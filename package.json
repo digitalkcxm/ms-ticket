@@ -1,0 +1,26 @@
+{
+  "name": "ms-ticket",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "migrate:latest":"./node_modules/.bin/run.env ./node_modules/.bin/knex migrate:latest",
+    "dev": "nodemon src/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Rafael da Silva Mendes",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.19.0",
+    "cors": "^2.8.5",
+    "dotenv": "^8.2.0",
+    "express": "^4.17.1",
+    "express-validator": "^6.6.1",
+    "knex": "^0.21.5",
+    "moment": "^2.29.0",
+    "nodemon": "^2.0.4",
+    "pg": "^8.3.3",
+    "run.env": "^1.1.0",
+    "uuid": "^8.3.0"
+  }
+}
