@@ -6,7 +6,8 @@ exports.up = function(knex) {
       table.string("callback").notNullable()
       table.boolean("active").default(true)
       table.timestamps(true,true)
-      table.unique("id")
+
+      table.primary("id")
   })
 };
 
