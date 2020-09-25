@@ -1,5 +1,6 @@
 const database = require('../config/database/database')
 const tableName = "company"
+
 class CompanyModel {
     async create(obj) {
         try {

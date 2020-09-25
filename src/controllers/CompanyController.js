@@ -22,6 +22,9 @@ class CompanyController {
             if (result.length > 0)
                 return res.status(200).send(obj)
 
+                if(result.code = "23502")
+                return res.status(400).send({error:"Please check your body"})
+
             return res.status(400).send({ error: "Error when manage company info" })
         } catch (err) {
             console.log("Error when manager company info => ", err)
