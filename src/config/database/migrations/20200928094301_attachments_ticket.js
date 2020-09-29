@@ -4,11 +4,13 @@ exports.up = function (knex) {
         table.increments()
         table.string("url").notNullable()
         table.integer("type").notNullable()
+        table.integer("id_user").notNullable()
         table.uuid("id_ticket").notNullable()
-        table.timestamps(true,true)
+        table.timestamps(true, true)
 
         table.foreign("id_ticket").references("ticket.id")
         table.foreign("type").references("type_attachments.id")
+        table.foreign("id_user").references("users.id")
     })
 };
 

@@ -22,6 +22,8 @@ class TicketController {
                 return res.status(400).send({ error: "Whitout id_user, please inform your user_id " })
 
             let id_user = await userController.checkUserCreated(req.body.id_user, req.headers.authorization)
+            if (!id_user || !id_user.id)
+                return res.status(400).send({ error: "Error when get user by id" })
 
             if (!req.body.id_phase)
                 return res.status(400).send({ error: "Whitout id_phase, please inform  id_phase" })
@@ -45,6 +47,7 @@ class TicketController {
                 id_company: req.headers.authorization,
                 ids_crm: req.body.ids_crm,
                 id_customer: req.body.id_customer,
+                id_user: id_user.id,
                 created_at: moment().format(),
                 updated_at: moment().format()
             }
@@ -226,9 +229,79 @@ class TicketController {
         }
     }
 
-    // async createAttachments(req,res){
+    async createAttachments(req, res) {
+        try {
+            if (!req.body.id_user)
+                return res.status(400).send({ error: "Whitout id_user" })
 
-    // }
+            let user = await userController.checkUserCreated(req.body.id_user, req.headers.authorization)
+
+            if (!user || !user.id)
+                return res.status(400).send({ error: "There was an error" })
+
+            let ticket = await ticketModel.getTicketById(req.body.id_ticket, req.headers.authorization)
+            if (!ticket || ticket.length <= 0)
+                return res.status(400).send({ error: "ID ticket is invalid" })
+
+            let typeAttachments = await ticketModel.getTypeAttachments(req.body.type)
+
+            if (!typeAttachments || typeAttachments.length <= 0)
+                return res.status(400).send({ error: "Type attachments is invalid" })
+
+            let obj = {
+                "id_user": user.id,
+                "id_ticket": req.body.id_ticket,
+                "url": req.body.url,
+                "type": req.body.type,
+                "created_at": moment().format(),
+                "updated_at": moment().format()
+            }
+
+            let result = await ticketModel.createAttachmentsTicket(obj)
+
+            if (result && result.length > 0) {
+                obj.id = result[0].id
+                return res.status(200).send(obj)
+            }
+
+            return res.status(400).send({ error: "There was an error" })
+        } catch (err) {
+            console.log("Error manage object to create attachments => ", err)
+            return res.status(400).send({ error: "There was an error" })
+        }
+    }
+
+    async getTicketByID(req, res) {
+        try {
+            const result = await ticketModel.getTicketById(req.params.id, req.headers.authorization)
+            if (result.name && result.name == 'error')
+                return res.status(400).send({ error: "There was an error" })
+
+            if (result && result.length > 0)
+                return res.status(200).send(result)
+
+            return res.status(400).send({ error: "There was an error" })
+        } catch (err) {
+            console.log("Error when select ticket by id =>", err)
+            return res.status(400).send({ error: "There was an error" })
+        }
+    }
+
+    async getAllTicket(req, res) {
+        try {
+            const result = await ticketModel.getAllTickets(req.headers.authorization)
+            if (result.name && result.name == 'error')
+                return res.status(400).send({ error: "There was an error" })
+
+            if (result && result.length > 0)
+                return res.status(200).send(result)
+
+            return res.status(400).send({ error: "There was an error" })
+        } catch (err) {
+            console.log("Error when select ticket by id =>", err)
+            return res.status(400).send({ error: "There was an error" })
+        }
+    }
 }
 
 module.exports = TicketController

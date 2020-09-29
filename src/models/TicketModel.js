@@ -46,12 +46,50 @@ class TicketModel {
 
     async getTicketById(id, id_company) {
         try {
-            return await database(tableName).where("id", id).andWhere("id_company", id_company)
+            return await database(tableName)
+                .select({
+                    id: `${tableName}.id`,
+                    ids_crm: `${tableName}.ids_crm`,
+                    id_customer: `${tableName}.id_customer`,
+                    created_at: `${tableName}.created_at`,
+                    updated_at: `${tableName}.updated_at`,
+                    id_user: "users.id_users_core"
+                })
+                .leftJoin("users", "users.id", `${tableName}.id_user`)
+                .where(`${tableName}.id`, id)
+                .andWhere(`${tableName}.id_company`, id_company)
         } catch (err) {
             console.log("Error when get ticket by id => ", err)
             return err
         }
+    }
 
+    async getAllTickets(id_company) {
+        try {
+            return await database(tableName)
+                .select({
+                    id: `${tableName}.id`,
+                    ids_crm: `${tableName}.ids_crm`,
+                    id_customer: `${tableName}.id_customer`,
+                    created_at: `${tableName}.created_at`,
+                    updated_at: `${tableName}.updated_at`,
+                    id_user: "users.id_users_core"
+                })
+                .leftJoin("users", "users.id", `${tableName}.id_user`)
+                .where(`${tableName}.id_company`, id_company)
+        } catch (err) {
+            console.log("Error when get ticket by id => ", err)
+            return err
+        }
+    }
+
+    async getTypeAttachments(id) {
+        try {
+            return await database("type_attachments").where("id", id)
+        } catch (err) {
+            console.log("Error when get type attachments by id => ", err)
+            return err
+        }
     }
 }
 
