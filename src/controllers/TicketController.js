@@ -188,10 +188,47 @@ class TicketController {
             return false
         }
     }
-    // emailResponsibleTicket, userResponsibleTicker
 
+    async createActivities(req, res) {
+        try {
+            if (!req.body.id_user)
+                return res.status(400).send({ error: "Whitout id_user" })
+
+            let user = await userController.checkUserCreated(req.body.id_user, req.headers.authorization)
+
+            if (!user || !user.id)
+                return res.status(400).send({ error: "There was an error" })
+
+            let ticket = await ticketModel.getTicketById(req.body.id_ticket, req.headers.authorization)
+            if (!ticket || ticket.length <= 0)
+                return res.status(400).send({ error: "ID ticket is invalid" })
+
+            let obj = {
+                "text": req.body.text,
+                "id_ticket": req.body.id_ticket,
+                "id_user": user.id,
+                "created_at": moment().format(),
+                "updated_at": moment().format()
+            }
+
+            let result = await ticketModel.createActivitiesTicket(obj)
+            console.log("TicketController -> createActivities -> result", result)
+
+            if (result && result.length > 0) {
+                obj.id = result[0].id
+                return res.status(200).send(obj)
+            }
+
+            return res.status(400).send({ error: "There was an error" })
+        } catch (err) {
+            console.log("Error manage object to create activities => ", err)
+            return res.status(400).send({ error: "There was an error" })
+        }
+    }
+
+    // async createAttachments(req,res){
+
+    // }
 }
-
-
 
 module.exports = TicketController

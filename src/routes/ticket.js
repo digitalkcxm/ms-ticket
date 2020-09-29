@@ -8,5 +8,6 @@ const TicketController = require("../controllers/TicketController")
 const ticketController = new TicketController()
 
 router.post("/", (req, res) => ticketController.create(req, res))
+router.post("/activities", (req, res) => ticketController.createActivities(req, res))
 
 module.exports = router
