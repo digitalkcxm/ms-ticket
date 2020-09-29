@@ -14,6 +14,7 @@ class CompanyController {
                 name: req.body.name,
                 callback: req.body.callback,
                 active: req.body.active,
+                notify_token: req.body.notify_token,
                 created_at: moment().format(),
                 updated_at: moment().format()
             }
@@ -22,8 +23,8 @@ class CompanyController {
             if (result.length > 0)
                 return res.status(200).send(obj)
 
-                if(result.code = "23502")
-                return res.status(400).send({error:"Please check your body"})
+            if (result.code = "23502")
+                return res.status(400).send({ error: "Please check your body" })
 
             return res.status(400).send({ error: "Error when manage company info" })
         } catch (err) {
@@ -51,13 +52,14 @@ class CompanyController {
                 "name": req.body.name,
                 "callback": req.body.callback,
                 "active": req.body.active,
+                "notify_token": req.body.notify_token,
                 "updated_at": moment().format()
             }
             const result = await companyModel.update(obj, req.headers.authorization)
-            if(result && result == 1)
-            return res.status(200).send(obj)
+            if (result && result == 1)
+                return res.status(200).send(obj)
 
-            return res.status(400).send({error: "Error when manage object to update company"}) 
+            return res.status(400).send({ error: "Error when manage object to update company" })
         } catch (err) {
             console.log("Error when manage object to update company => ", err)
             return res.status(400).send({ error: "Error when manage object to update company" })

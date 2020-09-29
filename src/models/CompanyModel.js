@@ -16,7 +16,7 @@ class CompanyModel {
             return await database(tableName).where("id", id)
         } catch (err) {
             console.log("Error when get company by id ==>", err)
-            return err
+            return false
         }
     }
 
