@@ -12,4 +12,6 @@ router.post("/activities", (req, res) => ticketController.createActivities(req, 
 router.post("/attachments", (req, res) => ticketController.createAttachments(req, res))
 router.get("/:id", (req, res) => ticketController.getTicketByID(req, res))
 router.get("/", (req, res) => ticketController.getAllTicket(req, res))
+router.put("/:id", (req, res) => ticketController.updateTicket(req, res))
+router.put("/close/:id", (req, res) => ticketController.closedTicket(req, res))
 module.exports = router
