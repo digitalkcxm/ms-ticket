@@ -1,4 +1,5 @@
 const database = require("../config/database/database")
+const { table } = require("../config/database/database")
 const tableName = "phase"
 
 class PhaseModel {
@@ -127,7 +128,7 @@ class PhaseModel {
 
     async getAllPhase(id_company) {
         try {
-            return await database(tableName).where("id_company", id_company)
+            return await database(tableName).select(["id", "id_unit_of_time", "icon", "name", "sla_time", "responsible_notify_sla", "supervisor_notify_sla", "created_at", "updated_at"]).where("id_company", id_company)
         } catch (err) {
             return res.status(400).send({ error: "There was an error " })
         }
@@ -135,7 +136,7 @@ class PhaseModel {
 
     async updatePhase(obj, id_phase, id_company) {
         try {
-            return await database(phase).update(obj).where("id", id_phase).andWhere("id_company", id_company)
+            return await database(tableName).update(obj).where("id", id_phase).andWhere("id_company", id_company)
         } catch (err) {
             console.log("Error update phase => ", err)
             return err

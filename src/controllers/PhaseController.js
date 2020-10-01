@@ -79,7 +79,7 @@ class PhaseController {
             await this._responsiblePhase(idPhase[0].id, usersResponsible, emailResponsible)
 
             await this._notifyPhase(idPhase[0].id, usersNotify, emailNotify, usersResponsible, emailResponsible)
-
+            delete obj.id_company
             return res.status(200).send(obj)
         } catch (err) {
             console.log("Error when manage phase create => ", err)
@@ -153,7 +153,6 @@ class PhaseController {
                 return res.status(400).send({ error: "Invalid information unit_of_time" })
 
             let obj = {
-                "id_company": req.headers.authorization,
                 "id_unit_of_time": req.body.unit_of_time,
                 "icon": req.body.icon,
                 "name": req.body.name,
@@ -162,7 +161,7 @@ class PhaseController {
                 "supervisor_notify_sla": req.body.notify_supervisor,
                 "updated_at": moment().format()
             }
-            await phaseModel.updatePhase(obj, req.params.id)
+            await phaseModel.updatePhase(obj, req.params.id, req.headers.authorization)
             obj.id = req.params.id
 
             await this._responsiblePhase(req.params.id, usersResponsible, emailResponsible)
@@ -238,8 +237,6 @@ class PhaseController {
             return err
         }
     }
-
-    
 }
 
 module.exports = PhaseController

@@ -61,7 +61,7 @@ class TicketController {
                 updated_at: moment().format()
             }
 
-            let result = await ticketModel.create(obj)
+            let result = await ticketModel.create(obj, "ticket")
 
             await this._createResponsibles(userResponsible, emailResponsible, obj.id)
 
@@ -81,12 +81,18 @@ class TicketController {
             await this._notify(phase[0].id, req.company[0].notify_token, obj.id, userResponsible, emailResponsible, req.headers.authorization, 4)
 
 
-            let result = await ticketModel.getTicketById(ticket.id, ticket.id_company)
-            await redis.set(`msTicket:ticket:${ticket.id}`, JSON.stringify(result[0]))
+            let ticket = await ticketModel.getTicketById(obj.id, req.headers.authorization)
+            console.log("TicketController -> create -> ticket", ticket)
+            await redis.set(`msTicket:ticket:${ticket.id}`, JSON.stringify(ticket[0]))
 
-            if (result && result.length > 0 && result[0].id)
+            console.log("TicketController -> create -> result", result)
+
+            if (result && result.length > 0 && result[0].id) {
+                delete obj.id_company
                 return res.status(200).send(obj)
+            }
 
+            console.log("TESTE")
             return res.status(400).send({ error: "There was an error" })
         } catch (err) {
             console.log("Error when generate object to save ticket => ", err)

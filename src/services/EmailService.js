@@ -100,17 +100,16 @@ class EmailService {
         else return null
     }
 
-    async _instance(departmentId) {
+    async _instance() {
         try {
-            if (settings)
-                return axios.create({
-                    baseURL: process.env.EMAILSES,
-                    timeout: 180000,
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'token': settings[0].settings.token
-                    }
-                })
+            return axios.create({
+                baseURL: process.env.EMAILSES,
+                timeout: 180000,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'token': process.env.EMAILTOKEN
+                }
+            })
         } catch (err) {
             return err
         }
