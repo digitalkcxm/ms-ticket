@@ -397,10 +397,10 @@ class TicketController {
 
             await this._notify(phase[0].id, req.company[0].notify_token, req.params.id, userResponsible, emailResponsible, req.headers.authorization, 5)
 
-            let result = await ticketModel.getTicketById(ticket.id, ticket.id_company)
-            await redis.set(`msTicket:ticket:${ticket.id}`, JSON.stringify(result[0]))
+            let ticket = await ticketModel.getTicketById(req.params.id, req.headers.authorization)
+            await redis.set(`msTicket:ticket:${req.params.id}`, JSON.stringify(ticket[0]))
 
-            if (result && result.length > 0 && result[0].id)
+            if (result)
                 return res.status(200).send(obj)
 
             return res.status(400).send({ error: "There was an error" })
