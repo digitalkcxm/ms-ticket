@@ -320,8 +320,10 @@ class TicketController {
             if (result.name && result.name == 'error')
                 return res.status(400).send({ error: "There was an error" })
 
-            if (result && result.length > 0)
+            if (result && result.length > 0) {
+                delete result[0].id_company
                 return res.status(200).send(result)
+            }
 
             return res.status(400).send({ error: "There was an error" })
         } catch (err) {

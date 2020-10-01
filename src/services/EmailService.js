@@ -59,20 +59,19 @@ class EmailService {
     //   }
 
     async sendActiveMenssage(subject, destination, message) {
+        // try {
+        //     let data = {
+        //         destination,
+        //         subject,
+        //         body: message
+        //     }
 
-        try {
-            let data = {
-                destination,
-                subject,
-                body: message
-            }
-
-            const instance = await this._instance()
-            return await instance.post(`/api/v1/messages/outgoing-active`, data)
-        } catch (err) {
-            console.log(err)
-            return { error: "Erro ao recuperar a mensagem." }
-        }
+        //     const instance = await this._instance()
+        //     return await instance.post(`/api/v1/messages/outgoing-active`, data)
+        // } catch (err) {
+        //     console.log(err)
+        //     return { error: "Erro ao recuperar a mensagem." }
+        // }
     }
 
     async closedChat(chat_id, department) {
