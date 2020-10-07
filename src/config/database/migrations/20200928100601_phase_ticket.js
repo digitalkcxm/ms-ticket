@@ -4,7 +4,7 @@ exports.up = function (knex) {
         table.increments()
         table.uuid("id_phase").notNullable()
         table.uuid("id_ticket").notNullable()
-        table.uuid("active").default(true)
+        table.boolean("active").default(true)
         table.foreign("id_phase").references("phase.id")
         table.foreign("id_ticket").references("ticket.id")
     })
