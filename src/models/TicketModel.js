@@ -23,8 +23,11 @@ class TicketModel {
                     id_user: "users.id_users_core",
                     sla_time: "phase.sla_time",
                     unit_of_time: "phase.id_unit_of_time",
+                    form: "phase.form",
+                    id_form: `${tableName}.id_form`,
                     created_at: `${tableName}.created_at`,
                     updated_at: `${tableName}.updated_at`
+
                 })
                 .leftJoin("users", "users.id", `${tableName}.id_user`)
                 .leftJoin("phase_ticket", "phase_ticket.id_ticket", `${tableName}.id`)

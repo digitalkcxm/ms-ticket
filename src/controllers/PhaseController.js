@@ -8,6 +8,7 @@ const { v1 } = require("uuid")
 const UserModel = require("../models/UserModel")
 const TicketModel = require("../models/TicketModel")
 const asyncRedis = require("async-redis")
+const FormTemplate = require("../documents/FormTemplate")
 const redis = asyncRedis.createClient(process.env.REDIS_PORT, process.env.REDIS_HOST)
 
 const unitOfTimeModel = new UnitOfTimeModel()
@@ -16,6 +17,7 @@ const userController = new UserController()
 const departmentController = new DepartmentController()
 const emailController = new EmailController()
 const ticketModel = new TicketModel()
+
 class PhaseController {
     async create(req, res) {
         try {
@@ -26,8 +28,35 @@ class PhaseController {
             const usersNotify = []
             const emailNotify = []
 
+            let obj = {
+                "id": v1(),
+                "id_company": req.headers.authorization,
+                "id_unit_of_time": req.body.unit_of_time,
+                "icon": req.body.icon,
+                "name": req.body.name,
+                "sla_time": req.body.sla_time,
+                "responsible_notify_sla": req.body.notify_responsible,
+                "supervisor_notify_sla": req.body.notify_supervisor,
+                "form": req.body.form,
+                "created_at": moment().format(),
+                "updated_at": moment().format()
+            }
+
             if (req.body.departments.length <= 0)
                 return res.status(400).send({ error: "Invalid department id" })
+
+            if (req.body.form) {
+                const errorsColumns = await this._collumnTemplateValidate(req.body.column)
+                if (errorsColumns.length > 0)
+                    return res.status(400).send({ errors: errorsColumns })
+
+                const formTemplate = await new FormTemplate(req.app.locals.db).createRegister(req.body.column)
+                obj.id_form_template = formTemplate
+            }
+
+            let timeType = await unitOfTimeModel.getUnitOfTime(req.body.unit_of_time)
+            if (!timeType || timeType.length <= 0)
+                return res.status(400).send({ error: "Invalid information unit_of_time" })
 
             req.body.departments.map(async department => {
                 let result = await departmentController.checkDepartmentCreated(department, req.headers.authorization)
@@ -56,22 +85,6 @@ class PhaseController {
                 }
             })
 
-            let timeType = await unitOfTimeModel.getUnitOfTime(req.body.unit_of_time)
-            if (!timeType || timeType.length <= 0)
-                return res.status(400).send({ error: "Invalid information unit_of_time" })
-
-            let obj = {
-                "id": v1(),
-                "id_company": req.headers.authorization,
-                "id_unit_of_time": req.body.unit_of_time,
-                "icon": req.body.icon,
-                "name": req.body.name,
-                "sla_time": req.body.sla_time,
-                "responsible_notify_sla": req.body.notify_responsible,
-                "supervisor_notify_sla": req.body.notify_supervisor,
-                "created_at": moment().format(),
-                "updated_at": moment().format()
-            }
             let idPhase = await phaseModel.createPhase(obj)
             obj.id = idPhase[0].id
 
@@ -79,6 +92,7 @@ class PhaseController {
             await this._responsiblePhase(idPhase[0].id, usersResponsible, emailResponsible)
 
             await this._notifyPhase(idPhase[0].id, usersNotify, emailNotify, usersResponsible, emailResponsible)
+
             delete obj.id_company
             return res.status(200).send(obj)
         } catch (err) {
@@ -90,8 +104,12 @@ class PhaseController {
     async getPhaseByID(req, res) {
         try {
             const result = await phaseModel.getPhaseById(req.params.id, req.headers.authorization)
+            if (!result || result.length < 0)
+                return res.status(400).send({ error: "Invalid id phase" })
 
             result[0].ticket = await ticketModel.getTicketByPhase(req.params.id)
+            const register = await new FormTemplate(req.app.locals.db).findRegistes(result[0].id_form_template)
+            result[0].formTemplate = register.column
             return res.status(200).send(result)
         } catch (err) {
             console.log("PhaseController -> getPhaseByID -> err", err)
@@ -236,6 +254,18 @@ class PhaseController {
             console.log("Error notify Phase => ", err)
             return err
         }
+    }
+
+    async _collumnTemplateValidate(columns) {
+        let errors = []
+        for (let i = 0; i < columns.length; i++) {
+            columns[i].label ? "" : errors.push(`item ${i}: label é um campo obrigatório`)
+            columns[i].column ? "" : errors.push(`item ${i}: column é um campo obrigatório`)
+            typeof columns[i].required === "boolean" ? "" : errors.push(`item ${i}: required é um campo booleano`)
+            typeof columns[i].editable === "boolean" ? "" : errors.push(`item ${i}: o campo editable é um campo booleano`)
+            columns[i].type ? "" : errors.push(`item ${i}: type é um campo obrigatório`)
+        }
+        return errors
     }
 }
 

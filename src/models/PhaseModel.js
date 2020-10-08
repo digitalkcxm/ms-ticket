@@ -23,6 +23,8 @@ class PhaseModel {
                 "sla_time": "phase.sla_time",
                 "responsible_notify_sla": "phase.responsible_notify_sla",
                 "supervisor_notify_sla": "phase.supervisor_notify_sla",
+                "form": "phase.form",
+                "id_form_template": "phase.id_form_template"
             })
                 .leftJoin("unit_of_time", "unit_of_time.id", "phase.id_unit_of_time")
                 .where("phase.id", id_phase)
@@ -151,7 +153,6 @@ class PhaseModel {
             return err
         }
     }
-
 
     async delNotifyPhase(id_phase) {
         try {

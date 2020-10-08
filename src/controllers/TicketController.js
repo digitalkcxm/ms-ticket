@@ -6,7 +6,8 @@ const UserModel = require("../models/UserModel")
 const CompanyModel = require("../models/CompanyModel")
 const EmailService = require("../services/EmailService")
 const EmailModel = require("../models/EmailModel")
-
+const FormTemplate = require("../documents/FormTemplate")
+const FormDocuments = require("../documents/FormDocuments")
 const asyncRedis = require('async-redis')
 const redis = asyncRedis.createClient(process.env.REDIS_PORT, process.env.REDIS_HOST)
 
@@ -61,12 +62,21 @@ class TicketController {
                 updated_at: moment().format()
             }
 
+            let phase = await phaseModel.getPhase(req.body.id_phase, req.headers.authorization)
+            console.log("TicketController -> create -> phase", phase)
+
+            if (phase[0].form) {
+                let errors = await this._validateForm(req.app.locals.db, phase[0].id_form_template, req.body.form)
+                if (errors.length > 0)
+                    return res.status(400).send({ errors: errors })
+
+                obj.id_form = await new FormDocuments(req.app.locals.db).createRegister(req.body.form)
+            }
+
             let result = await ticketModel.create(obj, "ticket")
 
             await this._createResponsibles(userResponsible, emailResponsible, obj.id)
 
-            let phase = await phaseModel.getPhase(req.body.id_phase, req.headers.authorization)
-            console.log("TicketController -> create -> phase", phase)
 
             if (!phase || phase.length <= 0)
                 return res.status(400).send({ error: "Invalid id_phase uuid" })
@@ -75,6 +85,8 @@ class TicketController {
                 "id_phase": phase[0].id,
                 "id_ticket": obj.id
             }, "phase_ticket")
+
+
 
             if (!phase_id || phase.length <= 0)
                 return res.status(500).send({ error: "There was an error" })
@@ -388,6 +400,11 @@ class TicketController {
             if (result.name && result.name == 'error')
                 return res.status(400).send({ error: "There was an error" })
 
+            if (result[0].form) {
+                result[0].form_data = await new FormDocuments(req.app.locals.db).findRegister(result[0].id_form)
+                delete result[0].form
+                delete result[0].id_form
+            }
             if (result && result.length > 0) {
                 delete result[0].id_company
                 return res.status(200).send(result)
@@ -571,6 +588,20 @@ class TicketController {
                 break;
         }
         return timeNow
+    }
+
+    async _validateForm(db, id_form_template, form) {
+        try {
+            const errors = []
+            const form_template = await new FormTemplate(db).findRegistes(id_form_template)
+            for (let column of form_template.column) {
+                column.required && form[column.column] ? "" : errors.push(`O campo ${column.label} é obrigatório`)
+            }
+            return errors
+        } catch (err) {
+            console.log("Error when generate Doc =>", err)
+            return err
+        }
     }
 }
 

@@ -44,20 +44,6 @@ class EmailService {
         }
     }
 
-    //   async _getMessageForward(listIdMessage, protocolId) {
-    //     let message = '';
-    //     try {
-    //       let listMessages = await Promise.all(listIdMessage.map(async m => await messageModel.getMessageByIdAndProtocol(m.id, protocolId)))
-    //       listMessages.forEach(m => {
-    //         message += `--------- Mensagem Encaminhada ------<br>${m[0].message}<br>`
-    //       })
-    //       return message
-    //     } catch (err) {
-
-    //       return { error: "Erro ao recuperar a mensagem." }
-    //     }
-    //   }
-
     async sendActiveMenssage(subject, destination, message) {
         try {
             let data = {
