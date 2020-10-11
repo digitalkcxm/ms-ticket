@@ -14,6 +14,7 @@ const redis = asyncRedis.createClient(process.env.REDIS_PORT, process.env.REDIS_
 const moment = require("moment")
 const { v1 } = require("uuid")
 const notify = require("../helpers/Notify")
+const { json } = require("body-parser")
 
 const ticketModel = new TicketModel()
 const userController = new UserController()
@@ -410,7 +411,14 @@ class TicketController {
 
     async getAllTicket(req, res) {
         try {
-            const result = await ticketModel.getAllTickets(req.headers.authorization)
+            console.log("===>", req.query)
+            let obj = {}
+            req.query.department ? obj.department = JSON.parse(req.query.department) : ""
+            req.query.users ? obj.users = JSON.parse(req.query.users) : ""
+            req.query.closed ? obj.closed = JSON.parse(req.query.closed) : obj.closed = [true, false]
+            req.query.range ? obj.range = JSON.parse(req.query.range) : ""
+
+            const result = await ticketModel.getAllTickets(req.headers.authorization, obj)
             if (result.name && result.name == 'error')
                 return res.status(400).send({ error: "There was an error" })
 

@@ -61,6 +61,24 @@ class PhaseModel {
         }
     }
 
+    async linkedEmail(obj) {
+        try {
+            return await database("department_phase").insert(obj)
+        } catch (err) {
+            console.log("Error when linked department with phase =>", err)
+            return err
+        }
+    }
+
+    async removeLinkedDepartment(phase_id) {
+        try {
+            return await database("department_phase").where("id_phase", phase_id)
+        } catch (err) {
+            console.log("Error when remove linked =>", err)
+            return err
+        }
+    }
+
     async getResponsiblePhase(phase_id) {
         try {
             return await database("phase").select({

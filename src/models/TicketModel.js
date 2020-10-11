@@ -41,21 +41,35 @@ class TicketModel {
         }
     }
 
-    async getAllTickets(id_company) {
+    async getAllTickets(id_company, obj) {
+        console.log("TicketModel -> getAllTickets -> id_company", id_company)
         try {
+            let stringWhere = `${tableName}.id_company = '${id_company}'`
+
+            if (obj.department && obj.department.length > 0) { stringWhere = stringWhere + ` AND department.id_department_core in (${obj.department}) ` }
+            if (obj.users && obj.users.length > 0) { stringWhere = stringWhere + ` AND users.id_users_core in (${obj.users}) ` }
+            if (obj.closed && obj.closed.length > 0) { stringWhere = stringWhere + ` AND ticket.closed in (${obj.closed}) ` }
+            if (obj.sla && obj.sla.length > 0) { stringWhere = stringWhere + ` AND ticket.sla in (${obj.sla}) ` }
+            if (obj.range.length > 0) { stringWhere = stringWhere + `AND ticket.created_at beetwen ${obj.range[0]} and ${obj.range[1]} ` }
+
             return await database(tableName)
-                .max({
+                .select({
                     id: `${tableName}.id`,
-                    ids_crm: `${tableName}.ids_crm`,
-                    id_customer: `${tableName}.id_customer`,
-                    phase: "phase_ticket.id_phase",
-                    id_user: "users.id_users_core",
+                    sla: `${tableName}.sla`,
+                    department: `department.id_department_core`,
+                    phase: "phase.name",
+                    id_phase: "phase.id",
+                    closed: `${tableName}.closed`,
                     created_at: `${tableName}.created_at`,
                     updated_at: `${tableName}.updated_at`
                 })
-                .leftJoin("users", "users.id", `${tableName}.id_user`)
+                .leftJoin("responsible_ticket", "responsible_ticket.id_ticket", `${tableName}.id`)
+                .leftJoin("users", "users.id", "responsible_ticket.id_user")
                 .leftJoin("phase_ticket", "phase_ticket.id_ticket", `${tableName}.id`)
-                .where(`${tableName}.id_company`, id_company)
+                .leftJoin("phase", "phase.id", "phase_ticket.id_phase")
+                .leftJoin("department_phase", "department_phase.id_phase", "phase.id")
+                .leftJoin("department", "department.id", "department_phase.id_department")
+                .whereRaw(stringWhere)
         } catch (err) {
             console.log("Error when get ticket by id => ", err)
             return err
@@ -103,7 +117,7 @@ class TicketModel {
 
     async getAllTicketWhitoutCompanyId() {
         try {
-            return await database(tableName).select()
+            return await database(tableName).select().where("sla", false)
         } catch (err) {
             console.log("Error when catch all ticket =>", err)
             return err

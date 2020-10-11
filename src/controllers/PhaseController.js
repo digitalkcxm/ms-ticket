@@ -88,7 +88,12 @@ class PhaseController {
             let idPhase = await phaseModel.createPhase(obj)
             obj.id = idPhase[0].id
 
-
+            for (let department_id of dpt) {
+                await phaseModel.linkedEmail({
+                    "id_department": department_id,
+                    "id_phase": idPhase[0].id
+                })
+            }
             await this._responsiblePhase(idPhase[0].id, usersResponsible, emailResponsible)
 
             await this._notifyPhase(idPhase[0].id, usersNotify, emailNotify, usersResponsible, emailResponsible)
@@ -181,6 +186,14 @@ class PhaseController {
             }
             await phaseModel.updatePhase(obj, req.params.id, req.headers.authorization)
             obj.id = req.params.id
+            
+            await phaseModel.removeLinkedDepartment(req.params.id)
+            for (let department_id of dpt) {
+                await phaseModel.linkedEmail({
+                    "id_department": department_id,
+                    "id_phase": req.params.id
+                })
+            }
 
             await this._responsiblePhase(req.params.id, usersResponsible, emailResponsible)
 
