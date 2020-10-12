@@ -128,9 +128,9 @@ class PhaseController {
 
             for (let i in result) {
                 result[i].ticket = await ticketModel.getTicketByPhase(result[i].id)
-                const responsibles = await phaseModel.getResponsiblePhaseByIdPhase(id_phase)
+                const responsibles = await phaseModel.getResponsiblePhaseByIdPhase(result[i].id)
                 console.log("PhaseController -> getAllPhase -> responsibles", responsibles)
-                const notify = await phaseModel.getNotifyPhaseByIdPhase(id_phase)
+                const notify = await phaseModel.getNotifyPhaseByIdPhase(result[i].id)
                 console.log("PhaseController -> getAllPhase -> notify", notify)
                 if (result[i].id_form_template) {
                     const register = await new FormTemplate(req.app.locals.db).findRegistes(result[i].id_form_template)

@@ -145,7 +145,7 @@ class PhaseModel {
             })
                 .leftJoin("email", "email.id", "responsible_phase.id_email")
                 .leftJoin("users", "users.id", "responsible.phase.id_users")
-                .where("id_phase", id_phase)
+                .where("responsible_phase.id_phase", id_phase)
         } catch (err) {
             console.log("Error when get responsible phase by id User => ", err)
             return err
@@ -160,7 +160,7 @@ class PhaseModel {
             })
                 .leftJoin("email", "email.id", "notify_phase.id_email")
                 .leftJoin("users", "users.id", "notify_phase.id_users")
-                .where("id_phase", id_phase)
+                .where("notify_phase.id_phase", id_phase)
         } catch (err) {
             console.log("Error when get notify by id user ==>", err)
             return err
