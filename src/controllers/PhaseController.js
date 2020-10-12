@@ -128,7 +128,7 @@ class PhaseController {
 
             for (let i in result) {
                 result[i].ticket = await ticketModel.getTicketByPhase(result[i].id)
-                console.log("form ====> ", result[i].id_form_template)
+                console.log("form ====> ", result[i])
                 if (result[i].id_form_template) {
                     const register = await new FormTemplate(req.app.locals.db).findRegistes(result[i].id_form_template)
                     result[i].formTemplate = register.column
