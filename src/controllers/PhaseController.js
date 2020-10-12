@@ -146,7 +146,9 @@ class PhaseController {
 
 
                 const department = await phaseModel.getDepartmentPhase(result[i].id)
+                result[i].department = []
                 await department.map(async value => { result[i].department.push(value.id_department) })
+                
                 if (result[i].id_form_template) {
                     const register = await new FormTemplate(req.app.locals.db).findRegistes(result[i].id_form_template)
                     result[i].formTemplate = register.column
