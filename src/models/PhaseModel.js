@@ -166,6 +166,17 @@ class PhaseModel {
             return err
         }
     }
+    
+    async getDepartmentPhase(id_phase) {
+        try {
+            return await database("department_phase").select({ id_department: "department.id_department_core" })
+                .leftJoin("department", "department.id", "department_phase.id_department")
+                .where("department_phase.id_phase", id_phase)
+        } catch (err) {
+            console.log("Error when catch department phase =>", err)
+            return err
+        }
+    }
 
     async disablePhaseTicket(id_ticket) {
         try {

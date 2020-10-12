@@ -143,7 +143,10 @@ class PhaseController {
                     if (value.email) { arrayNotify.push({ "email": value.email }) } else if (value.user) { arrayNotify.push({ "id": value.id }) }
                 })
                 result[i].notify = arrayNotify
-                
+
+
+                const department = await phaseModel.getDepartmentPhase(result[i].id)
+                await department.map(async value => { result[i].department.push(value.id_department) })
                 if (result[i].id_form_template) {
                     const register = await new FormTemplate(req.app.locals.db).findRegistes(result[i].id_form_template)
                     result[i].formTemplate = register.column
