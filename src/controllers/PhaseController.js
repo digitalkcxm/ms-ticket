@@ -125,6 +125,13 @@ class PhaseController {
     async getAllPhase(req, res) {
         try {
             const result = await phaseModel.getAllPhase(req.headers.authorization)
+
+            for (let i in result) {
+                result[i].ticket = await ticketModel.getTicketByPhase(result[i].id)
+                const register = await new FormTemplate(req.app.locals.db).findRegistes(result[i].id_form_template)
+                result[i].formTemplate = register.column
+            }
+            
             return res.status(200).send(result)
         } catch (err) {
             console.log("Get all phase => ", err)
@@ -186,7 +193,7 @@ class PhaseController {
             }
             await phaseModel.updatePhase(obj, req.params.id, req.headers.authorization)
             obj.id = req.params.id
-            
+
             await phaseModel.removeLinkedDepartment(req.params.id)
             for (let department_id of dpt) {
                 await phaseModel.linkedEmail({
