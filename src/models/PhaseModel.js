@@ -144,7 +144,7 @@ class PhaseModel {
                 user: "users.id_users_core"
             })
                 .leftJoin("email", "email.id", "responsible_phase.id_email")
-                .leftJoin("users", "users.id", "responsible.phase.id_users")
+                .leftJoin("users", "users.id", "responsible_phase.id_user")
                 .where("responsible_phase.id_phase", id_phase)
         } catch (err) {
             console.log("Error when get responsible phase by id User => ", err)
@@ -159,7 +159,7 @@ class PhaseModel {
                 user: "users.id_users_core"
             })
                 .leftJoin("email", "email.id", "notify_phase.id_email")
-                .leftJoin("users", "users.id", "notify_phase.id_users")
+                .leftJoin("users", "users.id", "notify_phase.id_user")
                 .where("notify_phase.id_phase", id_phase)
         } catch (err) {
             console.log("Error when get notify by id user ==>", err)
