@@ -5,7 +5,8 @@ const tableName = "phase"
 class PhaseModel {
     async createPhase(obj) {
         try {
-            return await database(tableName).returning(["id"]).insert(obj)
+	console.log("====>",obj)
+		return await database(tableName).returning(["id"]).insert(obj)
         } catch (err) {
             console.log("Error when create phase => ", err)
             return err
