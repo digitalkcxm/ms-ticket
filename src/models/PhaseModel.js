@@ -5,8 +5,8 @@ const tableName = "phase"
 class PhaseModel {
     async createPhase(obj) {
         try {
-	console.log("====>",obj)
-		return await database(tableName).returning(["id"]).insert(obj)
+            console.log("====>", obj)
+            return await database(tableName).returning(["id"]).insert(obj)
         } catch (err) {
             console.log("Error when create phase => ", err)
             return err
@@ -137,6 +137,35 @@ class PhaseModel {
             return err
         }
     }
+    async getResponsiblePhaseByIdPhase(id_phase) {
+        try {
+            return await database("responsible_phase").select({
+                email: "email.email",
+                user: "users.id_users_core"
+            })
+                .leftJoin("email", "email.id", "responsible_phase.id_email")
+                .leftJoin("users", "users.id", "responsible.phase.id_users")
+                .where("id_phase", id_phase)
+        } catch (err) {
+            console.log("Error when get responsible phase by id User => ", err)
+            return err
+        }
+    }
+
+    async getNotifyPhaseByIdPhase(id_phase) {
+        try {
+            return await database("notify_phase").select({
+                email: "email.email",
+                user: "users.id_users_core"
+            })
+                .leftJoin("email", "email.id", "notify_phase.id_email")
+                .leftJoin("users", "users.id", "notify_phase.id_users")
+                .where("id_phase", id_phase)
+        } catch (err) {
+            console.log("Error when get notify by id user ==>", err)
+            return err
+        }
+    }
 
     async disablePhaseTicket(id_ticket) {
         try {
@@ -149,7 +178,7 @@ class PhaseModel {
 
     async getAllPhase(id_company) {
         try {
-            return await database(tableName).select(["id", "id_unit_of_time", "icon", "name", "sla_time", "responsible_notify_sla", "supervisor_notify_sla", "id_form_template","created_at", "updated_at"]).where("id_company", id_company)
+            return await database(tableName).select(["id", "id_unit_of_time", "icon", "name", "sla_time", "responsible_notify_sla", "supervisor_notify_sla", "id_form_template", "created_at", "updated_at"]).where("id_company", id_company)
         } catch (err) {
             return res.status(400).send({ error: "There was an error " })
         }
