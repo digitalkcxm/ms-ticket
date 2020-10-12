@@ -127,11 +127,23 @@ class PhaseController {
             const result = await phaseModel.getAllPhase(req.headers.authorization)
 
             for (let i in result) {
+                const arrayResponsible = []
+                const arrayNotify = []
+
                 result[i].ticket = await ticketModel.getTicketByPhase(result[i].id)
                 const responsibles = await phaseModel.getResponsiblePhaseByIdPhase(result[i].id)
-                console.log("PhaseController -> getAllPhase -> responsibles", responsibles)
+
+                await responsibles.map(async value => {
+                    if (value.email) { arrayResponsible.push({ "email": value.email }) } else if (value.user) { arrayResponsible.push({ "id": value.user }) }
+                })
+                result[i].responsible = arrayResponsible
+
                 const notify = await phaseModel.getNotifyPhaseByIdPhase(result[i].id)
-                console.log("PhaseController -> getAllPhase -> notify", notify)
+                await notify.map(async value => {
+                    if (value.email) { arrayNotify.push({ "email": value.email }) } else if (value.user) { arrayNotify.push({ "id": value.id }) }
+                })
+                result[i].notify = arrayNotify
+                
                 if (result[i].id_form_template) {
                     const register = await new FormTemplate(req.app.locals.db).findRegistes(result[i].id_form_template)
                     result[i].formTemplate = register.column
