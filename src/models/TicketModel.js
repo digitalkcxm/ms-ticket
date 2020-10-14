@@ -18,6 +18,7 @@ class TicketModel {
                     id: `${tableName}.id`,
                     ids_crm: `${tableName}.ids_crm`,
                     id_customer: `${tableName}.id_customer`,
+                    id_protocol: `${tableName}.id_protocol`,
                     id_company: `${tableName}.id_company`,
                     phase: "phase_ticket.id_phase",
                     id_user: "users.id_users_core",
@@ -149,6 +150,7 @@ class TicketModel {
                 "ids_crm": "ticket.ids_crm",
                 "id_user": "users.id_users_core",
                 "id_customer": "ticket.id_customer",
+                "id_protocol": "ticket.id_protocol",
                 "closed": "ticket.closed",
                 "sla": "ticket.sla"
             })

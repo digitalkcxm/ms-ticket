@@ -58,6 +58,7 @@ class TicketController {
                 id_company: req.headers.authorization,
                 ids_crm: req.body.ids_crm,
                 id_customer: req.body.id_customer,
+                id_protocol: req.body.id_protocol,
                 id_user: id_user.id,
                 created_at: moment().format(),
                 updated_at: moment().format()
@@ -457,6 +458,7 @@ class TicketController {
             let obj = {
                 ids_crm: req.body.ids_crm,
                 id_customer: req.body.id_customer,
+                id_protocol: req.body.id_protocol,
                 updated_at: moment().format()
             }
 
