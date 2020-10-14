@@ -9,6 +9,7 @@ const UserModel = require("../models/UserModel")
 const TicketModel = require("../models/TicketModel")
 const asyncRedis = require("async-redis")
 const FormTemplate = require("../documents/FormTemplate")
+const FormDocuments = require("../documents/FormDocuments")
 const redis = asyncRedis.createClient(process.env.REDIS_PORT, process.env.REDIS_HOST)
 
 const unitOfTimeModel = new UnitOfTimeModel()
@@ -131,6 +132,14 @@ class PhaseController {
                 const arrayNotify = []
 
                 result[i].ticket = await ticketModel.getTicketByPhase(result[i].id)
+                if (result[i].ticket.length > 0) {
+                    for (let ticket of result[i].ticket) {
+                        if (ticket.id_form) {
+                            ticket.form_data = await new FormDocuments(req.app.locals.db).findRegister(ticket.id_form)
+                            delete ticket.id_form
+                        }
+                    }
+                }
                 const responsibles = await phaseModel.getResponsiblePhaseByIdPhase(result[i].id)
 
                 await responsibles.map(async value => {
@@ -148,7 +157,7 @@ class PhaseController {
                 const department = await phaseModel.getDepartmentPhase(result[i].id)
                 result[i].department = []
                 await department.map(async value => { result[i].department.push(value.id_department) })
-                
+
                 if (result[i].id_form_template) {
                     const register = await new FormTemplate(req.app.locals.db).findRegistes(result[i].id_form_template)
                     result[i].formTemplate = register.column
