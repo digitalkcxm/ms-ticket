@@ -89,7 +89,7 @@ class TicketController {
             if (!phase_id || phase.length <= 0)
                 return res.status(500).send({ error: "There was an error" })
 
-            await this._notify(phase[0].id, req.company[0].notify_token, obj.id, userResponsible, emailResponsible, req.headers.authorization, 4)
+            await this._notify(phase[0].id, req.company[0].notify_token, obj.id, userResponsible, emailResponsible, req.headers.authorization, 4, req.app.locals.db)
 
             let ticket = await ticketModel.getTicketById(obj.id, req.headers.authorization)
             await redis.set(`msTicket:ticket:${ticket.id}`, JSON.stringify(ticket[0]))
@@ -106,7 +106,7 @@ class TicketController {
         }
     }
 
-    async _createResponsibles(userResponsible = null, emailResponsible = null, ticket_id) {
+    async _createResponsibles(userResponsible = null, emailResponsible = null, ticket_id, db) {
         try {
             await ticketModel.delResponsibleTicket(ticket_id)
             if (userResponsible.length > 0) {
@@ -135,11 +135,31 @@ class TicketController {
         }
     }
 
-    async _notify(phase_id, notify_token, ticket_id, userResponsibleTicket, emailResponsibleTicket, id_company, type) {
+    async _notify(phase_id, notify_token, ticket_id, userResponsibleTicket, emailResponsibleTicket, id_company, type, db) {
         try {
-
+            let texto = ""
+            let register
             let responsiblePhase = await phaseModel.getResponsiblePhase(phase_id)
             let notifyPhase = await phaseModel.getNotifiedPhase(phase_id)
+
+            const resultPhase = await phaseModel.getPhaseById(phase_id, id_company)
+            if (resultPhase[0].id_form_template) {
+
+            }
+
+            const result = await ticketModel.getTicketById(ticket_id, id_company)
+            if (result[0].form) {
+                result[0].form_data = await new FormDocuments(db).findRegister(result[0].id_form)
+                delete result[0].form
+                delete result[0].id_form
+
+                register = await new FormTemplate(db).findRegistes(resultPhase[0].id_form_template)
+                for (let column of register.column) {
+                    texto = texto + `${column.label} : ${result[0].form_data[column.column] ? result[0].form_data[column.column] : ''} <br>`
+                }
+            }
+            console.log("TicketController -> _notify -> texto", texto)
+
             switch (type) {
                 case 3:
                     const phaseInfo = await phaseModel.getPhase(phase_id, id_company)
@@ -155,7 +175,7 @@ class TicketController {
                                         "id_phase": phase_id
                                     })
                                 } else if (contact.email) {
-                                    await emailService.sendActiveMenssage("SLA de ticket expirado", contact.email, `Um ticket expirou em uma fase de sua responsabilidade\n\nFase: ${contact.phase_description}`)
+                                    await emailService.sendActiveMenssage(`Ticket ID:${result[0].id_ticket}`, contact.email, `Um ticket expirou em uma fase de sua responsabilidade <br><br> Fase: ${contact.phase_description}  <br><br>  ${texto}`)
                                 }
                             })
                         }
@@ -173,7 +193,7 @@ class TicketController {
                             }
                             if (emailResponsibleTicket[i]) {
                                 let infoUser = await emailModel.getEmailById(emailResponsibleTicket[i], id_company)
-                                await emailService.sendActiveMenssage("Ticket Alert", infoUser[0].email, `Você foi alertado em um dos seus tickets`)
+                                await emailService.sendActiveMenssage(`Ticket ID:${result[0].id_ticket}`, infoUser[0].email, `Você foi alertado em um dos seus tickets <br><br>  ${texto}`)
                             }
                         }
 
@@ -191,7 +211,7 @@ class TicketController {
                                     "id_phase": phase_id
                                 })
                             } else if (contact.email) {
-                                await emailService.sendActiveMenssage("Ticket criado", contact.email, `Um ticket foi criado em uma fase de sua responsabilidade\n\nFase: ${contact.phase_description}`)
+                                await emailService.sendActiveMenssage(`Ticket ID:${result[0].id_ticket}`, contact.email, `Um ticket foi criado em uma fase de sua responsabilidade<br><br>Fase: ${contact.phase_description}  <br><br> ${texto}`)
                             }
                         })
                     }
@@ -205,7 +225,7 @@ class TicketController {
                                     "id_phase": phase_id
                                 })
                             } else if (contact.email) {
-                                await emailService.sendActiveMenssage("Ticket criado", contact.email, `Um ticket foi criado\n\nFase: ${contact.phase_description}`)
+                                await emailService.sendActiveMenssage(`Ticket ID:${result[0].id_ticket}`, contact.email, `Um ticket foi criado<br><br>Fase: ${contact.phase_description}  <br><br> ${texto}`)
                             }
                         })
                     }
@@ -223,7 +243,7 @@ class TicketController {
 
                             if (emailResponsibleTicket[i]) {
                                 let infoUser = await emailModel.getEmailById(emailResponsibleTicket[i], id_company)
-                                email = await emailService.sendActiveMenssage("Ticket criado", infoUser[0].email, `Um ticket Digitalk foi criado em seu nome`)
+                                email = await emailService.sendActiveMenssage(`Ticket ID:${result[0].id_ticket}`, infoUser[0].email, `Um ticket Digitalk foi criado em seu nome  <br><br> ${texto}`)
                                 await this.createLinkedEmailWithChatId(email.data.chatId, emailResponsibleTicket[i], ticket_id)
                             }
                         }
@@ -239,7 +259,7 @@ class TicketController {
                         for (let i = 0; i < emailResponsibleTicket.length; i++) {
                             if (emailResponsibleTicket[i]) {
                                 let infoUser = await emailModel.getEmailById(emailResponsibleTicket[i], id_company)
-                                await emailService.sendActiveMenssage("Ticket Alert", infoUser[0].email, `Você foi alertado em um dos seus tickets`)
+                                await emailService.sendActiveMenssage(`Ticket ID:${result[0].id_ticket}`, infoUser[0].email, `Você foi alertado em um dos seus tickets  <br><br> ${texto}`)
                             }
                         }
                     }
@@ -321,7 +341,7 @@ class TicketController {
                         emailResponsibleTicket.push(value.id_email)
                     }
                 })
-                this._notify(ticket[0].id_phasae, req.company[0].notify_token, req.body.id_ticket, userResponsibleTicket, emailResponsibleTicket, id_company, 5)
+                this._notify(ticket[0].id_phasae, req.company[0].notify_token, req.body.id_ticket, userResponsibleTicket, emailResponsibleTicket, id_company, 5, req.app.locals.db)
                 return res.status(200).send(obj)
             }
 
@@ -375,7 +395,7 @@ class TicketController {
                         emailResponsibleTicket.push(value.id_email)
                     }
                 })
-                this._notify(ticket[0].id_phasae, req.company[0].notify_token, req.body.id_ticket, userResponsibleTicket, emailResponsibleTicket, id_company, 5)
+                this._notify(ticket[0].id_phasae, req.company[0].notify_token, req.body.id_ticket, userResponsibleTicket, emailResponsibleTicket, id_company, 5, req.app.locals.db)
 
                 return res.status(200).send(obj)
             }
@@ -481,7 +501,7 @@ class TicketController {
             if (!phase_id || phase.length <= 0)
                 return res.status(500).send({ error: "There was an error" })
 
-            await this._notify(phase[0].id, req.company[0].notify_token, req.params.id, userResponsible, emailResponsible, req.headers.authorization, 5)
+            await this._notify(phase[0].id, req.company[0].notify_token, req.params.id, userResponsible, emailResponsible, req.headers.authorization, 5, req.app.locals.db)
 
             let ticket = await ticketModel.getTicketById(req.params.id, req.headers.authorization)
             await redis.set(`msTicket:ticket:${req.params.id}`, JSON.stringify(ticket[0]))
@@ -550,7 +570,7 @@ class TicketController {
                                 emailResponsibleTicket.push(value.id_email)
                             }
                         })
-                        await this._notify(result.phase, companyInfo[0].notify_token, result.id, userResponsibleTicket, emailResponsibleTicket, result.id_company, 3)
+                        await this._notify(result.phase, companyInfo[0].notify_token, result.id, userResponsibleTicket, emailResponsibleTicket, result.id_company, 3, req.app.locals.db)
 
                     }
                 }

@@ -16,6 +16,7 @@ class TicketModel {
             return await database(tableName)
                 .select({
                     id: `${tableName}.id`,
+                    id_ticket: `${tableName}.id_ticket`,
                     ids_crm: `${tableName}.ids_crm`,
                     id_customer: `${tableName}.id_customer`,
                     id_protocol: `${tableName}.id_protocol`,
@@ -57,6 +58,7 @@ class TicketModel {
                 .select({
                     id: `${tableName}.id`,
                     sla: `${tableName}.sla`,
+                    id_ticket: `${tableName}.id_ticket`,
                     department: `department.id_department_core`,
                     phase: "phase.name",
                     id_phase: "phase.id",
@@ -147,6 +149,7 @@ class TicketModel {
         try {
             return await database("phase_ticket").select({
                 "id": "ticket.id",
+                "id_ticket": "ticket.id_ticket",
                 "ids_crm": "ticket.ids_crm",
                 "id_user": "users.id_users_core",
                 "id_customer": "ticket.id_customer",
