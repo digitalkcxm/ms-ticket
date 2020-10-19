@@ -201,7 +201,6 @@ class TicketController {
                     }
                     break;
                 case 4:
-                    (created_at, sla, id_ticket, userName, department, phase)
                     let body = await emailController.formatEmail(result[0].created_at, result[0].sla_time, result[0].id_ticket, "Priscila", "Department", contact.phase_description)
                     let email
                     if (responsiblePhase && responsiblePhase.length > 0) {
