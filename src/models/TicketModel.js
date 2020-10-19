@@ -172,7 +172,21 @@ class TicketModel {
     }
     async getTicketByCustomerOrProtocol(id) {
         try {
-            return database(tableName).where("id_customer", id).orWhere("id_protocol", id)
+            return database(tableName)
+                .select({
+                    "id": "ticket.id",
+                    "id_seq": "ticket.id_seq",
+                    "ids_crm": "ticket.ids_crm",
+                    "id_customer": "ticket.id_customer",
+                    "id_protocol": "ticket.id_protocol",
+                    "id_user": "users.id_users_core",
+                    "closed": "ticket.closed",
+                    "sla": "ticket.sla",
+                    "created_at": "ticket.created_at",
+                    "updated_at": "ticket.updated_at"
+                })
+                .leftJoin("users", "users.id", "ticket.id_user")
+                .where("ticket.id_customer", id).orWhere("ticket.id_protocol", id)
         } catch (err) {
             console.log("===>", err)
             return err
