@@ -51,6 +51,44 @@ class EmailController {
             return res.status(400).send({ error: "There was an error" })
         }
     }
+
+    async formatEmail(created_at, sla, id_ticket, userName, department, phase) {
+
+        let timeExpired = moment(created_at).add(sla.time, sla.type)
+        let dateExpired = moment(timeExpired).format("DD/MM/YYYY")
+        let hourExpired = moment(timeExpired).format("HH:mm:ss")
+        return `
+<html>
+    <head>
+        <title></title>
+    </head>
+    <body>
+        <p>Olá, foi aberto o ticket <strong>#${id_ticket}</strong> dia <strong>${moment(created_at).format("DD/MM/YYYY")}</strong> às <strong>${moment(created_at).format("HH:mm:ss")}</strong> por
+            <strong>${userName}</strong> do departamento <strong>${department}</strong>
+        <p>
+        <br><br>
+        <p><strong>Fase</strong> : ${phase}</p>
+        ${texto}
+
+        <br>
+        <p>Acesse dominio.digitalk.com.br no módulo de Backoffice e realize a tratativa desse ticket antes de <strong>${dateExpired}</strong> às
+            ${hourExpired} para garantir o nível de serviço contratado.
+        </p>
+        <br>
+        <p>Caso tenha interesse em registrar um histórico a esse Ticket, também poderá incluir abaixo, após a linha
+            informada.
+        </p>
+
+        <br><br>
+        <p>==========================================================================</p>
+        <p> PARA REGISTRAR UMA OCORRÊNCIA AO TICKET, ESCREVA ABAIXO DESSA LINHA E NÃO MODIFIQUE O TÍTULO. PARA FINALIZAR O
+            TICKET, ENVIE APENAS 'FINALIZAR'
+        </p>
+        <p> ==========================================================================</p>
+
+    </body>
+</html>`
+    }
 }
 
 module.exports = EmailController

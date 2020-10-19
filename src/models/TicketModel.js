@@ -16,7 +16,7 @@ class TicketModel {
             return await database(tableName)
                 .select({
                     id: `${tableName}.id`,
-                    id_ticket: `${tableName}.id_ticket`,
+                    id_ticket: `${tableName}.id_seq`,
                     ids_crm: `${tableName}.ids_crm`,
                     id_customer: `${tableName}.id_customer`,
                     id_protocol: `${tableName}.id_protocol`,
@@ -52,13 +52,15 @@ class TicketModel {
             if (obj.users && obj.users.length > 0) { stringWhere = stringWhere + ` AND users.id_users_core in (${obj.users}) ` }
             if (obj.closed && obj.closed.length > 0) { stringWhere = stringWhere + ` AND ticket.closed in (${obj.closed}) ` }
             if (obj.sla && obj.sla.length > 0) { stringWhere = stringWhere + ` AND ticket.sla in (${obj.sla}) ` }
-            if (obj.range.length > 0) { stringWhere = stringWhere + `AND ticket.created_at beetwen ${obj.range[0]} and ${obj.range[1]} ` }
+            if (obj.range && obj.range.length > 0) { stringWhere = stringWhere + `AND ticket.created_at beetwen ${obj.range[0]} and ${obj.range[1]} ` }
 
             return await database(tableName)
                 .select({
                     id: `${tableName}.id`,
                     sla: `${tableName}.sla`,
-                    id_ticket: `${tableName}.id_ticket`,
+                    id_ticket: `${tableName}.id_seq`,
+                    id_protocol: `${tableName}.id_protocol`,
+                    id_customer: `${tableName}.id_customer`,
                     department: `department.id_department_core`,
                     phase: "phase.name",
                     id_phase: "phase.id",
@@ -149,7 +151,7 @@ class TicketModel {
         try {
             return await database("phase_ticket").select({
                 "id": "ticket.id",
-                "id_ticket": "ticket.id_ticket",
+                "id_ticket": "ticket.id_seq",
                 "ids_crm": "ticket.ids_crm",
                 "id_user": "users.id_users_core",
                 "id_customer": "ticket.id_customer",
@@ -165,6 +167,14 @@ class TicketModel {
                 .andWhere("phase_ticket.active", true)
         } catch (err) {
             console.log("Error when get Ticket by phase =>", err)
+            return err
+        }
+    }
+    async getTicketByCustomerOrProtocol(id) {
+        try {
+            return database(tableName).where("id_customer", id).orWhere("id_protocol", id)
+        } catch (err) {
+            console.log("===>", err)
             return err
         }
     }
