@@ -158,8 +158,6 @@ class TicketController {
                     texto = texto + `<p><strong>${column.label} : </strong>${result[0].form_data[column.column] ? result[0].form_data[column.column] : ''}</p>`
                 }
             }
-            console.log("TicketController -> _notify -> texto", texto)
-
 
             switch (type) {
                 case 3:
@@ -201,7 +199,7 @@ class TicketController {
                     }
                     break;
                 case 4:
-                    let body = await emailController.formatEmail(result[0].created_at, result[0].sla_time, result[0].id_ticket, "Priscila", "Department", resultPhase[0].name)
+                    let body = await emailController.formatEmail(result[0].created_at, result[0].sla_time, result[0].id_ticket, "Priscila", "Department", resultPhase[0].name, texto)
                     let email
                     if (responsiblePhase && responsiblePhase.length > 0) {
                         responsiblePhase.map(async contact => {

@@ -52,7 +52,7 @@ class EmailController {
         }
     }
 
-    async formatEmail(created_at, sla, id_ticket, userName, department, phase) {
+    async formatEmail(created_at, sla, id_ticket, userName, department, phase,texto) {
 
         let timeExpired = moment(created_at).add(sla.time, sla.type)
         let dateExpired = moment(timeExpired).format("DD/MM/YYYY")
