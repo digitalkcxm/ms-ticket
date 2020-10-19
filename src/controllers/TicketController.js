@@ -143,9 +143,9 @@ class TicketController {
             let notifyPhase = await phaseModel.getNotifiedPhase(phase_id)
 
             const resultPhase = await phaseModel.getPhaseById(phase_id, id_company)
-            if (resultPhase[0].id_form_template) {
+            // if (resultPhase[0].id_form_template) {
 
-            }
+            // }
 
             const result = await ticketModel.getTicketById(ticket_id, id_company)
             if (result[0].form) {
@@ -201,6 +201,7 @@ class TicketController {
                     }
                     break;
                 case 4:
+                    let body = await emailController.formatEmail(result[0].created_at, result[0].sla_time, result[0].id_ticket, "Priscila", "Department", resultPhase[0].name)
                     let email
                     if (responsiblePhase && responsiblePhase.length > 0) {
                         responsiblePhase.map(async contact => {
@@ -212,8 +213,6 @@ class TicketController {
                                     "id_phase": phase_id
                                 })
                             } else if (contact.email) {
-                                let body = await emailController.formatEmail(result[0].created_at, result[0].sla_time, result[0].id_ticket, "Priscila", "Department", contact.phase_description)
-
                                 await emailService.sendActiveMenssage(`Ticket ID:${result[0].id_ticket}`, contact.email, body)
                             }
                         })
