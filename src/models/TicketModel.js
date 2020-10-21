@@ -26,6 +26,7 @@ class TicketModel {
                     sla_time: "phase.sla_time",
                     unit_of_time: "phase.id_unit_of_time",
                     form: "phase.form",
+                    closed: `${tableName}.closed`,
                     id_form: `${tableName}.id_form`,
                     created_at: `${tableName}.created_at`,
                     updated_at: `${tableName}.updated_at`
@@ -140,7 +141,15 @@ class TicketModel {
 
     async getAllResponsibleTicket(id_ticket) {
         try {
-            return await database("responsible_ticket").where('id_ticket', id_ticket)
+            return await database("responsible_ticket").select({
+                "id_ticket": "responsible_ticket.id_ticket",
+                "id_user": "responsible_ticket.id_user",
+                "id_users_core": "users.id_users_core",
+                "id_email": "responsible_ticket.id_email",
+                "id_type_of_responsible": "responsible"
+            })
+                .leftJoin("users", "users.id", "responsible_ticket.id_user")
+                .where('id_ticket', id_ticket)
         } catch (err) {
             console.log("Error when get all responsible ticket => ", err)
             return err

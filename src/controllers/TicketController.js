@@ -14,7 +14,6 @@ const redis = asyncRedis.createClient(process.env.REDIS_PORT, process.env.REDIS_
 const moment = require("moment")
 const { v1 } = require("uuid")
 const notify = require("../helpers/Notify")
-const { json } = require("body-parser")
 
 const ticketModel = new TicketModel()
 const userController = new UserController()
@@ -441,10 +440,15 @@ class TicketController {
             if (result.name && result.name == 'error')
                 return res.status(400).send({ error: "There was an error" })
 
-            if (result && result.length > 0)
-                return res.status(200).send(result)
+            if (!result && result.length <= 0)
+                return res.status(400).send({ error: "There was an error" })
 
-            return res.status(400).send({ error: "There was an error" })
+            for (let ticket of result) {
+                let responsibles = ticketModel.getAllResponsibleTicket(id_ticket)
+                
+            }
+
+            return res.status(200).send(result)
         } catch (err) {
             console.log("Error when select ticket by id =>", err)
             return res.status(400).send({ error: "There was an error" })
