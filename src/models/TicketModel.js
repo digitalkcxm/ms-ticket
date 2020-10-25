@@ -23,6 +23,7 @@ class TicketModel {
                     id_company: `${tableName}.id_company`,
                     phase: "phase_ticket.id_phase",
                     id_user: "users.id_users_core",
+                    name: "users.name",
                     sla_time: "phase.sla_time",
                     unit_of_time: "phase.id_unit_of_time",
                     form: "phase.form",

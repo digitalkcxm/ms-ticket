@@ -67,7 +67,7 @@ class PhaseController {
             req.body.responsible.map(async responsible => {
                 let result
                 if (responsible.id) {
-                    result = await userController.checkUserCreated(responsible.id, req.headers.authorization)
+                    result = await userController.checkUserCreated(responsible.id, req.headers.authorization, responsible.name)
                     usersResponsible.push(result.id)
                 } else if (responsible.email) {
                     result = await emailController.checkEmailCreated(responsible.email, req.headers.authorization)
@@ -78,7 +78,7 @@ class PhaseController {
             req.body.notify.map(async notify => {
                 let result
                 if (notify.id) {
-                    result = await userController.checkUserCreated(notify.id, req.headers.authorization)
+                    result = await userController.checkUserCreated(notify.id, req.headers.authorization, responsible.name)
                     usersNotify.push(result.id)
                 } else if (notify.email) {
                     result = await emailController.checkEmailCreated(notify.email, req.headers.authorization)
@@ -191,7 +191,7 @@ class PhaseController {
             req.body.responsible.map(async responsible => {
                 let result
                 if (responsible.id) {
-                    result = await userController.checkUserCreated(responsible.id, req.headers.authorization)
+                    result = await userController.checkUserCreated(responsible.id, req.headers.authorization, responsible.name)
                     usersResponsible.push(result.id)
                 } else if (responsible.email) {
                     result = await emailController.checkEmailCreated(responsible.email, req.headers.authorization)
@@ -202,7 +202,7 @@ class PhaseController {
             req.body.notify.map(async notify => {
                 let result
                 if (notify.id) {
-                    result = await userController.checkUserCreated(notify.id, req.headers.authorization)
+                    result = await userController.checkUserCreated(notify.id, req.headers.authorization, responsible.name)
                     usersNotify.push(result.id)
                 } else if (notify.email) {
                     result = await emailController.checkEmailCreated(notify.email, req.headers.authorization)
