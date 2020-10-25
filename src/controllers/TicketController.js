@@ -14,6 +14,7 @@ const redis = asyncRedis.createClient(process.env.REDIS_PORT, process.env.REDIS_
 const moment = require("moment")
 const { v1 } = require("uuid")
 const notify = require("../helpers/Notify")
+const { models } = require("mongoose")
 
 const ticketModel = new TicketModel()
 const userController = new UserController()
@@ -210,7 +211,9 @@ class TicketController {
                                     "id_phase": phase_id
                                 })
                             } else if (contact.email) {
-                                await emailService.sendActiveMenssage(`Ticket ID:${result[0].id_seq}`, contact.email, body)
+                                email = await emailService.sendActiveMenssage(`Ticket ID:${result[0].id_seq}`, contact.email, body)
+                                await emailModel.createLinkedEmailWithChatId(email.data.chatId, contact.id_email, ticket_id)
+
                             }
                         })
                     }
@@ -224,7 +227,9 @@ class TicketController {
                                     "id_phase": phase_id
                                 })
                             } else if (contact.email) {
-                                await emailService.sendActiveMenssage(`Ticket ID:${result[0].id_seq}`, contact.email, body)
+                                email = await emailService.sendActiveMenssage(`Ticket ID:${result[0].id_seq}`, contact.email, body)
+                                await emailModel.createLinkedEmailWithChatId(email.data.chatId, contact.id_email, ticket_id)
+
                             }
                         })
                     }
@@ -243,7 +248,7 @@ class TicketController {
                             if (emailResponsibleTicket[i]) {
                                 let infoUser = await emailModel.getEmailById(emailResponsibleTicket[i], id_company)
                                 email = await emailService.sendActiveMenssage(`Ticket ID:${result[0].id_seq}`, infoUser[0].email, body)
-                                await this.createLinkedEmailWithChatId(email.data.chatId, emailResponsibleTicket[i], ticket_id)
+                                await emailModel.createLinkedEmailWithChatId(email.data.chatId, emailResponsibleTicket[i], ticket_id)
                             }
                         }
                     }
