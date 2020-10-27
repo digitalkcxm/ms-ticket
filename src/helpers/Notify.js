@@ -1,6 +1,6 @@
 const axios = require("axios")
-module.exports = (notify_token, obj) => {
-    return axios({
+module.exports = async (notify_token, obj) => {
+    return await axios({
         "method": "post",
         "url": process.env.msnotification,
         "headers": {

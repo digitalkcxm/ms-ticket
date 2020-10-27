@@ -204,12 +204,14 @@ class TicketController {
                     if (responsiblePhase && responsiblePhase.length > 0) {
                         responsiblePhase.map(async contact => {
                             if (contact.user_id) {
-                                await notify(notify_token, {
+                                console.log(contact.user_id)
+                                let resultNotify = await notify(notify_token, {
                                     "id_user": contact.id_user_core,
                                     "type": type,
                                     "id_ticket": ticket_id,
                                     "id_phase": phase_id
                                 })
+                                console.log("TicketController -> _notify -> resultNotify", resultNotify)
                             } else if (contact.email) {
                                 email = await emailService.sendActiveMenssage(`Ticket ID:${result[0].id_seq}`, contact.email, body)
                                 await emailModel.createLinkedEmailWithChatId(email.data.chatId, contact.id_email, ticket_id)
@@ -220,12 +222,15 @@ class TicketController {
                     if (notifyPhase && notifyPhase.length > 0) {
                         notifyPhase.map(async contact => {
                             if (contact.user_id) {
-                                await notify(notify_token, {
+                                console.log(contact.user_id)
+
+                                let resultNotify = await notify(notify_token, {
                                     "id_user": contact.id_user_core,
                                     "type": type,
                                     "id_ticket": ticket_id,
                                     "id_phase": phase_id
                                 })
+                                console.log("TicketController -> _notify -> resultNotify", resultNotify)
                             } else if (contact.email) {
                                 email = await emailService.sendActiveMenssage(`Ticket ID:${result[0].id_seq}`, contact.email, body)
                                 await emailModel.createLinkedEmailWithChatId(email.data.chatId, contact.id_email, ticket_id)
@@ -290,12 +295,14 @@ class TicketController {
                 }
                 if (user[i]) {
                     let infoUser = await userModel.getById(user[i], id_company)
-                    await notify(notify_token, {
+                    console.log("TicketController -> _notifyUser -> infoUser", infoUser)
+                    let resultNotify = await notify(notify_token, {
                         "id_user": infoUser[0].id_user_core,
                         "type": type,
                         "id_ticket": id_ticket,
                         "id_phase": id_phase
                     })
+                    console.log("TicketController -> _notify -> resultNotify", resultNotify)
                 }
             }
 
