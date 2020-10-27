@@ -21,7 +21,8 @@ class TicketModel {
                     id_customer: `${tableName}.id_customer`,
                     id_protocol: `${tableName}.id_protocol`,
                     id_company: `${tableName}.id_company`,
-                    phase: "phase_ticket.id_phase",
+                    phase_id: "phase_ticket.id_phase",
+                    phase: "phase.name",
                     id_user: "users.id_users_core",
                     name: "users.name",
                     sla_time: "phase.sla_time",
@@ -180,6 +181,7 @@ class TicketModel {
             return err
         }
     }
+
     async getTicketByCustomerOrProtocol(id) {
         try {
             return database(tableName)
@@ -199,6 +201,15 @@ class TicketModel {
                 .where("ticket.id_customer", id).orWhere("ticket.id_protocol", id)
         } catch (err) {
             console.log("===>", err)
+            return err
+        }
+    }
+
+    async last_interaction() {
+        try {
+            return await database("activities_ticket").select("users.name").leftJoin("users", "users.id", "activities_ticket.id_user").orderBy("activities_ticket.created_at", desc).limit(1)
+        } catch (err) {
+            console.log("====Error last interaction ===>", err)
             return err
         }
     }

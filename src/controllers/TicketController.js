@@ -421,6 +421,11 @@ class TicketController {
                 delete result[0].form
                 delete result[0].id_form
             }
+            let last_interaction = await ticketModel.last_interaction()
+            if (last_interaction && last_interaction.length > 0) {
+                result[0].last_interaction = last_interaction[0].name
+            } else { result[0].last_interaction = null }
+
             if (result && result.length > 0) {
                 delete result[0].id_company
                 return res.status(200).send(result)
