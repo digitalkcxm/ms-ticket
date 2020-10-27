@@ -33,6 +33,7 @@ class TicketController {
                 return res.status(400).send({ error: "Whitout id_user, please inform your user_id " })
 
             let id_user = await userController.checkUserCreated(req.body.id_user, req.headers.authorization)
+
             if (!id_user || !id_user.id)
                 return res.status(400).send({ error: "Error when get user by id" })
 
@@ -96,6 +97,7 @@ class TicketController {
 
             if (result && result.length > 0 && result[0].id) {
                 delete obj.id_company
+                obj.id_seq = ticket[0].id_seq
                 return res.status(200).send(obj)
             }
 
@@ -148,7 +150,9 @@ class TicketController {
             // }
 
             const result = await ticketModel.getTicketById(ticket_id, id_company)
+            console.log("TicketController -> _notify -> result", result)
             if (result[0].form) {
+                console.log("TESTE 3")
                 result[0].form_data = await new FormDocuments(db).findRegister(result[0].id_form)
                 delete result[0].form
                 delete result[0].id_form
@@ -158,6 +162,7 @@ class TicketController {
                     texto = texto + `<p><strong>${column.label} : </strong>${result[0].form_data[column.column] ? result[0].form_data[column.column] : ''}</p>`
                 }
             }
+            console.log("TicketController -> _notify -> type", type)
 
             switch (type) {
                 case 3:
@@ -203,8 +208,9 @@ class TicketController {
                     let email
                     if (responsiblePhase && responsiblePhase.length > 0) {
                         responsiblePhase.map(async contact => {
-                            if (contact.user_id) {
-                                console.log(contact.user_id)
+                            console.log("TicketController -> _notify -> contact", contact)
+                            if (contact.id_user) {
+                                console.log(contact.id_user)
                                 let resultNotify = await notify(notify_token, {
                                     "id_user": contact.id_user_core,
                                     "type": type,
@@ -213,16 +219,16 @@ class TicketController {
                                 })
                                 console.log("TicketController -> _notify -> resultNotify", resultNotify)
                             } else if (contact.email) {
-                                email = await emailService.sendActiveMenssage(`Ticket ID:${result[0].id_seq}`, contact.email, body)
-                                await emailModel.createLinkedEmailWithChatId(email.data.chatId, contact.id_email, ticket_id)
+                                // email = await emailService.sendActiveMenssage(`Ticket ID:${result[0].id_seq}`, contact.email, body)
+                                // await emailModel.createLinkedEmailWithChatId(email.data.chatId, contact.id_email, ticket_id)
 
                             }
                         })
                     }
                     if (notifyPhase && notifyPhase.length > 0) {
                         notifyPhase.map(async contact => {
-                            if (contact.user_id) {
-                                console.log(contact.user_id)
+                            if (contact.id_user) {
+                                console.log(contact.id_user)
 
                                 let resultNotify = await notify(notify_token, {
                                     "id_user": contact.id_user_core,

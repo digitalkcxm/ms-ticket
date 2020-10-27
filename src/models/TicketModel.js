@@ -170,7 +170,8 @@ class TicketModel {
                 "closed": "ticket.closed",
                 "sla": "ticket.sla",
                 "id_form": `ticket.id_form`,
-
+                "created_at":"ticket.created_at",
+                "updated_at":"ticket.updated_at"
             })
                 .leftJoin("ticket", "ticket.id", "phase_ticket.id_ticket")
                 .leftJoin("users", "users.id", "ticket.id_user")
