@@ -16,12 +16,10 @@ class FormDocuments {
     }
 
     async findRegister(id) {
-        console.log("FormDocuments -> findRegister -> id", id)
         try {
             id = JSON.parse(id)
-            const result = await this._db.collection(collection).findOne({ _id: ObjectID(id) })
-            console.log(result)
-            return result
+            return await this._db.collection(collection).findOne({ _id: ObjectID(id) })
+
         } catch (err) {
             console.log("Find Form register=>", err)
             return err
