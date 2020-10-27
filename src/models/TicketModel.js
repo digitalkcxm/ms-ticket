@@ -170,8 +170,8 @@ class TicketModel {
                 "closed": "ticket.closed",
                 "sla": "ticket.sla",
                 "id_form": `ticket.id_form`,
-                "created_at":"ticket.created_at",
-                "updated_at":"ticket.updated_at"
+                "created_at": "ticket.created_at",
+                "updated_at": "ticket.updated_at"
             })
                 .leftJoin("ticket", "ticket.id", "phase_ticket.id_ticket")
                 .leftJoin("users", "users.id", "ticket.id_user")
@@ -209,6 +209,14 @@ class TicketModel {
     async last_interaction() {
         try {
             return await database("activities_ticket").select("users.name").leftJoin("users", "users.id", "activities_ticket.id_user").orderBy("activities_ticket.created_at", desc).limit(1)
+        } catch (err) {
+            console.log("====Error last interaction ===>", err)
+            return err
+        }
+    }
+    async first_interaction(id) {
+        try {
+            return await database("activities_ticket").select("created_at").where('id_ticket', id).orderBy("created_at", "asc").limit(1)
         } catch (err) {
             console.log("====Error last interaction ===>", err)
             return err

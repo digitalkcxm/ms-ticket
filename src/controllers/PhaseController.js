@@ -134,6 +134,10 @@ class PhaseController {
                 result[i].ticket = await ticketModel.getTicketByPhase(result[i].id)
                 if (result[i].ticket.length > 0) {
                     for (let ticket of result[i].ticket) {
+                        const typeMoment = await new UnitOfTimeModel().checkUnitOfTime(result[i].id_unit_of_time)
+                        // let first_interaction = await ticketModel.first_interaction(id)
+                        ticket.countSLA = moment(ticket.created_at).add(result[i].sla_time, typeMoment)
+                        ticket.countSLA = moment(ticket.countSLA).format("DD/MM/YYYY HH:mm:ss")
                         if (ticket.id_form) {
                             ticket.form_data = await new FormDocuments(req.app.locals.db).findRegister(ticket.id_form)
                             delete ticket.id_form
