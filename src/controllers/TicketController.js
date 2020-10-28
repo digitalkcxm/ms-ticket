@@ -172,7 +172,7 @@ class TicketController {
                     if (phaseInfo[0] && phaseInfo[0].responsible_notify_sla) {
                         if (responsiblePhase && responsiblePhase.length > 0) {
                             responsiblePhase.map(async contact => {
-                                if (contact.user_id) {
+                                if (contact.id_user) {
                                     await notify(notify_token, {
                                         "id_user": contact.id_user_core,
                                         "type": type,
@@ -220,8 +220,8 @@ class TicketController {
                                 })
                                 console.log("TicketController -> _notify -> resultNotify", resultNotify)
                             } else if (contact.email) {
-                                // email = await emailService.sendActiveMenssage(`Ticket ID:${result[0].id_seq}`, contact.email, body)
-                                // await emailModel.createLinkedEmailWithChatId(email.data.chatId, contact.id_email, ticket_id)
+                                email = await emailService.sendActiveMenssage(`Ticket ID:${result[0].id_seq}`, contact.email, body)
+                                await emailModel.createLinkedEmailWithChatId(email.data.chatId, contact.id_email, ticket_id)
 
                             }
                         })

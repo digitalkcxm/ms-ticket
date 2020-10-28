@@ -88,7 +88,7 @@ class EmailController {
         ${texto}
 
         <br>
-        <p>Acesse dominio.digitalk.com.br no módulo de Backoffice e realize a tratativa desse ticket antes de <strong>${dateExpired}</strong> às
+        <p>Acesse pshomol.digitalk.com.br no módulo de Backoffice e realize a tratativa desse ticket antes de <strong>${dateExpired}</strong> às
             ${hourExpired} para garantir o nível de serviço contratado.
         </p>
         <br>
