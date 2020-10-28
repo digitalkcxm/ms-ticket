@@ -10,6 +10,7 @@ const FormTemplate = require("../documents/FormTemplate")
 const FormDocuments = require("../documents/FormDocuments")
 const asyncRedis = require('async-redis')
 const redis = asyncRedis.createClient(process.env.REDIS_PORT, process.env.REDIS_HOST)
+const UnitOfTimeModel = require("../models/UnitOfTimeModel")
 
 const moment = require("moment")
 const { v1 } = require("uuid")
@@ -434,6 +435,12 @@ class TicketController {
                 delete result[0].form
                 delete result[0].id_form
             }
+            const typeMoment = await new UnitOfTimeModel().checkUnitOfTime(result[0].unit_of_time)
+            result[0].countSLA = moment(result[0].created_at).add(result[0].sla_time, typeMoment)
+            result[0].countSLA = moment(result[0].countSLA).format("DD/MM/YYYY HH:mm:ss")
+            let first_interaction = await ticketModel.first_interaction(result[0].id)
+            first_interaction ? result[0].first_message = moment(first_interaction).format("DD/MM/YYYY HH:mm:ss") : null
+
             let last_interaction = await ticketModel.last_interaction()
             if (last_interaction && last_interaction.length > 0) {
                 result[0].last_interaction = last_interaction[0].name
@@ -654,6 +661,12 @@ class TicketController {
         try {
             let result = await ticketModel.getTicketByCustomerOrProtocol(req.params.id)
 
+            const typeMoment = await new UnitOfTimeModel().checkUnitOfTime(result[0].unit_of_time)
+            result[0].countSLA = moment(result[0].created_at).add(result[0].sla_time, typeMoment)
+            result[0].countSLA = moment(result[0].countSLA).format("DD/MM/YYYY HH:mm:ss")
+            let first_interaction = await ticketModel.first_interaction(result[0].id)
+            first_interaction ? result[0].first_message = moment(first_interaction).format("DD/MM/YYYY HH:mm:ss") : null
+            
             if (!result && result.length <= 0)
                 return res.status(400).send({ error: "There was an error" })
 
