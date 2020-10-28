@@ -661,12 +661,14 @@ class TicketController {
         try {
             let result = await ticketModel.getTicketByCustomerOrProtocol(req.params.id)
 
-            const typeMoment = await new UnitOfTimeModel().checkUnitOfTime(result[0].unit_of_time)
-            result[0].countSLA = moment(result[0].created_at).add(result[0].sla_time, typeMoment)
-            result[0].countSLA = moment(result[0].countSLA).format("DD/MM/YYYY HH:mm:ss")
-            let first_interaction = await ticketModel.first_interaction(result[0].id)
-            first_interaction ? result[0].first_message = moment(first_interaction).format("DD/MM/YYYY HH:mm:ss") : null
-            
+            for (let ticket of result) {
+                const typeMoment = await new UnitOfTimeModel().checkUnitOfTime(ticket.unit_of_time)
+                ticket.countSLA = moment(ticket.created_at).add(ticket.sla_time, typeMoment)
+                ticket.countSLA = moment(ticket.countSLA).format("DD/MM/YYYY HH:mm:ss")
+                let first_interaction = await ticketModel.first_interaction(ticket.id)
+                first_interaction ? ticket.first_message = moment(first_interaction).format("DD/MM/YYYY HH:mm:ss") : null
+            }
+
             if (!result && result.length <= 0)
                 return res.status(400).send({ error: "There was an error" })
 
