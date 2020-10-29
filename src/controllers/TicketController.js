@@ -678,6 +678,23 @@ class TicketController {
             return res.status(400).send({ error: "There was an error" })
         }
     }
+
+    async ticketStatusCount(req, res) {
+        try {
+            let result = await ticketModel.getTicketStatusCount()
+            console.log('result', result)
+
+            if (result.length < 0) {
+                return res.status(400).send({error: "There is no status to return"})
+            }
+
+            return res.status(200).json({ticket_status: result})
+        }
+        catch(err) {
+            console.log("status ====>", err)
+            return res.status(400).send({ error: "There was an error while trying to obtain status" })
+        }
+    }
 }
 
 module.exports = TicketController

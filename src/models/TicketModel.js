@@ -226,6 +226,16 @@ class TicketModel {
             return err
         }
     }
+
+    async getTicketStatusCount() {
+        try {
+            return await database("vw_dash_tickets").select("*")
+        }
+        catch(err) {
+            console.log("status ====>", err)
+            return res.status(400).send({ error: "There was an error while trying to obtain status count of tickets" })
+        }
+    }
 }
 
 module.exports = TicketModel
