@@ -358,7 +358,7 @@ class TicketController {
                         emailResponsibleTicket.push(value.id_email)
                     }
                 })
-                this._notify(ticket[0].phase_id, req.company[0].notify_token, req.body.id_ticket, userResponsibleTicket, emailResponsibleTicket, ticket[0].id_company, 5, req.app.locals.db)
+                // this._notify(ticket[0].phase_id, req.company[0].notify_token, req.body.id_ticket, userResponsibleTicket, emailResponsibleTicket, ticket[0].id_company, 5, req.app.locals.db)
                 return res.status(200).send(obj)
             }
 
@@ -439,7 +439,7 @@ class TicketController {
             result[0].countSLA = moment(result[0].created_at).add(result[0].sla_time, typeMoment)
             result[0].countSLA = moment(result[0].countSLA).format("DD/MM/YYYY HH:mm:ss")
             let first_interaction = await ticketModel.first_interaction(result[0].id)
-            first_interaction ? result[0].first_message = moment(first_interaction).format("DD/MM/YYYY HH:mm:ss") : null
+            first_interaction.length ? result[0].first_message = moment(first_interaction[0].created_at).format("DD/MM/YYYY HH:mm:ss") : null
 
             let last_interaction = await ticketModel.last_interaction()
             if (last_interaction && last_interaction.length > 0) {
@@ -666,7 +666,7 @@ class TicketController {
                 ticket.countSLA = moment(ticket.created_at).add(ticket.sla_time, typeMoment)
                 ticket.countSLA = moment(ticket.countSLA).format("DD/MM/YYYY HH:mm:ss")
                 let first_interaction = await ticketModel.first_interaction(ticket.id)
-                first_interaction ? ticket.first_message = moment(first_interaction).format("DD/MM/YYYY HH:mm:ss") : null
+                first_interaction.length ? ticket.first_message = moment(first_interaction[0].created_at).format("DD/MM/YYYY HH:mm:ss") : null
             }
 
             if (!result && result.length <= 0)
