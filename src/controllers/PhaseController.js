@@ -161,7 +161,7 @@ class PhaseController {
                         if (last_interaction && last_interaction.length) {
                             ticket.last_message = last_interaction[0]
                             ticket.last_message.created_at = moment(ticket.last_message.created_at).format("DD/MM/YYYY HH:mm:ss")
-                        }                        
+                        }
                     }
                 }
                 const responsibles = await phaseModel.getResponsiblePhaseByIdPhase(result[i].id)
