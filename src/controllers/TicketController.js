@@ -358,7 +358,7 @@ class TicketController {
                         emailResponsibleTicket.push(value.id_email)
                     }
                 })
-                this._notify(ticket[0].id_phasae, req.company[0].notify_token, req.body.id_ticket, userResponsibleTicket, emailResponsibleTicket, id_company, 5, req.app.locals.db)
+                this._notify(ticket[0].phase_id, req.company[0].notify_token, req.body.id_ticket, userResponsibleTicket, emailResponsibleTicket, ticket[0].id_company, 5, req.app.locals.db)
                 return res.status(200).send(obj)
             }
 

@@ -148,7 +148,7 @@ class TicketModel {
                 "id_user": "responsible_ticket.id_user",
                 "id_users_core": "users.id_users_core",
                 "id_email": "responsible_ticket.id_email",
-                "id_type_of_responsible": "responsible"
+                "id_type_of_responsible": "responsible_ticket.id_type_of_responsible"
             })
                 .leftJoin("users", "users.id", "responsible_ticket.id_user")
                 .where('id_ticket', id_ticket)
