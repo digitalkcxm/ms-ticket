@@ -150,7 +150,7 @@ class PhaseController {
                         ticket.countSLA = moment(ticket.created_at).add(result[i].sla_time, typeMoment)
                         ticket.countSLA = moment(ticket.countSLA).format("DD/MM/YYYY HH:mm:ss")
                         let first_interaction = await ticketModel.first_interaction(ticket.id)
-                        first_interaction ? ticket.first_message = moment(first_interaction).format("DD/MM/YYYY HH:mm:ss") : null
+                        first_interaction.length ? ticket.first_message = moment(first_interaction[0].created_at).format("DD/MM/YYYY HH:mm:ss") : null
 
                         if (ticket.id_form) {
                             ticket.form_data = await new FormDocuments(req.app.locals.db).findRegister(ticket.id_form)
