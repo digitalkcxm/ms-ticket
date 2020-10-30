@@ -119,7 +119,7 @@ class PhaseController {
                 ticket.countSLA = moment(ticket.created_at).add(result[0].sla_time, typeMoment)
                 ticket.countSLA = moment(ticket.countSLA).format("DD/MM/YYYY HH:mm:ss")
                 let first_interaction = await ticketModel.first_interaction(ticket.id)
-                first_interaction ? ticket.first_message = moment(first_interaction).format("DD/MM/YYYY HH:mm:ss") : null
+                first_interaction.length ? ticket.first_message = moment(first_interaction[0].created_at).format("DD/MM/YYYY HH:mm:ss") : null
 
                 if (ticket.id_form) {
                     ticket.form_data = await new FormDocuments(req.app.locals.db).findRegister(ticket.id_form)
@@ -150,11 +150,17 @@ class PhaseController {
                         ticket.countSLA = moment(ticket.created_at).add(result[i].sla_time, typeMoment)
                         ticket.countSLA = moment(ticket.countSLA).format("DD/MM/YYYY HH:mm:ss")
                         let first_interaction = await ticketModel.first_interaction(ticket.id)
-                        first_interaction ? ticket.first_message = moment(first_interaction).format("DD/MM/YYYY HH:mm:ss") : null
+                        first_interaction.length ? ticket.first_message = moment(first_interaction[0].created_at).format("DD/MM/YYYY HH:mm:ss") : null
 
                         if (ticket.id_form) {
                             ticket.form_data = await new FormDocuments(req.app.locals.db).findRegister(ticket.id_form)
                             delete ticket.id_form
+                        }
+
+                        let last_interaction = await ticketModel.last_interaction_ticket(ticket.id)
+                        if (last_interaction && last_interaction.length) {
+                            ticket.last_message = last_interaction[0]
+                            ticket.last_message.created_at = moment(ticket.last_message.created_at).format("DD/MM/YYYY HH:mm:ss")
                         }
                     }
                 }

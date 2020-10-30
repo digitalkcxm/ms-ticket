@@ -148,7 +148,7 @@ class TicketModel {
                 "id_user": "responsible_ticket.id_user",
                 "id_users_core": "users.id_users_core",
                 "id_email": "responsible_ticket.id_email",
-                "id_type_of_responsible": "responsible"
+                "id_type_of_responsible": "responsible_ticket.id_type_of_responsible"
             })
                 .leftJoin("users", "users.id", "responsible_ticket.id_user")
                 .where('id_ticket', id_ticket)
@@ -223,6 +223,14 @@ class TicketModel {
             return await database("activities_ticket").select("created_at").where('id_ticket', id).orderBy("created_at", "asc").limit(1)
         } catch (err) {
             console.log("====Error last interaction ===>", err)
+            return err
+        }
+    }
+    async last_interaction_ticket(id) {
+        try {
+            return await database("activities_ticket").select(["users.id_users_core", "activities_ticket.created_at"]).leftJoin("users", "users.id", "activities_ticket.id_user").where('id_ticket', id).orderBy("activities_ticket.created_at", "desc").limit(1)
+        } catch (err) {
+            console.log("====Error last interaction ticket ===>", err)
             return err
         }
     }
