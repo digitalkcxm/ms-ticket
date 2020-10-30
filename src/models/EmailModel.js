@@ -32,7 +32,11 @@ class EmailModel {
 
     async createLinkedEmailWithChatId(chat_id, id_email, id_ticket) {
         try {
-            return await database("ticket_email_id").returning(["id"]).insert(obj)
+            return await database("ticket_email_id").returning(["id"]).insert({
+                "id_ticket": id_ticket,
+                "chat_id": chat_id,
+                "id_email": id_email
+            })
         } catch (err) {
             console.log("Error when link email with chat_id => ", err)
             return err

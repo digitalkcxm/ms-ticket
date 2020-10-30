@@ -67,7 +67,7 @@ class PhaseController {
             req.body.responsible.map(async responsible => {
                 let result
                 if (responsible.id) {
-                    result = await userController.checkUserCreated(responsible.id, req.headers.authorization)
+                    result = await userController.checkUserCreated(responsible.id, req.headers.authorization, responsible.name)
                     usersResponsible.push(result.id)
                 } else if (responsible.email) {
                     result = await emailController.checkEmailCreated(responsible.email, req.headers.authorization)
@@ -78,7 +78,7 @@ class PhaseController {
             req.body.notify.map(async notify => {
                 let result
                 if (notify.id) {
-                    result = await userController.checkUserCreated(notify.id, req.headers.authorization)
+                    result = await userController.checkUserCreated(notify.id, req.headers.authorization, responsible.name)
                     usersNotify.push(result.id)
                 } else if (notify.email) {
                     result = await emailController.checkEmailCreated(notify.email, req.headers.authorization)
@@ -114,6 +114,18 @@ class PhaseController {
                 return res.status(400).send({ error: "Invalid id phase" })
 
             result[0].ticket = await ticketModel.getTicketByPhase(req.params.id)
+            for (let ticket of result[0].ticket) {
+                const typeMoment = await new UnitOfTimeModel().checkUnitOfTime(result[0].id_unit_of_time)
+                ticket.countSLA = moment(ticket.created_at).add(result[0].sla_time, typeMoment)
+                ticket.countSLA = moment(ticket.countSLA).format("DD/MM/YYYY HH:mm:ss")
+                let first_interaction = await ticketModel.first_interaction(ticket.id)
+                first_interaction ? ticket.first_message = moment(first_interaction).format("DD/MM/YYYY HH:mm:ss") : null
+
+                if (ticket.id_form) {
+                    ticket.form_data = await new FormDocuments(req.app.locals.db).findRegister(ticket.id_form)
+                    delete ticket.id_form
+                }
+            }
             const register = await new FormTemplate(req.app.locals.db).findRegistes(result[0].id_form_template)
             result[0].formTemplate = register.column
             return res.status(200).send(result)
@@ -134,6 +146,12 @@ class PhaseController {
                 result[i].ticket = await ticketModel.getTicketByPhase(result[i].id)
                 if (result[i].ticket.length > 0) {
                     for (let ticket of result[i].ticket) {
+                        const typeMoment = await new UnitOfTimeModel().checkUnitOfTime(result[i].id_unit_of_time)
+                        ticket.countSLA = moment(ticket.created_at).add(result[i].sla_time, typeMoment)
+                        ticket.countSLA = moment(ticket.countSLA).format("DD/MM/YYYY HH:mm:ss")
+                        let first_interaction = await ticketModel.first_interaction(ticket.id)
+                        first_interaction ? ticket.first_message = moment(first_interaction).format("DD/MM/YYYY HH:mm:ss") : null
+
                         if (ticket.id_form) {
                             ticket.form_data = await new FormDocuments(req.app.locals.db).findRegister(ticket.id_form)
                             delete ticket.id_form
@@ -191,7 +209,7 @@ class PhaseController {
             req.body.responsible.map(async responsible => {
                 let result
                 if (responsible.id) {
-                    result = await userController.checkUserCreated(responsible.id, req.headers.authorization)
+                    result = await userController.checkUserCreated(responsible.id, req.headers.authorization, responsible.name)
                     usersResponsible.push(result.id)
                 } else if (responsible.email) {
                     result = await emailController.checkEmailCreated(responsible.email, req.headers.authorization)
@@ -202,7 +220,7 @@ class PhaseController {
             req.body.notify.map(async notify => {
                 let result
                 if (notify.id) {
-                    result = await userController.checkUserCreated(notify.id, req.headers.authorization)
+                    result = await userController.checkUserCreated(notify.id, req.headers.authorization, responsible.name)
                     usersNotify.push(result.id)
                 } else if (notify.email) {
                     result = await emailController.checkEmailCreated(notify.email, req.headers.authorization)

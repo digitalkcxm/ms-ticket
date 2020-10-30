@@ -1,11 +1,18 @@
 const axios = require("axios")
-module.exports = (notify_token, obj) => {
-    return axios({
-        "method": "post",
-        "url": "https://581e4c7665a7.ngrok.io/api/v1/notification/ticket",
-        "headers": {
-            "Authorization": notify_token
-        },
-        "data": obj
-    })
+module.exports = async (notify_token, obj) => {
+    try {
+        return await axios({
+            "method": "post",
+            "url": `${process.env.MSNOTIFICATION}`,
+            "headers": {
+                "Authorization": notify_token
+            },
+            "data": obj
+        })
+    } catch (err) {
+        console.log("err", err)
+        return err
+    }
+
 }
+
