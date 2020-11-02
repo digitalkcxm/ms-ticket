@@ -274,7 +274,7 @@ class TicketController {
                         for (let i = 0; i < emailResponsibleTicket.length; i++) {
                             if (emailResponsibleTicket[i]) {
                                 let infoUser = await emailModel.getEmailById(emailResponsibleTicket[i], id_company)
-                                await emailService.sendActiveMenssage(`Ticket ID:${result[0].id_ticket}`, infoUser[0].email, `Você foi alertado em um dos seus tickets  <br><br> ${texto}`)
+                                await emailService.sendActiveMenssage(`Ticket ID:${result[0].id_seq}`, infoUser[0].email, `Você foi alertado em um dos seus tickets  <br><br> ${texto}`)
                             }
                         }
                     }
@@ -304,7 +304,7 @@ class TicketController {
                     let infoUser = await userModel.getById(user[i], id_company)
                     console.log("TicketController -> _notifyUser -> infoUser", infoUser)
                     let resultNotify = await notify(notify_token, {
-                        "id_user": infoUser[0].id_user_core,
+                        "id_user": infoUser[0].id_users_core,
                         "type": type,
                         "id_ticket": id_ticket,
                         "id_phase": id_phase
