@@ -358,7 +358,7 @@ class TicketController {
                         emailResponsibleTicket.push(value.id_email)
                     }
                 })
-                // this._notify(ticket[0].phase_id, req.company[0].notify_token, req.body.id_ticket, userResponsibleTicket, emailResponsibleTicket, ticket[0].id_company, 5, req.app.locals.db)
+                this._notify(ticket[0].phase_id, req.company[0].notify_token, req.body.id_ticket, userResponsibleTicket, emailResponsibleTicket, ticket[0].id_company, 5, req.app.locals.db)
                 return res.status(200).send(obj)
             }
 
@@ -412,7 +412,7 @@ class TicketController {
                         emailResponsibleTicket.push(value.id_email)
                     }
                 })
-                this._notify(ticket[0].id_phasae, req.company[0].notify_token, req.body.id_ticket, userResponsibleTicket, emailResponsibleTicket, id_company, 5, req.app.locals.db)
+                await this._notify(ticket[0].phase_id, req.company[0].notify_token, req.body.id_ticket, userResponsibleTicket, emailResponsibleTicket, id_company, 5, req.app.locals.db)
 
                 return res.status(200).send(obj)
             }
@@ -684,18 +684,18 @@ class TicketController {
             let result = await ticketModel.getTicketStatusCount()
 
             if (result.length < 0) {
-                return res.status(400).send({error: "There is no status to return"})
+                return res.status(400).send({ error: "There is no status to return" })
             }
 
             const retorno = {
-              tickets_abertos: parseInt(result[0].tickets_abertos),
-              tickets_respondidos: parseInt(result[0].tickets_respondidos),
-              tickets_atrasados: parseInt(result[0].tickets_atrasados)
+                tickets_abertos: parseInt(result[0].tickets_abertos),
+                tickets_respondidos: parseInt(result[0].tickets_respondidos),
+                tickets_atrasados: parseInt(result[0].tickets_atrasados)
             }
 
             return res.status(200).json(retorno)
         }
-        catch(err) {
+        catch (err) {
             console.log("status ====>", err)
             return res.status(400).send({ error: "There was an error while trying to obtain status" })
         }
