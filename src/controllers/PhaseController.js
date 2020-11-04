@@ -136,6 +136,7 @@ class PhaseController {
     }
 
     async getAllPhase(req, res) {
+        const search = (req.query.search) ? req.query.search : ''
         try {
             const result = await phaseModel.getAllPhase(req.headers.authorization)
 
@@ -143,7 +144,7 @@ class PhaseController {
                 const arrayResponsible = []
                 const arrayNotify = []
 
-                result[i].ticket = await ticketModel.getTicketByPhase(result[i].id)
+                result[i].ticket = await ticketModel.getTicketByPhase(result[i].id, search)
                 if (result[i].ticket.length > 0) {
                     for (let ticket of result[i].ticket) {
                         const typeMoment = await new UnitOfTimeModel().checkUnitOfTime(result[i].id_unit_of_time)
