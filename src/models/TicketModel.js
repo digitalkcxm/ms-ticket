@@ -178,7 +178,7 @@ class TicketModel {
                 .where("phase_ticket.id_phase", id_phase)
                 .andWhere("phase_ticket.active", true)
                 .where((builder) => {
-                    if (search) builder.where("ticket.id", search).orWhere("ticket.id_protocol", search)
+                    if (search) builder.where("ticket.id_seq", search).orWhere("ticket.id_protocol", search)
                 })
         } catch (err) {
             console.log("Error when get Ticket by phase =>", err)
