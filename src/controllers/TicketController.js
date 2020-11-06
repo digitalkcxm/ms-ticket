@@ -221,8 +221,8 @@ class TicketController {
                                 console.log("TicketController -> _notify -> resultNotify", resultNotify)
                             } else if (contact.email) {
                                 email = await emailService.sendActiveMenssage(`Ticket ID:${result[0].id_seq}`, contact.email, body)
-                                await emailModel.createLinkedEmailWithChatId(email.data.chatId, contact.id_email, ticket_id)
-
+                                if (email.data && email.data.chatId)
+                                    await emailModel.createLinkedEmailWithChatId(email.data.chatId, contact.id_email, ticket_id)
                             }
                         })
                     }
@@ -240,7 +240,8 @@ class TicketController {
                                 console.log("TicketController -> _notify -> resultNotify", resultNotify)
                             } else if (contact.email) {
                                 email = await emailService.sendActiveMenssage(`Ticket ID:${result[0].id_seq}`, contact.email, body)
-                                await emailModel.createLinkedEmailWithChatId(email.data.chatId, contact.id_email, ticket_id)
+                                if (email.data && email.data.chatId)
+                                    await emailModel.createLinkedEmailWithChatId(email.data.chatId, contact.id_email, ticket_id)
 
                             }
                         })
@@ -260,7 +261,8 @@ class TicketController {
                             if (emailResponsibleTicket[i]) {
                                 let infoUser = await emailModel.getEmailById(emailResponsibleTicket[i], id_company)
                                 email = await emailService.sendActiveMenssage(`Ticket ID:${result[0].id_seq}`, infoUser[0].email, body)
-                                await emailModel.createLinkedEmailWithChatId(email.data.chatId, emailResponsibleTicket[i], ticket_id)
+                                if (email.data && email.data.chatId)
+                                    await emailModel.createLinkedEmailWithChatId(email.data.chatId, emailResponsibleTicket[i], ticket_id)
                             }
                         }
                     }
