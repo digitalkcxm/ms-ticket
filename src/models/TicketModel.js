@@ -242,9 +242,37 @@ class TicketModel {
         try {
             return await database("vw_dash_tickets").select("*")
         }
-        catch(err) {
+        catch (err) {
             console.log("status ====>", err)
             return res.status(400).send({ error: "There was an error while trying to obtain status count of tickets" })
+        }
+    }
+
+    async getTicketByIDForm(id_form, id_phase) {
+        try {
+            const data = await database("phase_ticket").select({
+                "id": "ticket.id",
+                "id_seq": "ticket.id_seq",
+                "ids_crm": "ticket.ids_crm",
+                "id_user": "users.id_users_core",
+                "id_customer": "ticket.id_customer",
+                "id_protocol": "ticket.id_protocol",
+                "closed": "ticket.closed",
+                "sla": "ticket.sla",
+                "id_form": `ticket.id_form`,
+                "created_at": "ticket.created_at",
+                "updated_at": "ticket.updated_at"
+            })
+                .leftJoin("ticket", "ticket.id", "phase_ticket.id_ticket")
+                .leftJoin("users", "users.id", "ticket.id_user")
+                .where("phase_ticket.id_phase", id_phase)
+                .andWhere("phase_ticket.active", true)
+                .where("ticket.id_form", id_form)
+
+            return data[0]
+        } catch (err) {
+            console.log("Error when select ticket by id Form ====>", err)
+            return err
         }
     }
 }

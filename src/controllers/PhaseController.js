@@ -140,52 +140,162 @@ class PhaseController {
         try {
             const result = await phaseModel.getAllPhase(req.headers.authorization)
 
-            for (let i in result) {
-                const arrayResponsible = []
-                const arrayNotify = []
+            if (search) {
+                if (isNaN(search)) {
+                    const searchMongo = await new FormDocuments(req.app.locals.db).searchRegister(search)
 
-                result[i].ticket = await ticketModel.getTicketByPhase(result[i].id, search)
-                if (result[i].ticket.length > 0) {
-                    for (let ticket of result[i].ticket) {
-                        const typeMoment = await new UnitOfTimeModel().checkUnitOfTime(result[i].id_unit_of_time)
-                        ticket.countSLA = moment(ticket.created_at).add(result[i].sla_time, typeMoment)
-                        ticket.countSLA = moment(ticket.countSLA).format("DD/MM/YYYY HH:mm:ss")
-                        let first_interaction = await ticketModel.first_interaction(ticket.id)
-                        first_interaction.length ? ticket.first_message = moment(first_interaction[0].created_at).format("DD/MM/YYYY HH:mm:ss") : null
+                    for (let i in result) {
 
-                        if (ticket.id_form) {
-                            ticket.form_data = await new FormDocuments(req.app.locals.db).findRegister(ticket.id_form)
-                            delete ticket.id_form
+                        const arrayResponsible = []
+                        const arrayNotify = []
+                        result[i].ticket = []
+
+                        for (const mongoResult of searchMongo) {
+                            let ticket = await ticketModel.getTicketByIDForm(mongoResult._id, result[i].id)
+                            if (ticket) {
+                                const typeMoment = await new UnitOfTimeModel().checkUnitOfTime(result[i].id_unit_of_time)
+                                ticket.countSLA = moment(ticket.created_at).add(result[i].sla_time, typeMoment)
+                                ticket.countSLA = moment(ticket.countSLA).format("DD/MM/YYYY HH:mm:ss")
+                                let first_interaction = await ticketModel.first_interaction(ticket.id)
+                                first_interaction.length ? ticket.first_message = moment(first_interaction[0].created_at).format("DD/MM/YYYY HH:mm:ss") : null
+
+                                if (ticket.id_form) {
+                                    ticket.form_data = await new FormDocuments(req.app.locals.db).findRegister(ticket.id_form)
+                                    delete ticket.id_form
+                                }
+
+                                let last_interaction = await ticketModel.last_interaction_ticket(ticket.id)
+                                if (last_interaction && last_interaction.length) {
+                                    ticket.last_message = last_interaction[0]
+                                    ticket.last_message.created_at = moment(ticket.last_message.created_at).format("DD/MM/YYYY HH:mm:ss")
+                                }
+                                result[i].ticket.push(ticket)
+
+                            }
+
                         }
 
-                        let last_interaction = await ticketModel.last_interaction_ticket(ticket.id)
-                        if (last_interaction && last_interaction.length) {
-                            ticket.last_message = last_interaction[0]
-                            ticket.last_message.created_at = moment(ticket.last_message.created_at).format("DD/MM/YYYY HH:mm:ss")
+                        const responsibles = await phaseModel.getResponsiblePhaseByIdPhase(result[i].id)
+
+                        await responsibles.map(async value => {
+                            if (value.email) { arrayResponsible.push({ "email": value.email }) } else if (value.user) { arrayResponsible.push({ "id": value.user }) }
+                        })
+                        result[i].responsible = arrayResponsible
+
+                        const notify = await phaseModel.getNotifyPhaseByIdPhase(result[i].id)
+                        await notify.map(async value => {
+                            if (value.email) { arrayNotify.push({ "email": value.email }) } else if (value.user) { arrayNotify.push({ "id": value.id }) }
+                        })
+                        result[i].notify = arrayNotify
+
+
+                        const department = await phaseModel.getDepartmentPhase(result[i].id)
+                        result[i].department = []
+                        await department.map(async value => { result[i].department.push(value.id_department) })
+
+                        if (result[i].id_form_template) {
+                            const register = await new FormTemplate(req.app.locals.db).findRegistes(result[i].id_form_template)
+                            result[i].formTemplate = register.column
+                        }
+                    }
+                } else {
+                    for (let i in result) {
+                        const arrayResponsible = []
+                        const arrayNotify = []
+                        result[i].ticket = await ticketModel.getTicketByPhase(result[i].id, search)
+                        if (result[i].ticket.length > 0) {
+                            for (let ticket of result[i].ticket) {
+                                const typeMoment = await new UnitOfTimeModel().checkUnitOfTime(result[i].id_unit_of_time)
+                                ticket.countSLA = moment(ticket.created_at).add(result[i].sla_time, typeMoment)
+                                ticket.countSLA = moment(ticket.countSLA).format("DD/MM/YYYY HH:mm:ss")
+                                let first_interaction = await ticketModel.first_interaction(ticket.id)
+                                first_interaction.length ? ticket.first_message = moment(first_interaction[0].created_at).format("DD/MM/YYYY HH:mm:ss") : null
+
+                                if (ticket.id_form) {
+                                    ticket.form_data = await new FormDocuments(req.app.locals.db).findRegister(ticket.id_form)
+                                    delete ticket.id_form
+                                }
+
+                                let last_interaction = await ticketModel.last_interaction_ticket(ticket.id)
+                                if (last_interaction && last_interaction.length) {
+                                    ticket.last_message = last_interaction[0]
+                                    ticket.last_message.created_at = moment(ticket.last_message.created_at).format("DD/MM/YYYY HH:mm:ss")
+                                }
+                            }
+                        }
+                        const responsibles = await phaseModel.getResponsiblePhaseByIdPhase(result[i].id)
+
+                        await responsibles.map(async value => {
+                            if (value.email) { arrayResponsible.push({ "email": value.email }) } else if (value.user) { arrayResponsible.push({ "id": value.user }) }
+                        })
+                        result[i].responsible = arrayResponsible
+
+                        const notify = await phaseModel.getNotifyPhaseByIdPhase(result[i].id)
+                        await notify.map(async value => {
+                            if (value.email) { arrayNotify.push({ "email": value.email }) } else if (value.user) { arrayNotify.push({ "id": value.id }) }
+                        })
+                        result[i].notify = arrayNotify
+
+
+                        const department = await phaseModel.getDepartmentPhase(result[i].id)
+                        result[i].department = []
+                        await department.map(async value => { result[i].department.push(value.id_department) })
+
+                        if (result[i].id_form_template) {
+                            const register = await new FormTemplate(req.app.locals.db).findRegistes(result[i].id_form_template)
+                            result[i].formTemplate = register.column
                         }
                     }
                 }
-                const responsibles = await phaseModel.getResponsiblePhaseByIdPhase(result[i].id)
+            } else {
+                for (let i in result) {
+                    const arrayResponsible = []
+                    const arrayNotify = []
+                    result[i].ticket = await ticketModel.getTicketByPhase(result[i].id)
 
-                await responsibles.map(async value => {
-                    if (value.email) { arrayResponsible.push({ "email": value.email }) } else if (value.user) { arrayResponsible.push({ "id": value.user }) }
-                })
-                result[i].responsible = arrayResponsible
+                    if (result[i].ticket.length > 0) {
+                        for (let ticket of result[i].ticket) {
+                            const typeMoment = await new UnitOfTimeModel().checkUnitOfTime(result[i].id_unit_of_time)
+                            ticket.countSLA = moment(ticket.created_at).add(result[i].sla_time, typeMoment)
+                            ticket.countSLA = moment(ticket.countSLA).format("DD/MM/YYYY HH:mm:ss")
+                            let first_interaction = await ticketModel.first_interaction(ticket.id)
+                            first_interaction.length ? ticket.first_message = moment(first_interaction[0].created_at).format("DD/MM/YYYY HH:mm:ss") : null
 
-                const notify = await phaseModel.getNotifyPhaseByIdPhase(result[i].id)
-                await notify.map(async value => {
-                    if (value.email) { arrayNotify.push({ "email": value.email }) } else if (value.user) { arrayNotify.push({ "id": value.id }) }
-                })
-                result[i].notify = arrayNotify
+                            if (ticket.id_form) {
+                                ticket.form_data = await new FormDocuments(req.app.locals.db).findRegister(ticket.id_form)
+                                delete ticket.id_form
+                            }
+
+                            let last_interaction = await ticketModel.last_interaction_ticket(ticket.id)
+                            if (last_interaction && last_interaction.length) {
+                                ticket.last_message = last_interaction[0]
+                                ticket.last_message.created_at = moment(ticket.last_message.created_at).format("DD/MM/YYYY HH:mm:ss")
+                            }
+                        }
+                    }
+                    const responsibles = await phaseModel.getResponsiblePhaseByIdPhase(result[i].id)
+
+                    await responsibles.map(async value => {
+                        if (value.email) { arrayResponsible.push({ "email": value.email }) } else if (value.user) { arrayResponsible.push({ "id": value.user }) }
+                    })
+                    result[i].responsible = arrayResponsible
+
+                    const notify = await phaseModel.getNotifyPhaseByIdPhase(result[i].id)
+                    await notify.map(async value => {
+                        if (value.email) { arrayNotify.push({ "email": value.email }) } else if (value.user) { arrayNotify.push({ "id": value.id }) }
+                    })
+                    result[i].notify = arrayNotify
 
 
-                const department = await phaseModel.getDepartmentPhase(result[i].id)
-                result[i].department = []
-                await department.map(async value => { result[i].department.push(value.id_department) })
+                    const department = await phaseModel.getDepartmentPhase(result[i].id)
+                    result[i].department = []
+                    await department.map(async value => { result[i].department.push(value.id_department) })
 
-                if (result[i].id_form_template) {
-                    const register = await new FormTemplate(req.app.locals.db).findRegistes(result[i].id_form_template)
-                    result[i].formTemplate = register.column
+                    if (result[i].id_form_template) {
+                        const register = await new FormTemplate(req.app.locals.db).findRegistes(result[i].id_form_template)
+                        result[i].formTemplate = register.column
+                    }
+
                 }
             }
 

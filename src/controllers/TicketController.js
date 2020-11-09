@@ -218,11 +218,9 @@ class TicketController {
                                     "id_ticket": ticket_id,
                                     "id_phase": phase_id
                                 })
-                                console.log("TicketController -> _notify -> resultNotify", resultNotify)
                             } else if (contact.email) {
                                 email = await emailService.sendActiveMenssage(`Ticket ID:${result[0].id_seq}`, contact.email, body)
-                                if (email.data && email.data.chatId)
-                                    await emailModel.createLinkedEmailWithChatId(email.data.chatId, contact.id_email, ticket_id)
+                                await emailModel.createLinkedEmailWithChatId(email.data.chatId, contact.id_email, ticket_id)
                             }
                         })
                     }
@@ -240,8 +238,7 @@ class TicketController {
                                 console.log("TicketController -> _notify -> resultNotify", resultNotify)
                             } else if (contact.email) {
                                 email = await emailService.sendActiveMenssage(`Ticket ID:${result[0].id_seq}`, contact.email, body)
-                                if (email.data && email.data.chatId)
-                                    await emailModel.createLinkedEmailWithChatId(email.data.chatId, contact.id_email, ticket_id)
+                                await emailModel.createLinkedEmailWithChatId(email.data.chatId, contact.id_email, ticket_id)
 
                             }
                         })
@@ -261,14 +258,15 @@ class TicketController {
                             if (emailResponsibleTicket[i]) {
                                 let infoUser = await emailModel.getEmailById(emailResponsibleTicket[i], id_company)
                                 email = await emailService.sendActiveMenssage(`Ticket ID:${result[0].id_seq}`, infoUser[0].email, body)
-                                if (email.data && email.data.chatId)
-                                    await emailModel.createLinkedEmailWithChatId(email.data.chatId, emailResponsibleTicket[i], ticket_id)
+                                await emailModel.createLinkedEmailWithChatId(email.data.chatId, emailResponsibleTicket[i], ticket_id)
                             }
                         }
                     }
                     break;
                 case 5:
                     if (userResponsibleTicket && userResponsibleTicket.length > 0) {
+                        console.log("TicketController -> _notify -> userResponsibleTicket", userResponsibleTicket)
+
                         await this._notifyUser(type, userResponsibleTicket, id_company, ticket_id, phase_id, notify_token)
                     }
 
@@ -293,9 +291,10 @@ class TicketController {
     }
 
     async _notifyUser(type, user, id_company, id_ticket, id_phase, notify_token, responsiblePhase = null, notifyPhase = null) {
+        console.log("TicketController -> _notifyUser -> user", user)
         try {
             for (let i = 0; i < user.length; i++) {
-                if (responsiblePhase) {
+                if (user[i] && responsiblePhase) {
                     await responsiblePhase.map(userPhase => { if (userPhase.id_user == user[i]) { delete user[i] } })
                 }
 
@@ -360,7 +359,10 @@ class TicketController {
                         emailResponsibleTicket.push(value.id_email)
                     }
                 })
-                this._notify(ticket[0].phase_id, req.company[0].notify_token, req.body.id_ticket, userResponsibleTicket, emailResponsibleTicket, ticket[0].id_company, 5, req.app.locals.db)
+                console.log("========TESTE ===============")
+                console.log("TicketController -> createActivities -> userResponsibleTicket", userResponsibleTicket)
+                console.log("========TESTE ===============")
+                await this._notify(ticket[0].phase_id, req.company[0].notify_token, req.body.id_ticket, userResponsibleTicket, emailResponsibleTicket, ticket[0].id_company, 5, req.app.locals.db)
                 return res.status(200).send(obj)
             }
 

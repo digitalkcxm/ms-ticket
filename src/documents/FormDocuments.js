@@ -1,3 +1,5 @@
+const { Error } = require("mongoose")
+
 const ObjectID = require("mongodb").ObjectID
 let collection = "form"
 class FormDocuments {
@@ -22,6 +24,15 @@ class FormDocuments {
 
         } catch (err) {
             console.log("Find Form register=>", err)
+            return err
+        }
+    }
+
+    async searchRegister(search) {
+        try {
+            return await this._db.collection(collection).find({ "nome_tutor": { '$regex': search, '$options': 'i' } }).toArray()
+        } catch (err) {
+            console.log("Search register in form collection ===> ", err)
             return err
         }
     }
