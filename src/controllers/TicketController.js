@@ -177,6 +177,7 @@ class TicketController {
                                         "id_user": contact.id_user_core,
                                         "type": type,
                                         "id_ticket": ticket_id,
+                                        "id_seq": result[0].id_seq,
                                         "id_phase": phase_id
                                     })
                                 } else if (contact.email) {
@@ -186,7 +187,7 @@ class TicketController {
                         }
                     }
                     if (userResponsibleTicket && userResponsibleTicket.length > 0) {
-                        await this._notifyUser(type, userResponsibleTicket, id_company, ticket_id, phase_id, notify_token, responsiblePhase, notifyPhase)
+                        await this._notifyUser(type, userResponsibleTicket, id_company, ticket_id, phase_id, notify_token, result[0].id_seq, responsiblePhase, notifyPhase)
                     }
 
                     if (emailResponsibleTicket && emailResponsibleTicket.length > 0) {
@@ -216,6 +217,7 @@ class TicketController {
                                     "id_user": contact.id_user_core,
                                     "type": type,
                                     "id_ticket": ticket_id,
+                                    "id_seq": result[0].id_seq,
                                     "id_phase": phase_id
                                 })
                             } else if (contact.email) {
@@ -233,6 +235,7 @@ class TicketController {
                                     "id_user": contact.id_user_core,
                                     "type": type,
                                     "id_ticket": ticket_id,
+                                    "id_seq": result[0].id_seq,
                                     "id_phase": phase_id
                                 })
                                 console.log("TicketController -> _notify -> resultNotify", resultNotify)
@@ -245,7 +248,7 @@ class TicketController {
                     }
 
                     if (userResponsibleTicket && userResponsibleTicket.length > 0) {
-                        await this._notifyUser(type, userResponsibleTicket, id_company, ticket_id, phase_id, notify_token, responsiblePhase, notifyPhase)
+                        await this._notifyUser(type, userResponsibleTicket, id_company, ticket_id, phase_id, notify_token, result[0].id_seq, responsiblePhase, notifyPhase)
                     }
                     if (emailResponsibleTicket && emailResponsibleTicket.length > 0) {
                         for (let i = 0; i < emailResponsibleTicket.length; i++) {
@@ -267,7 +270,7 @@ class TicketController {
                     if (userResponsibleTicket && userResponsibleTicket.length > 0) {
                         console.log("TicketController -> _notify -> userResponsibleTicket", userResponsibleTicket)
 
-                        await this._notifyUser(type, userResponsibleTicket, id_company, ticket_id, phase_id, notify_token)
+                        await this._notifyUser(type, userResponsibleTicket, id_company, ticket_id, phase_id, notify_token, result[0].id_seq)
                     }
 
                     if (emailResponsibleTicket && emailResponsibleTicket.length > 0) {
@@ -290,7 +293,7 @@ class TicketController {
         }
     }
 
-    async _notifyUser(type, user, id_company, id_ticket, id_phase, notify_token, responsiblePhase = null, notifyPhase = null) {
+    async _notifyUser(type, user, id_company, id_ticket, id_phase, notify_token, id_seq, responsiblePhase = null, notifyPhase = null) {
         console.log("TicketController -> _notifyUser -> user", user)
         try {
             for (let i = 0; i < user.length; i++) {
@@ -308,6 +311,7 @@ class TicketController {
                         "id_user": infoUser[0].id_users_core,
                         "type": type,
                         "id_ticket": id_ticket,
+                        "id_seq": id_seq,
                         "id_phase": id_phase
                     })
                     console.log("TicketController -> _notify -> resultNotify", resultNotify)
