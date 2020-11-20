@@ -275,6 +275,25 @@ class TicketModel {
             return err
         }
     }
+
+    async getAttachments(id_ticket) {
+        try {
+            return await database("attachments_ticket").select({
+                "id": "attachments_ticket.id",
+                "url": "attachments_ticket.url",
+                "type": "type_attachments.type",
+                "id_user": "users.id_users_core",
+                "created_at": "attachments_ticket.created_at",
+                "updated_at": "attachments_ticket·updated_at"
+            })
+                .leftJoin("tipe_attachments", "type_attachments.id", "attachments_ticket.type")
+                .leftJoin("users", "users.id", "attachments_ticket.id_user")
+                .where("id_ticket", id_ticket)
+        } catch (err) {
+            console.log("Error get Attachments ====>", err)
+            return err
+        }
+    }
 }
 
 module.exports = TicketModel

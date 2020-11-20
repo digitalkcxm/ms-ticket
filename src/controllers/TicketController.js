@@ -102,6 +102,7 @@ class TicketController {
                 ticket[0].countSLA = moment(ticket.countSLA).format("DD/MM/YYYY HH:mm:ss")
                 let first_interaction = await ticketModel.first_interaction(ticket[0].id)
                 first_interaction.length ? ticket[0].first_message = moment(first_interaction[0].created_at).format("DD/MM/YYYY HH:mm:ss") : null
+                ticket.attachments = ticketModel.getAttachments(ticket.id)
 
                 if (ticket[0].id_form) {
                     ticket[0].form_data = await new FormDocuments(req.app.locals.db).findRegister(ticket[0].id_form)
@@ -417,8 +418,8 @@ class TicketController {
                 "id_ticket": req.body.id_ticket,
                 "url": req.body.url,
                 "type": req.body.type,
-                "created_at": moment().format(),
-                "updated_at": moment().format()
+                "created_at": moment().format("DD/MM/YYYY HH:mm:ss"),
+                "updated_at": moment().format("DD/MM/YYYY HH:mm:ss")
             }
 
             let result = await ticketModel.create(obj, attachments_ticket)
@@ -585,6 +586,7 @@ class TicketController {
                 ticket[0].countSLA = moment(ticket.countSLA).format("DD/MM/YYYY HH:mm:ss")
                 let first_interaction = await ticketModel.first_interaction(ticket[0].id)
                 first_interaction.length ? ticket[0].first_message = moment(first_interaction[0].created_at).format("DD/MM/YYYY HH:mm:ss") : null
+                ticket.attachments = ticketModel.getAttachments(ticket.id)
 
                 if (ticket[0].id_form) {
                     ticket[0].form_data = await new FormDocuments(req.app.locals.db).findRegister(ticket[0].id_form)
