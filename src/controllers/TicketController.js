@@ -96,9 +96,6 @@ class TicketController {
             let ticket = await ticketModel.getTicketById(obj.id, req.headers.authorization)
             await redis.set(`msTicket:ticket:${ticket.id}`, JSON.stringify(ticket[0]))
 
-
-
-
             if (result && result.length > 0 && result[0].id) {
                 const typeMoment = await new UnitOfTimeModel().checkUnitOfTime(ticket[0].unit_of_time)
                 ticket[0].countSLA = moment(ticket[0].created_at).add(ticket[0].sla_time, typeMoment)
@@ -580,7 +577,29 @@ class TicketController {
             const result = await ticketModel.closedTicket(req.params.id)
             if (result && result[0].id) {
                 await redis.del(`msTicket:ticket:${result[0].id}`)
-                return res.status(200).send(result)
+
+                let ticket = await ticketModel.getTicketById(obj.id, req.headers.authorization)
+
+                const typeMoment = await new UnitOfTimeModel().checkUnitOfTime(ticket[0].unit_of_time)
+                ticket[0].countSLA = moment(ticket[0].created_at).add(ticket[0].sla_time, typeMoment)
+                ticket[0].countSLA = moment(ticket.countSLA).format("DD/MM/YYYY HH:mm:ss")
+                let first_interaction = await ticketModel.first_interaction(ticket[0].id)
+                first_interaction.length ? ticket[0].first_message = moment(first_interaction[0].created_at).format("DD/MM/YYYY HH:mm:ss") : null
+
+                if (ticket[0].id_form) {
+                    ticket[0].form_data = await new FormDocuments(req.app.locals.db).findRegister(ticket[0].id_form)
+                    delete ticket[0].id_form
+                }
+
+                let last_interaction = await ticketModel.last_interaction_ticket(ticket[0].id)
+                if (last_interaction && last_interaction.length) {
+                    ticket[0].last_message = last_interaction[0]
+                    ticket[0].last_message.created_at = moment(ticket[0].last_message.created_at).format("DD/MM/YYYY HH:mm:ss")
+                }
+
+                delete ticket[0].id_company
+                return res.status(200).send(ticket[0])
+
             }
             return res.status(400).send({ error: "There was an error" })
         } catch (err) {
