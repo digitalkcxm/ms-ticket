@@ -16,7 +16,7 @@ module.exports = {
     seeds: {
       directory: __dirname + '/src/config/database/seeds'
     },
-    debug: false,
+    debug: true,
     pool: {
       afterCreate: function(connection, callback) {
         connection.query('SET timezone = -3;', function(err) {
