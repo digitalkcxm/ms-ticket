@@ -281,12 +281,12 @@ class TicketModel {
             return await database("attachments_ticket").select({
                 "id": "attachments_ticket.id",
                 "url": "attachments_ticket.url",
-                "type": "type_attachments.type",
+                "type": "type_attachments.name",
                 "id_user": "users.id_users_core",
                 "created_at": "attachments_ticket.created_at",
-                "updated_at": "attachments_ticket·updated_at"
+                "updated_at": "attachments_ticket.updated_at"
             })
-                .leftJoin("tipe_attachments", "type_attachments.id", "attachments_ticket.type")
+                .leftJoin("type_attachments", "type_attachments.id", "attachments_ticket.type")
                 .leftJoin("users", "users.id", "attachments_ticket.id_user")
                 .where("id_ticket", id_ticket)
         } catch (err) {
