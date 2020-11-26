@@ -422,7 +422,7 @@ class TicketController {
                 "updated_at": moment().format("DD/MM/YYYY HH:mm:ss")
             }
 
-            let result = await ticketModel.create(obj, attachments_ticket)
+            let result = await ticketModel.create(obj, "attachments_ticket")
 
             if (result && result.length > 0) {
                 obj.id = result[0].id
