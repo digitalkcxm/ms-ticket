@@ -168,9 +168,7 @@ class TicketController {
             // }
 
             const result = await ticketModel.getTicketById(ticket_id, id_company)
-            console.log("TicketController -> _notify -> result", result)
             if (result[0].form) {
-                console.log("TESTE 3")
                 result[0].form_data = await new FormDocuments(db).findRegister(result[0].id_form)
                 delete result[0].form
                 delete result[0].id_form
@@ -180,7 +178,6 @@ class TicketController {
                     texto = texto + `<p><strong>${column.label} : </strong>${result[0].form_data[column.column] ? result[0].form_data[column.column] : ''}</p>`
                 }
             }
-            console.log("TicketController -> _notify -> type", type)
 
             switch (type) {
                 case 3:
@@ -227,9 +224,7 @@ class TicketController {
                     let email
                     if (responsiblePhase && responsiblePhase.length > 0) {
                         responsiblePhase.map(async contact => {
-                            console.log("TicketController -> _notify -> contact", contact)
                             if (contact.id_user) {
-                                console.log(contact.id_user)
                                 let resultNotify = await notify(notify_token, {
                                     "id_user": contact.id_user_core,
                                     "type": type,
@@ -246,8 +241,6 @@ class TicketController {
                     if (notifyPhase && notifyPhase.length > 0) {
                         notifyPhase.map(async contact => {
                             if (contact.id_user) {
-                                console.log(contact.id_user)
-
                                 let resultNotify = await notify(notify_token, {
                                     "id_user": contact.id_user_core,
                                     "type": type,
@@ -255,7 +248,6 @@ class TicketController {
                                     "id_seq": result[0].id_seq,
                                     "id_phase": phase_id
                                 })
-                                console.log("TicketController -> _notify -> resultNotify", resultNotify)
                             } else if (contact.email) {
                                 email = await emailService.sendActiveMenssage(`Ticket ID:${result[0].id_seq}`, contact.email, body)
                                 await emailModel.createLinkedEmailWithChatId(email.data.chatId, contact.id_email, ticket_id)
@@ -285,8 +277,6 @@ class TicketController {
                     break;
                 case 5:
                     if (userResponsibleTicket && userResponsibleTicket.length > 0) {
-                        console.log("TicketController -> _notify -> userResponsibleTicket", userResponsibleTicket)
-
                         await this._notifyUser(type, userResponsibleTicket, id_company, ticket_id, phase_id, notify_token, result[0].id_seq)
                     }
 
@@ -417,9 +407,9 @@ class TicketController {
                 "id_user": user.id,
                 "id_ticket": req.body.id_ticket,
                 "url": req.body.url,
-                "type": req.body.type,
-                "created_at": moment().format("DD/MM/YYYY HH:mm:ss"),
-                "updated_at": moment().format("DD/MM/YYYY HH:mm:ss")
+                "type": typeAttachments[0].id,
+                "created_at": moment(),
+                "updated_at": moment()
             }
 
             let result = await ticketModel.create(obj, "attachments_ticket")
@@ -437,7 +427,7 @@ class TicketController {
                         emailResponsibleTicket.push(value.id_email)
                     }
                 })
-                await this._notify(ticket[0].phase_id, req.company[0].notify_token, req.body.id_ticket, userResponsibleTicket, emailResponsibleTicket, id_company, 5, req.app.locals.db)
+                await this._notify(ticket[0].phase_id, req.company[0].notify_token, req.body.id_ticket, userResponsibleTicket, emailResponsibleTicket,  req.headers.authorization, 5, req.app.locals.db)
 
                 return res.status(200).send(obj)
             }
