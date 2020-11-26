@@ -408,6 +408,7 @@ class TicketController {
                 "id_ticket": req.body.id_ticket,
                 "url": req.body.url,
                 "type": typeAttachments[0].id,
+                "name": req.body.name,
                 "created_at": moment(),
                 "updated_at": moment()
             }
@@ -427,7 +428,7 @@ class TicketController {
                         emailResponsibleTicket.push(value.id_email)
                     }
                 })
-                await this._notify(ticket[0].phase_id, req.company[0].notify_token, req.body.id_ticket, userResponsibleTicket, emailResponsibleTicket,  req.headers.authorization, 5, req.app.locals.db)
+                await this._notify(ticket[0].phase_id, req.company[0].notify_token, req.body.id_ticket, userResponsibleTicket, emailResponsibleTicket, req.headers.authorization, 5, req.app.locals.db)
 
                 return res.status(200).send(obj)
             }
