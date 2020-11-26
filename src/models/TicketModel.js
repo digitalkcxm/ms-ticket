@@ -283,6 +283,7 @@ class TicketModel {
                 "url": "attachments_ticket.url",
                 "type": "type_attachments.name",
                 "id_user": "users.id_users_core",
+                "name": "attachments_ticket.name",
                 "created_at": "attachments_ticket.created_at",
                 "updated_at": "attachments_ticket.updated_at"
             })
