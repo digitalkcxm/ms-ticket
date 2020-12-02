@@ -289,7 +289,7 @@ class TicketModel {
             })
                 .leftJoin("type_attachments", "type_attachments.id", "attachments_ticket.type")
                 .leftJoin("users", "users.id", "attachments_ticket.id_user")
-                .where("id_ticket", id_ticket)
+                .where("attachments_ticket.id_ticket", id_ticket)
         } catch (err) {
             console.log("Error get Attachments ====>", err)
             return err

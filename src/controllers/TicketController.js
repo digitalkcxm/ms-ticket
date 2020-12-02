@@ -398,6 +398,8 @@ class TicketController {
             if (!ticket || ticket.length <= 0)
                 return res.status(400).send({ error: "ID ticket is invalid" })
 
+            console.log("TicketController -> createAttachments -> req.body", req.body)
+
             let typeAttachments = await ticketModel.getTypeAttachments(req.body.type)
 
             if (!typeAttachments || typeAttachments.length <= 0)
