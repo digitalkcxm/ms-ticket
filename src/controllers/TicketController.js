@@ -572,14 +572,14 @@ class TicketController {
             if (result && result[0].id) {
                 await redis.del(`msTicket:ticket:${result[0].id}`)
 
-                let ticket = await ticketModel.getTicketById(obj.id, req.headers.authorization)
+                let ticket = await ticketModel.getTicketById(req.params.id, req.headers.authorization)
 
                 const typeMoment = await new UnitOfTimeModel().checkUnitOfTime(ticket[0].unit_of_time)
                 ticket[0].countSLA = moment(ticket[0].created_at).add(ticket[0].sla_time, typeMoment)
                 ticket[0].countSLA = moment(ticket.countSLA).format("DD/MM/YYYY HH:mm:ss")
                 let first_interaction = await ticketModel.first_interaction(ticket[0].id)
                 first_interaction.length ? ticket[0].first_message = moment(first_interaction[0].created_at).format("DD/MM/YYYY HH:mm:ss") : null
-                ticket.attachments = ticketModel.getAttachments(ticket.id)
+                ticket.attachments = await ticketModel.getAttachments(ticket.id)
 
                 if (ticket[0].id_form) {
                     ticket[0].form_data = await new FormDocuments(req.app.locals.db).findRegister(ticket[0].id_form)
