@@ -102,7 +102,7 @@ class TicketController {
                 ticket[0].countSLA = moment(ticket.countSLA).format("DD/MM/YYYY HH:mm:ss")
                 let first_interaction = await ticketModel.first_interaction(ticket[0].id)
                 first_interaction.length ? ticket[0].first_message = moment(first_interaction[0].created_at).format("DD/MM/YYYY HH:mm:ss") : null
-                ticket.attachments = ticketModel.getAttachments(ticket.id)
+                ticket.attachments = ticketModel.getAttachments(ticket[0].id)
 
                 if (ticket[0].id_form) {
                     ticket[0].form_data = await new FormDocuments(req.app.locals.db).findRegister(ticket[0].id_form)
@@ -579,7 +579,7 @@ class TicketController {
                 ticket[0].countSLA = moment(ticket.countSLA).format("DD/MM/YYYY HH:mm:ss")
                 let first_interaction = await ticketModel.first_interaction(ticket[0].id)
                 first_interaction.length ? ticket[0].first_message = moment(first_interaction[0].created_at).format("DD/MM/YYYY HH:mm:ss") : null
-                ticket.attachments = await ticketModel.getAttachments(ticket.id)
+                ticket.attachments = await ticketModel.getAttachments(ticket[0].id)
 
                 if (ticket[0].id_form) {
                     ticket[0].form_data = await new FormDocuments(req.app.locals.db).findRegister(ticket[0].id_form)
