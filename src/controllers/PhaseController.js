@@ -78,7 +78,7 @@ class PhaseController {
             req.body.notify.map(async notify => {
                 let result
                 if (notify.id) {
-                    result = await userController.checkUserCreated(notify.id, req.headers.authorization, responsible.name)
+                    result = await userController.checkUserCreated(notify.id, req.headers.authorization, notify.name)
                     usersNotify.push(result.id)
                 } else if (notify.email) {
                     result = await emailController.checkEmailCreated(notify.email, req.headers.authorization)
@@ -450,7 +450,7 @@ class PhaseController {
             columns[i].column ? "" : errors.push(`item ${i}: column é um campo obrigatório`)
             typeof columns[i].required === "boolean" ? "" : errors.push(`item ${i}: required é um campo booleano`)
             typeof columns[i].editable === "boolean" ? "" : errors.push(`item ${i}: o campo editable é um campo booleano`)
-            columns[i].type ? "" : errors.push(`item ${i}: type é um campo obrigatório`)
+            columns[i].type || columns[i].type >= 0 ? "" : errors.push(`item ${i}: type é um campo obrigatório`)
         }
         return errors
     }

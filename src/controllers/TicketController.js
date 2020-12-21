@@ -301,7 +301,6 @@ class TicketController {
     }
 
     async _notifyUser(type, user, id_company, id_ticket, id_phase, notify_token, id_seq, responsiblePhase = null, notifyPhase = null) {
-        console.log("TicketController -> _notifyUser -> user", user)
         try {
             for (let i = 0; i < user.length; i++) {
                 if (user[i] && responsiblePhase) {
@@ -313,7 +312,6 @@ class TicketController {
                 }
                 if (user[i]) {
                     let infoUser = await userModel.getById(user[i], id_company)
-                    console.log("TicketController -> _notifyUser -> infoUser", infoUser)
                     let resultNotify = await notify(notify_token, {
                         "id_user": infoUser[0].id_users_core,
                         "type": type,
@@ -321,7 +319,7 @@ class TicketController {
                         "id_seq": id_seq,
                         "id_phase": id_phase
                     })
-                    console.log("TicketController -> _notify -> resultNotify", resultNotify)
+
                 }
             }
 
@@ -355,7 +353,6 @@ class TicketController {
             }
 
             let result = await ticketModel.create(obj, "activities_ticket")
-            console.log("TicketController -> createActivities -> result", result)
 
             if (result && result.length > 0) {
                 obj.id = result[0].id
@@ -370,9 +367,7 @@ class TicketController {
                         emailResponsibleTicket.push(value.id_email)
                     }
                 })
-                console.log("========TESTE ===============")
-                console.log("TicketController -> createActivities -> userResponsibleTicket", userResponsibleTicket)
-                console.log("========TESTE ===============")
+
                 await this._notify(ticket[0].phase_id, req.company[0].notify_token, req.body.id_ticket, userResponsibleTicket, emailResponsibleTicket, ticket[0].id_company, 5, req.app.locals.db)
                 return res.status(200).send(obj)
             }
@@ -397,8 +392,6 @@ class TicketController {
             let ticket = await ticketModel.getTicketById(req.body.id_ticket, req.headers.authorization)
             if (!ticket || ticket.length <= 0)
                 return res.status(400).send({ error: "ID ticket is invalid" })
-
-            console.log("TicketController -> createAttachments -> req.body", req.body)
 
             let typeAttachments = await ticketModel.getTypeAttachments(req.body.type)
 
