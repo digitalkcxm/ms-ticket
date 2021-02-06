@@ -25,29 +25,42 @@ deploy_homol:
     - ssh-add <(echo "$SSH_PRIVATE_KEY")
     - mkdir -p ~/.ssh
     - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
+    - ENV="homol"
     - export AWS_ACCESS_KEY_ID="${HOMOL_AWS_ACCESS_KEY_ID}"
     - export AWS_SECRET_ACCESS_KEY="${HOMOL_AWS_SECRET_ACCESS_KEY}"
   script:
-    - echo "Buscando servidor do servico $CI_PROJECT_NAME no ambiente homol"
-    - INSTANCE_NAME=$(aws ec2 describe-instances --region $AWS_DEFAULT_REGION --filters "Name=tag:Name,Values=$CI_PROJECT_NAME*" --query 'Reservations[*].Instances[*].{Name:Tags[?Key==`Name`]|[0].Value,PrivateIP:PrivateIpAddress}' | jq '.[] | .[] | .Name')
+    - echo "Buscando servidor do servico $CI_PROJECT_NAME no ambinte $ENV"
+    - INSTANCE_NAME=$(aws ec2 describe-instances --region $AWS_DEFAULT_REGION --filters "Name=tag:Name,Values=$CI_PROJECT_NAME*" --query 'Reservations[*].Instances[*].{Name:Tags[?Key==`Name`]|[0].Value,PrivateIP:PrivateIpAddress}' | jq '.[] | .[] | .Name')    
     - INSTANCE_NAME=`echo $INSTANCE_NAME | cut -d '"' -f2`
     - SERVER_IP=$(aws ec2 describe-instances --region $AWS_DEFAULT_REGION --filters "Name=tag:Name,Values=$CI_PROJECT_NAME*" --query 'Reservations[*].Instances[*].{Name:Tags[?Key==`Name`]|[0].Value,PrivateIP:PrivateIpAddress}' | jq '.[] | .[] | .PrivateIP')
     - SERVER_IP=`echo $SERVER_IP | cut -d '"' -f2`
-    - echo "Iniciando deploy do serviço $CI_PROJECT_NAME no servidor Nome=$INSTANCE_NAME | IP=$SERVER_IP"
-    - cp $ENV_HOMOL .env
-    - ssh ubuntu@$SERVER_IP "sudo rm -rf /srv/$CI_PROJECT_NAME"
-    - ssh ubuntu@$SERVER_IP "sudo mkdir -p /srv/$CI_PROJECT_NAME"
-    - ssh ubuntu@$SERVER_IP "sudo chown -R ubuntu:ubuntu /srv/$CI_PROJECT_NAME"
-    - ssh ubuntu@$SERVER_IP 'export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; pm2 show '${CI_PROJECT_NAME}'; if [ $? -eq 0 ]; then pm2 delete all; else echo "Nenhum processo encontrado" ; fi'
-    - rsync -azvr ../$CI_PROJECT_NAME/* --exclude=aws --exclude=awscliv2.zip --exclude=.git ubuntu@$SERVER_IP:/srv/$CI_PROJECT_NAME/
-    - rsync -azvr .env ubuntu@$SERVER_IP:/srv/$CI_PROJECT_NAME/
-    - ssh ubuntu@$SERVER_IP "export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; cd /srv/$CI_PROJECT_NAME; npm install ; npm run migrate:latest"
-    - ssh ubuntu@$SERVER_IP "export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; cd /srv/$CI_PROJECT_NAME; pm2 start -f src/index.js --name $CI_PROJECT_NAME --log-date-format='DD-MM-YYYY HH:mm Z' --log-type json"  
-    - ssh ubuntu@$SERVER_IP "sudo env PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin /usr/local/nvm/versions/node/v10.14.1/lib/node_modules/pm2/bin/pm2 startup systemd -u ubuntu --hp /home/ubuntu"
-    - ssh ubuntu@$SERVER_IP "sudo systemctl enable pm2-ubuntu"
-    - ssh ubuntu@$SERVER_IP "export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; pm2 save"
-    - ssh ubuntu@$SERVER_IP "sudo env PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin pm2 logrotate -u ubuntu"
-    - ssh ubuntu@$SERVER_IP "export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; pm2 set pm2-logrotate:max_size 100M ; pm2 set pm2-logrotate:retain 10 ; pm2 set pm2-logrotate:compress true"
+    - echo $SERVER_IP > servers.txt
+    - > 
+            for i in $(cat servers.txt);
+            do
+
+                echo "########## Iniciando deploy do serviço $CI_PROJECT_NAME no servidor Nome=$INSTANCE_NAME | IP=$i ##########";
+                cp $ENV_HOMOL .env;
+                ssh ubuntu@$i "sudo rm -rf /srv/$CI_PROJECT_NAME";
+                ssh ubuntu@$i "sudo mkdir -p /srv/$CI_PROJECT_NAME";
+                ssh ubuntu@$i "sudo chown -R ubuntu:ubuntu /srv/$CI_PROJECT_NAME";
+                ssh ubuntu@$i 'export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; pm2 show '${CI_PROJECT_NAME}'; if [ $? -eq 0 ]; then pm2 delete all; else echo "Nenhum processo encontrado" ; fi';
+                
+                rsync -azvr ../$CI_PROJECT_NAME/* --exclude=aws --exclude=awscliv2.zip --exclude=.git ubuntu@$i:/srv/$CI_PROJECT_NAME/;
+                rsync -azvr .env ubuntu@$i:/srv/$CI_PROJECT_NAME/;
+                
+                ssh ubuntu@$i "export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; cd /srv/$CI_PROJECT_NAME; npm install ; npm run migrate:latest";
+                ssh ubuntu@$i "export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; cd /srv/$CI_PROJECT_NAME; pm2 start -f src/index.js --name $CI_PROJECT_NAME --log-date-format='DD-MM-YYYY HH:mm Z' --log-type json";
+                ssh ubuntu@$i "sudo env PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin /usr/local/nvm/versions/node/v10.14.1/lib/node_modules/pm2/bin/pm2 startup systemd -u ubuntu --hp /home/ubuntu";
+                ssh ubuntu@$i "sudo systemctl enable pm2-ubuntu";
+                ssh ubuntu@$i "export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; pm2 save";
+                ssh ubuntu@$i "sudo env PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin pm2 logrotate -u ubuntu";
+                ssh ubuntu@$i "export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; pm2 set pm2-logrotate:max_size 100M ; pm2 set pm2-logrotate:retain 10 ; pm2 set pm2-logrotate:compress true";
+                
+                echo "########## Deploy no ambiente $ENV finalizado ##########";
+                ssh ubuntu@$i "export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; pm2 list";
+
+            done
   only:
     - homol
   when: on_success
@@ -76,31 +89,57 @@ test_homol:
     - ssh-add <(echo "$SSH_PRIVATE_KEY")
     - mkdir -p ~/.ssh
     - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
+    - ENV="homol"
     - export AWS_ACCESS_KEY_ID="${HOMOL_AWS_ACCESS_KEY_ID}"
     - export AWS_SECRET_ACCESS_KEY="${HOMOL_AWS_SECRET_ACCESS_KEY}"
+
   script:
-    - echo "Buscando servidor do servico $CI_PROJECT_NAME no ambiente homol"
+    - echo "Buscando servidor do servico $CI_PROJECT_NAME no ambiente $ENV"
     - INSTANCE_NAME=$(aws ec2 describe-instances --region $AWS_DEFAULT_REGION --filters "Name=tag:Name,Values=$CI_PROJECT_NAME*" --query 'Reservations[*].Instances[*].{Name:Tags[?Key==`Name`]|[0].Value,PrivateIP:PrivateIpAddress}' | jq '.[] | .[] | .Name')
     - INSTANCE_NAME=`echo $INSTANCE_NAME | cut -d '"' -f2`
     - SERVER_IP=$(aws ec2 describe-instances --region $AWS_DEFAULT_REGION --filters "Name=tag:Name,Values=$CI_PROJECT_NAME*" --query 'Reservations[*].Instances[*].{Name:Tags[?Key==`Name`]|[0].Value,PrivateIP:PrivateIpAddress}' | jq '.[] | .[] | .PrivateIP')
     - SERVER_IP=`echo $SERVER_IP | cut -d '"' -f2`
-    - echo "Listando processos em execução para o projeto $CI_PROJECT_NAME no ambiente homol"
-    - ssh ubuntu@$SERVER_IP "export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; pm2 show '${CI_PROJECT_NAME}'"
-    - echo "Verificando resposta do healthcheck localhost"
-    - ssh ubuntu@$SERVER_IP "curl -s -I -X GET http://localhost:5000/api/v1/health"
-    - echo "Verificando status code do healthcheck localhost"
-    - curl -s -I -X GET http://$SERVER_IP:5000/api/v1/health
-    - STATUS_CODE=`curl -s -I -X GET http://$SERVER_IP:5000/api/v1/health | grep HTTP | awk '{print $2}'`
-    - echo $STATUS_CODE
+    - echo $SERVER_IP > servers.txt
+    - echo "Iniciando validações da aplicação $CI_PROJECT_NAME no ambiente $ENV"
     - >
-            if [[ "$STATUS_CODE" == "200" ]]; 
-            then 
-                echo "O aplicativo '${CI_PROJECT_NAME}' esta esta respondendo status code  $STATUS_CODE"
-                exit 0
-            else 
-                echo "O aplicativo '${CI_PROJECT_NAME}' esta esta respondendo status code de error  $STATUS_CODE"
-                exit 1
-            fi
+            for i in $(cat servers.txt);
+            do 
+
+                echo "########## Listando processos em execução da aplicação $CI_PROJECT_NAME no servidor IP=$i ##########";
+                ssh ubuntu@$i "export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; pm2 show '${CI_PROJECT_NAME}'";
+                echo "########## Verificando resposta do healthcheck localhost ##########";
+                ssh ubuntu@$i "curl -s -I -X GET http://localhost:5000/api/v1/health";
+            
+            done
+    
+    - >
+            for i in $(cat servers.txt);
+            do
+
+                echo "########## Verificando status code do healthcheck no servidor $i ##########";
+                STATUS_CODE=`curl -s -I -X GET http://$i:5000/api/v1/health | grep HTTP | awk '{print $2}'`;
+                if [ $? -eq 0 ]; then
+                        echo $STATUS_CODE;
+                        if [[ "$STATUS_CODE" == "200" ]]; then 
+
+                                echo "########## O aplicativo '${CI_PROJECT_NAME}' esta respondendo status code $STATUS_CODE na URL http://$i:5000/api/v1/health ##########";
+                                curl -s -I -X GET http://$i:5000/api/v1/health;
+                                exit 0 ;
+                        else 
+                                echo "########## O aplicativo '${CI_PROJECT_NAME}' esta respondendo status code de error $STATUS_CODE na URL http://$i:5000/api/v1/health ##########";
+                                curl -s -I -X GET http://$i:5000/api/v1/health;
+                                exit 1 ;
+                        fi
+
+                else
+
+                        echo $STATUS_CODE;
+                        echo "########## Falha ao tentar conectar no endpoint http://$i:5000/api/v1/health ##########";
+                        exit 1;
+
+                fi
+
+            done
   only:
     - homol
   when: on_success
@@ -162,33 +201,60 @@ deploy_prod:
     - ssh-add <(echo "$SSH_PRIVATE_KEY")
     - mkdir -p ~/.ssh
     - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
+    - ENV="prod"
     - export AWS_ACCESS_KEY_ID="${PROD_AWS_ACCESS_KEY_ID}"
     - export AWS_SECRET_ACCESS_KEY="${PROD_AWS_SECRET_ACCESS_KEY}"
   script:
-    - echo "Buscando servidor do servico $CI_PROJECT_NAME no ambiente prod"
-    - INSTANCE_NAME=$(aws ec2 describe-instances --region $AWS_DEFAULT_REGION --filters "Name=tag:Name,Values=$CI_PROJECT_NAME*" --query 'Reservations[*].Instances[*].{Name:Tags[?Key==`Name`]|[0].Value,PrivateIP:PrivateIpAddress}' | jq '.[] | .[] | .Name')
+    - echo "Buscando servidor do servico $CI_PROJECT_NAME no ambinte $ENV"
+    - INSTANCE_NAME=$(aws ec2 describe-instances --region $AWS_DEFAULT_REGION --filters "Name=tag:Name,Values=$CI_PROJECT_NAME*" --query 'Reservations[*].Instances[*].{Name:Tags[?Key==`Name`]|[0].Value,PrivateIP:PrivateIpAddress}' | jq '.[] | .[] | .Name')    
     - INSTANCE_NAME=`echo $INSTANCE_NAME | cut -d '"' -f2`
     - SERVER_IP=$(aws ec2 describe-instances --region $AWS_DEFAULT_REGION --filters "Name=tag:Name,Values=$CI_PROJECT_NAME*" --query 'Reservations[*].Instances[*].{Name:Tags[?Key==`Name`]|[0].Value,PrivateIP:PrivateIpAddress}' | jq '.[] | .[] | .PrivateIP')
     - SERVER_IP=`echo $SERVER_IP | cut -d '"' -f2`
-    - echo "Ativando downtime de 10m para o servidor $INSTANCE_NAME no monitoramento"
-    - curl -I -s "http://${CHECKMK_HOST}/check_mk/view.py?_username=${CHECKMK_USER}&_secret=${CHECKMK_SECRET}&_transid=-1&_do_confirm=yes&_do_actions=yes&host=${INSTANCE_NAME}&_down_from_now=yes&_down_minutes=5&_down_comment=Deploy_Aplicacao&view_name=hoststatus"
-    - echo "Iniciando deploy do serviço $CI_PROJECT_NAME no servidor Nome=$INSTANCE_NAME | IP=$SERVER_IP"
-    - cp $ENV_PROD .env
-    - ssh ubuntu@$SERVER_IP "sudo rm -rf /srv/$CI_PROJECT_NAME"
-    - ssh ubuntu@$SERVER_IP "sudo mkdir -p /srv/$CI_PROJECT_NAME"
-    - ssh ubuntu@$SERVER_IP "sudo chown -R ubuntu:ubuntu /srv/$CI_PROJECT_NAME"
-    - ssh ubuntu@$SERVER_IP 'export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; pm2 show '${CI_PROJECT_NAME}'; if [ $? -eq 0 ]; then pm2 delete all; else echo "Nenhum processo encontrado" ; fi'
-    - rsync -azvr ../$CI_PROJECT_NAME/* --exclude=aws --exclude=awscliv2.zip --exclude=.git ubuntu@$SERVER_IP:/srv/$CI_PROJECT_NAME/
-    - rsync -azvr .env ubuntu@$SERVER_IP:/srv/$CI_PROJECT_NAME/
-    - ssh ubuntu@$SERVER_IP "export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; cd /srv/$CI_PROJECT_NAME; npm install ; npm run migrate:latest"
-    - ssh ubuntu@$SERVER_IP "export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; cd /srv/$CI_PROJECT_NAME; pm2 start -f src/index.js --name $CI_PROJECT_NAME --log-date-format='DD-MM-YYYY HH:mm Z' --log-type json"  
-    - ssh ubuntu@$SERVER_IP "sudo env PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin /usr/local/nvm/versions/node/v10.14.1/lib/node_modules/pm2/bin/pm2 startup systemd -u ubuntu --hp /home/ubuntu"
-    - ssh ubuntu@$SERVER_IP "sudo systemctl enable pm2-ubuntu"
-    - ssh ubuntu@$SERVER_IP "export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; pm2 save"
-    - ssh ubuntu@$SERVER_IP "sudo env PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin pm2 logrotate -u ubuntu"
-    - ssh ubuntu@$SERVER_IP "export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; pm2 set pm2-logrotate:max_size 100M ; pm2 set pm2-logrotate:retain 10 ; pm2 set pm2-logrotate:compress true"
-    - echo "Removendo downtime do servidor $INSTANCE_NAME no monitoramento"
-    - curl -I -s "http://${CHECKMK_HOST}/check_mk/view.py?_do_confirm&_transid=-1&_do_actions=yes&_username=${CHECKMK_USER}&_secret=${CHECKMK_SECRET}&view_name=hoststatus&host=${INSTANCE_NAME}&_down_remove=Remove"
+    - echo $SERVER_IP > servers.txt
+    - echo $INSTANCE_NAME > servername.txt
+    - cat servername.txt
+    - >
+           for i in $(cat servername.txt);
+           do
+                echo "Ativando downtime de 15m para o servidor $i no monitoramento";
+                curl -I -s "http://${CHECKMK_HOST}/check_mk/view.py?_username=${CHECKMK_USER}&_secret=${CHECKMK_SECRET}&_transid=-1&_do_confirm=yes&_do_actions=yes&host=${i}&_down_from_now=yes&_down_minutes=15&_down_comment=Deploy_Aplicacao&view_name=hoststatus";
+           done
+
+    - > 
+            for i in $(cat servers.txt);
+            do
+
+                echo "########## Iniciando deploy do serviço $CI_PROJECT_NAME no servidor Nome=$INSTANCE_NAME | IP=$i ##########";
+                cp $ENV_PROD .env;
+
+                ssh ubuntu@$i "sudo rm -rf /srv/$CI_PROJECT_NAME";
+                ssh ubuntu@$i "sudo mkdir -p /srv/$CI_PROJECT_NAME";
+                ssh ubuntu@$i "sudo chown -R ubuntu:ubuntu /srv/$CI_PROJECT_NAME";
+                ssh ubuntu@$i 'export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; pm2 show '${CI_PROJECT_NAME}'; if [ $? -eq 0 ]; then pm2 delete all; else echo "Nenhum processo encontrado" ; fi';
+
+                rsync -azvr ../$CI_PROJECT_NAME/* --exclude=aws --exclude=awscliv2.zip --exclude=.git ubuntu@$i:/srv/$CI_PROJECT_NAME/;
+                rsync -azvr .env ubuntu@$i:/srv/$CI_PROJECT_NAME/;
+
+                ssh ubuntu@$i "export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; cd /srv/$CI_PROJECT_NAME; npm install ; npm run migrate:latest";
+                ssh ubuntu@$i "export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; cd /srv/$CI_PROJECT_NAME; pm2 start -f src/index.js --name $CI_PROJECT_NAME --log-date-format='DD-MM-YYYY HH:mm Z' --log-type json";
+                ssh ubuntu@$i "sudo env PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin /usr/local/nvm/versions/node/v10.14.1/lib/node_modules/pm2/bin/pm2 startup systemd -u ubuntu --hp /home/ubuntu";
+                ssh ubuntu@$i "sudo systemctl enable pm2-ubuntu";
+                ssh ubuntu@$i "export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; pm2 save";
+                ssh ubuntu@$i "sudo env PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin pm2 logrotate -u ubuntu";
+                ssh ubuntu@$i "export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; pm2 set pm2-logrotate:max_size 100M ; pm2 set pm2-logrotate:retain 10 ; pm2 set pm2-logrotate:compress true";
+
+                echo "########## Deploy no ambiente $ENV finalizado ##########";
+                ssh ubuntu@$i "export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; pm2 list";
+
+            done
+
+    - > 
+           for i in $(cat servername.txt);
+           do
+                echo "Removendo downtime do servidor $i no monitoramento";
+                curl -I -s "http://${CHECKMK_HOST}/check_mk/view.py?_do_confirm&_transid=-1&_do_actions=yes&_username=${CHECKMK_USER}&_secret=${CHECKMK_SECRET}&view_name=hoststatus&host=${i}&_down_remove=Remove";
+           done
+            
   only:
     - master
   when: on_success
@@ -216,37 +282,64 @@ test_prod:
     - ssh-add <(echo "$SSH_PRIVATE_KEY")
     - mkdir -p ~/.ssh
     - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
+    - ENV="prod"
     - export AWS_ACCESS_KEY_ID="${PROD_AWS_ACCESS_KEY_ID}"
     - export AWS_SECRET_ACCESS_KEY="${PROD_AWS_SECRET_ACCESS_KEY}"
   script:
-    - echo "Buscando servidor do servico $CI_PROJECT_NAME no ambiente prod"
+    - echo "Buscando servidor do servico $CI_PROJECT_NAME no ambiente $ENV"
     - INSTANCE_NAME=$(aws ec2 describe-instances --region $AWS_DEFAULT_REGION --filters "Name=tag:Name,Values=$CI_PROJECT_NAME*" --query 'Reservations[*].Instances[*].{Name:Tags[?Key==`Name`]|[0].Value,PrivateIP:PrivateIpAddress}' | jq '.[] | .[] | .Name')
     - INSTANCE_NAME=`echo $INSTANCE_NAME | cut -d '"' -f2`
     - SERVER_IP=$(aws ec2 describe-instances --region $AWS_DEFAULT_REGION --filters "Name=tag:Name,Values=$CI_PROJECT_NAME*" --query 'Reservations[*].Instances[*].{Name:Tags[?Key==`Name`]|[0].Value,PrivateIP:PrivateIpAddress}' | jq '.[] | .[] | .PrivateIP')
     - SERVER_IP=`echo $SERVER_IP | cut -d '"' -f2`
-    - echo "Listando processos em execução para o projeto $CI_PROJECT_NAME no ambiente prod"
-    - ssh ubuntu@$SERVER_IP "export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; pm2 show '${CI_PROJECT_NAME}'"
-    - echo "Verificando resposta do healthcheck localhost"
-    - ssh ubuntu@$SERVER_IP "curl -s -I -X GET http://localhost:5000/api/v1/health"
-    - echo "Verificando status code do healthcheck localhost"
-    - curl -s -I -X GET http://$SERVER_IP:5000/api/v1/health
-    - STATUS_CODE=`curl -s -I -X GET http://$SERVER_IP:5000/api/v1/health | grep HTTP | awk '{print $2}'`
-    - echo $STATUS_CODE
+    - echo $SERVER_IP > servers.txt
+    - echo "Iniciando validações da aplicação $CI_PROJECT_NAME no ambiente $ENV"
     - >
-            if [[ "$STATUS_CODE" == "200" ]]; 
-            then 
-                echo "O aplicativo '${CI_PROJECT_NAME}' esta esta respondendo status code  $STATUS_CODE"
-                exit 0
-            else 
-                echo "O aplicativo '${CI_PROJECT_NAME}' esta esta respondendo status code de error  $STATUS_CODE"
-                exit 1
-            fi
+            for i in $(cat servers.txt);
+            do 
+
+                echo "########## Listando processos em execução da aplicação $CI_PROJECT_NAME no servidor IP=$i ##########";
+                ssh ubuntu@$i "export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; pm2 show '${CI_PROJECT_NAME}'";
+                echo "########## Verificando resposta do healthcheck localhost ##########";
+                ssh ubuntu@$i "curl -s -I -X GET http://localhost:5000/api/v1/health";
+            
+            done
+    
+    - >
+            for i in $(cat servers.txt);
+            do
+
+                echo "########## Verificando status code do healthcheck no servidor $i ##########";
+                STATUS_CODE=`curl -s -I -X GET http://$i:5000/api/v1/health | grep HTTP | awk '{print $2}'`;
+                if [ $? -eq 0 ]; then
+                        echo $STATUS_CODE;
+                        if [[ "$STATUS_CODE" == "200" ]]; then 
+
+                                echo "########## O aplicativo '${CI_PROJECT_NAME}' esta respondendo status code $STATUS_CODE na URL http://$i:5000/api/v1/health ##########";
+                                curl -s -I -X GET http://$i:5000/api/v1/health;
+                                exit 0 ;
+                        else 
+                                echo "########## O aplicativo '${CI_PROJECT_NAME}' esta respondendo status code de error $STATUS_CODE na URL http://$i:5000/api/v1/health ##########";
+                                curl -s -I -X GET http://$i:5000/api/v1/health;
+                                exit 1 ;
+                        fi
+
+                else
+
+                        echo $STATUS_CODE;
+                        echo "########## Falha ao tentar conectar no endpoint http://$i:5000/api/v1/health ##########";
+                        exit 1;
+
+                fi
+
+            done
   only:
     - master
   when: on_success
   allow_failure: true
 
-###########################PORTO
+
+############################################ PORTO
+#
 
 deploy_ps:
   stage: deploy
@@ -270,33 +363,60 @@ deploy_ps:
     - ssh-add <(echo "$SSH_PRIVATE_KEY")
     - mkdir -p ~/.ssh
     - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
+    - ENV="prod"
     - export AWS_ACCESS_KEY_ID="${PS_AWS_ACCESS_KEY_ID}"
     - export AWS_SECRET_ACCESS_KEY="${PS_AWS_SECRET_ACCESS_KEY}"
   script:
-    - echo "Buscando servidor do servico $CI_PROJECT_NAME no ambiente prod"
-    - INSTANCE_NAME=$(aws ec2 describe-instances --region $AWS_DEFAULT_REGION --filters "Name=tag:Name,Values=$CI_PROJECT_NAME*" --query 'Reservations[*].Instances[*].{Name:Tags[?Key==`Name`]|[0].Value,PrivateIP:PrivateIpAddress}' | jq '.[] | .[] | .Name')
+    - echo "Buscando servidor do servico $CI_PROJECT_NAME no ambinte $ENV"
+    - INSTANCE_NAME=$(aws ec2 describe-instances --region $AWS_DEFAULT_REGION --filters "Name=tag:Name,Values=$CI_PROJECT_NAME*" --query 'Reservations[*].Instances[*].{Name:Tags[?Key==`Name`]|[0].Value,PrivateIP:PrivateIpAddress}' | jq '.[] | .[] | .Name')    
     - INSTANCE_NAME=`echo $INSTANCE_NAME | cut -d '"' -f2`
     - SERVER_IP=$(aws ec2 describe-instances --region $AWS_DEFAULT_REGION --filters "Name=tag:Name,Values=$CI_PROJECT_NAME*" --query 'Reservations[*].Instances[*].{Name:Tags[?Key==`Name`]|[0].Value,PrivateIP:PrivateIpAddress}' | jq '.[] | .[] | .PrivateIP')
     - SERVER_IP=`echo $SERVER_IP | cut -d '"' -f2`
-    - echo "Ativando downtime de 10m para o servidor $INSTANCE_NAME no monitoramento"
-    - curl -I -s "http://${CHECKMK_HOST}/check_mk/view.py?_username=${CHECKMK_USER}&_secret=${CHECKMK_SECRET}&_transid=-1&_do_confirm=yes&_do_actions=yes&host=${INSTANCE_NAME}&_down_from_now=yes&_down_minutes=5&_down_comment=Deploy_Aplicacao&view_name=hoststatus"
-    - echo "Iniciando deploy do serviço $CI_PROJECT_NAME no servidor Nome=$INSTANCE_NAME | IP=$SERVER_IP"
-    - cp $ENV_PS .env
-    - ssh ubuntu@$SERVER_IP "sudo rm -rf /srv/$CI_PROJECT_NAME"
-    - ssh ubuntu@$SERVER_IP "sudo mkdir -p /srv/$CI_PROJECT_NAME"
-    - ssh ubuntu@$SERVER_IP "sudo chown -R ubuntu:ubuntu /srv/$CI_PROJECT_NAME"
-    - ssh ubuntu@$SERVER_IP 'export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; pm2 show '${CI_PROJECT_NAME}'; if [ $? -eq 0 ]; then pm2 delete all; else echo "Nenhum processo encontrado" ; fi'
-    - rsync -azvr ../$CI_PROJECT_NAME/* --exclude=aws --exclude=awscliv2.zip --exclude=.git ubuntu@$SERVER_IP:/srv/$CI_PROJECT_NAME/
-    - rsync -azvr .env ubuntu@$SERVER_IP:/srv/$CI_PROJECT_NAME/
-    - ssh ubuntu@$SERVER_IP "export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; cd /srv/$CI_PROJECT_NAME; npm install ; npm run migrate:latest"
-    - ssh ubuntu@$SERVER_IP "export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; cd /srv/$CI_PROJECT_NAME; pm2 start -f src/index.js --name $CI_PROJECT_NAME --log-date-format='DD-MM-YYYY HH:mm Z' --log-type json"  
-    - ssh ubuntu@$SERVER_IP "sudo env PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin /usr/local/nvm/versions/node/v10.14.1/lib/node_modules/pm2/bin/pm2 startup systemd -u ubuntu --hp /home/ubuntu"
-    - ssh ubuntu@$SERVER_IP "sudo systemctl enable pm2-ubuntu"
-    - ssh ubuntu@$SERVER_IP "export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; pm2 save"
-    - ssh ubuntu@$SERVER_IP "sudo env PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin pm2 logrotate -u ubuntu"
-    - ssh ubuntu@$SERVER_IP "export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; pm2 set pm2-logrotate:max_size 100M ; pm2 set pm2-logrotate:retain 10 ; pm2 set pm2-logrotate:compress true"
-    - echo "Removendo downtime do servidor $INSTANCE_NAME no monitoramento"
-    - curl -I -s "http://${CHECKMK_HOST}/check_mk/view.py?_do_confirm&_transid=-1&_do_actions=yes&_username=${CHECKMK_USER}&_secret=${CHECKMK_SECRET}&view_name=hoststatus&host=${INSTANCE_NAME}&_down_remove=Remove"
+    - echo $SERVER_IP > servers.txt
+    - echo $INSTANCE_NAME > servername.txt
+    - cat servername.txt
+    - >
+           for i in $(cat servername.txt);
+           do
+                echo "Ativando downtime de 15m para o servidor $i no monitoramento";
+                curl -I -s "http://${CHECKMK_HOST}/check_mk/view.py?_username=${CHECKMK_USER}&_secret=${CHECKMK_SECRET}&_transid=-1&_do_confirm=yes&_do_actions=yes&host=${i}&_down_from_now=yes&_down_minutes=15&_down_comment=Deploy_Aplicacao&view_name=hoststatus";
+           done
+
+    - > 
+            for i in $(cat servers.txt);
+            do
+
+                echo "########## Iniciando deploy do serviço $CI_PROJECT_NAME no servidor Nome=$INSTANCE_NAME | IP=$i ##########";
+                cp $ENV_PROD .env;
+
+                ssh ubuntu@$i "sudo rm -rf /srv/$CI_PROJECT_NAME";
+                ssh ubuntu@$i "sudo mkdir -p /srv/$CI_PROJECT_NAME";
+                ssh ubuntu@$i "sudo chown -R ubuntu:ubuntu /srv/$CI_PROJECT_NAME";
+                ssh ubuntu@$i 'export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; pm2 show '${CI_PROJECT_NAME}'; if [ $? -eq 0 ]; then pm2 delete all; else echo "Nenhum processo encontrado" ; fi';
+
+                rsync -azvr ../$CI_PROJECT_NAME/* --exclude=aws --exclude=awscliv2.zip --exclude=.git ubuntu@$i:/srv/$CI_PROJECT_NAME/;
+                rsync -azvr .env ubuntu@$i:/srv/$CI_PROJECT_NAME/;
+
+                ssh ubuntu@$i "export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; cd /srv/$CI_PROJECT_NAME; npm install ; npm run migrate:latest";
+                ssh ubuntu@$i "export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; cd /srv/$CI_PROJECT_NAME; pm2 start -f src/index.js --name $CI_PROJECT_NAME --log-date-format='DD-MM-YYYY HH:mm Z' --log-type json";
+                ssh ubuntu@$i "sudo env PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin /usr/local/nvm/versions/node/v10.14.1/lib/node_modules/pm2/bin/pm2 startup systemd -u ubuntu --hp /home/ubuntu";
+                ssh ubuntu@$i "sudo systemctl enable pm2-ubuntu";
+                ssh ubuntu@$i "export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; pm2 save";
+                ssh ubuntu@$i "sudo env PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin pm2 logrotate -u ubuntu";
+                ssh ubuntu@$i "export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; pm2 set pm2-logrotate:max_size 100M ; pm2 set pm2-logrotate:retain 10 ; pm2 set pm2-logrotate:compress true";
+
+                echo "########## Deploy no ambiente $ENV finalizado ##########";
+                ssh ubuntu@$i "export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; pm2 list";
+
+            done
+
+    - > 
+           for i in $(cat servername.txt);
+           do
+                echo "Removendo downtime do servidor $i no monitoramento";
+                curl -I -s "http://${CHECKMK_HOST}/check_mk/view.py?_do_confirm&_transid=-1&_do_actions=yes&_username=${CHECKMK_USER}&_secret=${CHECKMK_SECRET}&view_name=hoststatus&host=${i}&_down_remove=Remove";
+           done
+            
   only:
     - master
   when: on_success
@@ -324,32 +444,58 @@ test_ps:
     - ssh-add <(echo "$SSH_PRIVATE_KEY")
     - mkdir -p ~/.ssh
     - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
+    - ENV="prod"
     - export AWS_ACCESS_KEY_ID="${PS_AWS_ACCESS_KEY_ID}"
     - export AWS_SECRET_ACCESS_KEY="${PS_AWS_SECRET_ACCESS_KEY}"
   script:
-    - echo "Buscando servidor do servico $CI_PROJECT_NAME no ambiente prod"
+    - echo "Buscando servidor do servico $CI_PROJECT_NAME no ambiente $ENV"
     - INSTANCE_NAME=$(aws ec2 describe-instances --region $AWS_DEFAULT_REGION --filters "Name=tag:Name,Values=$CI_PROJECT_NAME*" --query 'Reservations[*].Instances[*].{Name:Tags[?Key==`Name`]|[0].Value,PrivateIP:PrivateIpAddress}' | jq '.[] | .[] | .Name')
     - INSTANCE_NAME=`echo $INSTANCE_NAME | cut -d '"' -f2`
     - SERVER_IP=$(aws ec2 describe-instances --region $AWS_DEFAULT_REGION --filters "Name=tag:Name,Values=$CI_PROJECT_NAME*" --query 'Reservations[*].Instances[*].{Name:Tags[?Key==`Name`]|[0].Value,PrivateIP:PrivateIpAddress}' | jq '.[] | .[] | .PrivateIP')
     - SERVER_IP=`echo $SERVER_IP | cut -d '"' -f2`
-    - echo "Listando processos em execução para o projeto $CI_PROJECT_NAME no ambiente prod"
-    - ssh ubuntu@$SERVER_IP "export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; pm2 show '${CI_PROJECT_NAME}'"
-    - echo "Verificando resposta do healthcheck localhost"
-    - ssh ubuntu@$SERVER_IP "curl -s -I -X GET http://localhost:5000/api/v1/health"
-    - echo "Verificando status code do healthcheck localhost"
-    - curl -s -I -X GET http://$SERVER_IP:5000/api/v1/health
-    - STATUS_CODE=`curl -s -I -X GET http://$SERVER_IP:5000/api/v1/health | grep HTTP | awk '{print $2}'`
-    - echo $STATUS_CODE
+    - echo $SERVER_IP > servers.txt
+    - echo "Iniciando validações da aplicação $CI_PROJECT_NAME no ambiente $ENV"
     - >
-            if [[ "$STATUS_CODE" == "200" ]]; 
-            then 
-                echo "O aplicativo '${CI_PROJECT_NAME}' esta esta respondendo status code  $STATUS_CODE"
-                exit 0
-            else 
-                echo "O aplicativo '${CI_PROJECT_NAME}' esta esta respondendo status code de error  $STATUS_CODE"
-                exit 1
-            fi
+            for i in $(cat servers.txt);
+            do 
+
+                echo "########## Listando processos em execução da aplicação $CI_PROJECT_NAME no servidor IP=$i ##########";
+                ssh ubuntu@$i "export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; pm2 show '${CI_PROJECT_NAME}'";
+                echo "########## Verificando resposta do healthcheck localhost ##########";
+                ssh ubuntu@$i "curl -s -I -X GET http://localhost:5000/api/v1/health";
+            
+            done
+    
+    - >
+            for i in $(cat servers.txt);
+            do
+
+                echo "########## Verificando status code do healthcheck no servidor $i ##########";
+                STATUS_CODE=`curl -s -I -X GET http://$i:5000/api/v1/health | grep HTTP | awk '{print $2}'`;
+                if [ $? -eq 0 ]; then
+                        echo $STATUS_CODE;
+                        if [[ "$STATUS_CODE" == "200" ]]; then 
+
+                                echo "########## O aplicativo '${CI_PROJECT_NAME}' esta respondendo status code $STATUS_CODE na URL http://$i:5000/api/v1/health ##########";
+                                curl -s -I -X GET http://$i:5000/api/v1/health;
+                                exit 0 ;
+                        else 
+                                echo "########## O aplicativo '${CI_PROJECT_NAME}' esta respondendo status code de error $STATUS_CODE na URL http://$i:5000/api/v1/health ##########";
+                                curl -s -I -X GET http://$i:5000/api/v1/health;
+                                exit 1 ;
+                        fi
+
+                else
+
+                        echo $STATUS_CODE;
+                        echo "########## Falha ao tentar conectar no endpoint http://$i:5000/api/v1/health ##########";
+                        exit 1;
+
+                fi
+
+            done
   only:
     - master
   when: on_success
   allow_failure: true
+
