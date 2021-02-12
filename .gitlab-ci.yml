@@ -391,7 +391,7 @@ deploy_ps:
             do
 
                 echo "########## Iniciando deploy do serviço $CI_PROJECT_NAME no servidor Nome=$INSTANCE_NAME | IP=$i ##########";
-                cp $ENV_PROD .env;
+                cp $ENV_PS .env;
 
                 ssh ubuntu@$i "sudo rm -rf /srv/$CI_PROJECT_NAME";
                 ssh ubuntu@$i "sudo mkdir -p /srv/$CI_PROJECT_NAME";
