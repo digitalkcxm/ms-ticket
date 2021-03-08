@@ -238,9 +238,9 @@ class TicketModel {
         }
     }
 
-    async getTicketStatusCount() {
+    async getTicketStatusCount(id_company) {
         try {
-            return await database("vw_dash_tickets").select("*")
+            return await database("vw_dash_tickets").select("*").where({id_company})
         }
         catch (err) {
             console.log("status ====>", err)
