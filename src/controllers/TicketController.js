@@ -715,19 +715,23 @@ class TicketController {
 
     async ticketStatusCount(req, res) {
         try {
-            let result = await ticketModel.getTicketStatusCount()
+          const id_company = req.headers.authorization
+          let result = await ticketModel.getTicketStatusCount(id_company)
 
-            if (result.length < 0) {
-                return res.status(400).send({ error: "There is no status to return" })
-            }
+          let retorno
+          if (result.length && result.length > 0 && result[0].id_company.length > 0) {
 
-            const retorno = {
-                tickets_abertos: parseInt(result[0].tickets_abertos),
-                tickets_respondidos: parseInt(result[0].tickets_respondidos),
-                tickets_atrasados: parseInt(result[0].tickets_atrasados)
-            }
+              retorno = {
+                      tickets_abertos: parseInt(result[0].tickets_abertos),
+                      tickets_respondidos: parseInt(result[0].tickets_respondidos),
+                      tickets_atrasados: parseInt(result[0].tickets_atrasados)
+              }
+          } else {
+              retorno = {tickets_abertos: 0, tickets_respondidos: 0, tickets_atrasados: 0}
+          }
 
-            return res.status(200).json(retorno)
+
+          return res.status(200).json(retorno)
         }
         catch (err) {
             console.log("status ====>", err)
