@@ -383,7 +383,7 @@ class PhaseController {
 
     async _responsiblePhase(phase_id, usersResponsible, emailResponsible) {
         try {
-            await phaseModel.delNotifyPhase(phase_id)
+            await phaseModel.delResponsiblePhase(phase_id)
 
             if (usersResponsible.length > 0) {
                 usersResponsible.map(async user => {
@@ -412,6 +412,7 @@ class PhaseController {
 
     async _notifyPhase(phase_id, usersNotify, emailNotify, usersResponsible, emailResponsible) {
         try {
+            await phaseModel.delNotifyPhase(phase_id)
 
             if (usersNotify.length > 0) {
                 usersNotify.map(async user => {

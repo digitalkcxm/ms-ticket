@@ -73,7 +73,7 @@ class PhaseModel {
 
     async removeLinkedDepartment(phase_id) {
         try {
-            return await database("department_phase").where("id_phase", phase_id)
+            return await database("department_phase").where("id_phase", phase_id).del()
         } catch (err) {
             console.log("Error when remove linked =>", err)
             return err
@@ -166,7 +166,7 @@ class PhaseModel {
             return err
         }
     }
-    
+
     async getDepartmentPhase(id_phase) {
         try {
             return await database("department_phase").select({ id_department: "department.id_department_core" })
@@ -206,7 +206,7 @@ class PhaseModel {
 
     async delResponsiblePhase(id_phase) {
         try {
-            return await database("responsible_phase").andWhere("id_phase", id_phase).del()
+            return await database("responsible_phase").where("id_phase", id_phase).del()
         } catch (err) {
             console.log("Error when get responsible Ticket =>", err)
             return err
@@ -215,7 +215,7 @@ class PhaseModel {
 
     async delNotifyPhase(id_phase) {
         try {
-            return await database("notify_phase").andWhere("id_phase", id_phase).del()
+            return await database("notify_phase").where("id_phase", id_phase).del()
         } catch (err) {
             console.log("Error when get responsible Ticket =>", err)
             return err
