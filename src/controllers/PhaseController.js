@@ -11,6 +11,7 @@ const asyncRedis = require("async-redis")
 const FormTemplate = require("../documents/FormTemplate")
 const FormDocuments = require("../documents/FormDocuments")
 const redis = asyncRedis.createClient(process.env.REDIS_PORT, process.env.REDIS_HOST)
+const DepartmentModel = require("../models/DepartmentModel")
 
 const unitOfTimeModel = new UnitOfTimeModel()
 const phaseModel = new PhaseModel()
@@ -18,6 +19,7 @@ const userController = new UserController()
 const departmentController = new DepartmentController()
 const emailController = new EmailController()
 const ticketModel = new TicketModel()
+const departmentModel = new DepartmentModel()
 
 class PhaseController {
     async create(req, res) {
@@ -137,10 +139,12 @@ class PhaseController {
 
     async getAllPhase(req, res) {
         const search = (req.query.search) ? req.query.search : ''
+        let result
         try {
-            const result = await phaseModel.getAllPhase(req.headers.authorization)
 
             if (search) {
+                result = await phaseModel.getAllPhase(req.headers.authorization)
+
                 if (isNaN(search)) {
                     const searchMongo = await new FormDocuments(req.app.locals.db).searchRegister(search)
 
@@ -247,7 +251,12 @@ class PhaseController {
                         }
                     }
                 }
+            } else if (req.query.departments) {
+                console.log("TESTE")
+                result = await this._getByDepartment(req.query.departments, req.headers.authorization, req.app.locals.db)
             } else {
+                result = await phaseModel.getAllPhase(req.headers.authorization)
+
                 for (let i in result) {
                     const arrayResponsible = []
                     const arrayNotify = []
@@ -378,6 +387,40 @@ class PhaseController {
         } catch (err) {
             console.log("Error when manage phase create => ", err)
             return res.status(400).send({ error: "Error when manage phase create" })
+        }
+    }
+
+    async _getByDepartment(departments, authorization, db) {
+        try {
+            let phases = []
+            departments = JSON.parse(departments)
+            if (departments.length > 0) {
+                for (const department of departments) {
+
+                    const department_id = await departmentModel.getByID(department, authorization)
+                    if (department_id && department_id.length <= 0)
+                        return false
+
+                    const result = await phaseModel.getPhasesByDepartmentID(department_id[0].id)
+                    for (const phase of result) {
+                        if (phase.id_form_template && phase.form) {
+                            console.log("TESTE _---->", phase)
+                            const register = await new FormTemplate(db).findRegistes(phase.id_form_template)
+                            if (register && register.column)
+                                phase.formTemplate = register.column
+
+                            delete phase.id_form_template
+                        }
+                        phase.department = department
+                        phases.push(phase)
+                    }
+                }
+                return phases
+            }
+
+        } catch (err) {
+            console.log(err)
+            return { error: "Houve algum erro ao captar o departamento pelo id" }
         }
     }
 
