@@ -181,7 +181,7 @@ class PhaseModel {
     async getPhasesByDepartmentID(id_department) {
         try {
             return await database("department_phase").select({
-                phase: "phase.id",
+                id: "phase.id",
                 name: "phase.name",
                 form: "phase.form",
                 id_form_template: "phase.id_form_template"
