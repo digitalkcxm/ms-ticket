@@ -571,3 +571,291 @@ valida_prod:
   dependencies:
     - deploy_prod
   allow_failure: false
+
+###DEPLOY AMBIENTE DONUS
+
+deploy_donus_prod:
+  stage: prod
+  image: ubuntu
+  before_script:
+    - apt update > /dev/null 2>&1 
+    - apt install dos2unix python3 python3-pip jq git unzip zip curl bash openssl wget rsync -y > /dev/null 2>&1
+    - DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends tzdata > /dev/null 2>&1
+    - rm -rf /etc/localtime
+    - ln -s /usr/share/zoneinfo/America/Sao_Paulo /etc/localtime
+    - curl -s https://releases.hashicorp.com/vault/1.5.3/vault_1.5.3_linux_amd64.zip -o "vault.zip"
+    - unzip -q vault.zip ; mv vault /usr/bin/ ; chmod +x /usr/bin/vault
+    - curl -s "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+    - unzip -q awscliv2.zip
+    - ./aws/install
+    - aws --version
+    - vault -v
+    - DATE=$(date +%d-%m-%YH%H:%M:%S)
+    - echo $DATE
+    - 'which ssh-agent || ( apt-get install -qq openssh-client )'
+    - eval $(ssh-agent -s)
+    # Setup SSH deploy keys
+    - ssh-add <(echo "$SSH_PRIVATE_KEY")
+    - mkdir -p ~/.ssh
+    - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
+    - TXT_RED="\e[31m" && TXT_BLUE="\e[34m" && TXT_GREEN="\e[32m" && TXT_CYAN="\e[36m" && TXT_YELLOW="\e[33m"
+    - export VAULT_ADDR="${VAULT_ADDR}"
+    - export VAULT_TOKEN="${VAULT_TOKEN}"
+    - CLIENTE=donus
+    - AWS_DEFAULT_REGION=us-east-1    
+    - ENV=prod
+    - export AWS_ACCESS_KEY_ID="${DONUS_AWS_ACCESS_KEY_ID}"
+    - export AWS_SECRET_ACCESS_KEY="${DONUS_AWS_SECRET_ACCESS_KEY}"
+    - TAG_RELEASE=`git describe --abbrev=0 --tags`
+  script:
+    - >
+      KEYS=`vault kv get kv-v1/$CLIENTE/microservicos/$CI_PROJECT_NAME | egrep -v "Data|---|Key" | awk '{print $1}'`
+
+        for k in $(echo $KEYS);
+        do
+          var=`vault kv get -field=$k kv-v1/$CLIENTE/microservicos/$CI_PROJECT_NAME`
+          echo "$k='$var'" >> .env
+        done
+
+        aws ec2 describe-instances --region $AWS_DEFAULT_REGION --filters "Name=tag:Name,Values=$CI_PROJECT_NAME-$ENV" --query 'Reservations[*].Instances[*].{Name:Tags[?Key==`Name`]|[0].Value,PrivateIP:PrivateIpAddress}' | jq '.[] | .[] | .Name' > nameserver.txt
+        INSTANCE_NAME=`cat nameserver.txt | cut -d '"' -f2`
+        aws ec2 describe-instances --region $AWS_DEFAULT_REGION --filters "Name=tag:Name,Values=$CI_PROJECT_NAME-$ENV" --query 'Reservations[*].Instances[*].{Name:Tags[?Key==`Name`]|[0].Value,PrivateIP:PrivateIpAddress}' | jq '.[] | .[] | .PrivateIP' > servers.txt
+        IP=`cat servers.txt | cut -d '"' -f2`
+        echo " "
+        
+        for s in $(cat servers.txt | cut -d '"' -f2);
+        do
+
+          ssh ubuntu@$s "sudo hostname | grep $CI_PROJECT_NAME" > hostname.txt
+          HOSTNAME=`cat hostname.txt`
+          rm -rf hostname.txt
+
+          echo -e "${TXT_BLUE}**************************************************************************************************************"
+          echo -e "${TXT_BLUE}******************************************| ${TXT_CYAN}STARTED AT: $DATE"
+          echo -e "${TXT_BLUE}******************************************| ${TXT_CYAN}MICROSERVICO: $CI_PROJECT_NAME"
+          echo -e "${TXT_BLUE}******************************************| ${TXT_CYAN}TAG RELEASE: $TAG_RELEASE"
+          echo -e "${TXT_BLUE}******************************************| ${TXT_CYAN}AMBIENTE: $ENV"
+          echo -e "${TXT_BLUE}******************************************| ${TXT_CYAN}USER: $GITLAB_USER_LOGIN"
+          echo -e "${TXT_BLUE}******************************************| ${TXT_CYAN}SERVIDOR: $HOSTNAME"
+          echo -e "${TXT_BLUE}******************************************| ${TXT_CYAN}IP: $s"
+          echo -e "${TXT_BLUE}**************************************************************************************************************"
+          echo " "  
+
+          MS_URL=`vault kv get -field=HEALTHCHECK kv-v1/$CLIENTE/microservicos/$CI_PROJECT_NAME | cut -d "/" -f3`
+          
+          echo -e "${TXT_BLUE}******************************************| ${TXT_GREEN}ADICIONANDO DOWNTIME PARA O SERVIDOR $HOSTNAME NO MONITORAMENTO"
+          curl -I -s "http://${CHECKMK_HOST}/check_mk/view.py?_username=${CHECKMK_USER}&_secret=${CHECKMK_SECRET}&_transid=-1&_do_confirm=yes&_do_actions=yes&host=${HOSTNAME}&_down_from_now=yes&_down_minutes=15&_down_comment=Deploy_Aplicacao&view_name=hoststatus"
+          echo " "
+
+          echo -e "${TXT_BLUE}******************************************| ${TXT_GREEN}ADICIONANDO DOWNTIME PARA A URL $MS_URL NO MONITORAMENTO"
+          curl -I -s "http://${CHECKMK_HOST}/check_mk/view.py?_username=${CHECKMK_USER}&_secret=${CHECKMK_SECRET}&_transid=-1&_do_confirm=yes&_do_actions=yes&host=${MS_URL}&_down_from_now=yes&_down_minutes=15&_down_comment=Deploy_Aplicacao&view_name=hoststatus"
+          echo " " 
+
+          echo -e "${TXT_BLUE}******************************************| ${TXT_YELLOW}CRIANDO ESTRUTURA DE DIRETORIOS E REMOVENDO CONTEUDO ANTIGO"
+
+          ssh ubuntu@$s "sudo rm -rf /srv/$CI_PROJECT_NAME" > /dev/null 2>&1
+          ssh ubuntu@$s "sudo mkdir -p /srv/$CI_PROJECT_NAME"
+          ssh ubuntu@$s "sudo chown -R ubuntu:ubuntu /srv/$CI_PROJECT_NAME"
+          echo " "
+
+          echo -e "${TXT_BLUE}******************************************| ${TXT_YELLOW}REMOVENDO APLICACAO EM EXECUSAO"
+          ssh ubuntu@$s 'export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; pm2 show '${CI_PROJECT_NAME}'; if [ $? -eq 0 ]; then pm2 delete all; else echo "Nenhum processo encontrado" ; fi'
+          echo " "           
+
+          echo -e "${TXT_BLUE}******************************************| ${TXT_YELLOW}REALIZANDO O UPLOAD DOS NOVOS ARQUIVOS PARA O SERVIDOR $s"
+          rsync -azr ../$CI_PROJECT_NAME/* --exclude=aws --exclude=awscliv2.zip --exclude=vault.zip --exclude=servers.txt --exclude=nameserver.txt ubuntu@$s:/srv/$CI_PROJECT_NAME/
+          rsync -azr .* --exclude=aws --exclude=awscliv2.zip --exclude=vault.zip --exclude=servers.txt --exclude=nameserver.txt --exclude=$CI_PROJECT_NAME --exclude=$CI_PROJECT_NAME.tmp ubuntu@$s:/srv/$CI_PROJECT_NAME/
+          ssh ubuntu@$s "chmod 755 -R /srv/$CI_PROJECT_NAME/"
+          ssh ubuntu@$s "cd /srv/$CI_PROJECT_NAME/; git remote set-url origin $CI_PROJECT_URL"
+          ssh ubuntu@$s "cd /srv/$CI_PROJECT_NAME/; git checkout ."
+          echo " "
+
+          echo -e "${TXT_BLUE}******************************************| ${TXT_YELLOW}REALIZANDO BUILD E START DA NOVA APLICACAO"
+          ssh ubuntu@$s "export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; cd /srv/$CI_PROJECT_NAME; npm install"
+          ssh ubuntu@$s "export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; cd /srv/$CI_PROJECT_NAME; pm2 start -f index.js --name $CI_PROJECT_NAME --log-date-format='DD-MM-YYYY HH:mm Z' --log-type json"
+          ssh ubuntu@$s "sudo env PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin /usr/local/nvm/versions/node/v10.14.1/lib/node_modules/pm2/bin/pm2 startup systemd -u ubuntu --hp /home/ubuntu"
+
+          ssh ubuntu@$s "sudo systemctl enable pm2-ubuntu"
+          echo " "
+
+          ssh ubuntu@$s "export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; pm2 save"
+          echo " "
+
+          ssh ubuntu@$s "sudo env PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin pm2 logrotate -u ubuntu"
+          echo " "
+
+          ssh ubuntu@$s "export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; pm2 set pm2-logrotate:max_size 100M ; pm2 set pm2-logrotate:retain 10 ; pm2 set pm2-logrotate:compress true"
+          echo " "
+
+          echo -e "${TXT_BLUE}******************************************| ${TXT_YELLOW}LISTANDO PROCESSOS DA APLICAO EM EXECUSAO APOS DEPLOY"
+          ssh ubuntu@$s "export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; pm2 list"
+          echo " "
+
+          ssh ubuntu@$s "sudo netstat -ntpl | grep 5000"
+          echo " "
+          sleep 10
+
+          echo -e "${TXT_BLUE}******************************************| ${TXT_GREEN}REMOVENDO DOWNTIME DO SERVIDOR $HOSTNAME NO MONITORAMENTO"
+          curl -I -s "http://${CHECKMK_HOST}/check_mk/view.py?_do_confirm&_transid=-1&_do_actions=yes&_username=${CHECKMK_USER}&_secret=${CHECKMK_SECRET}&view_name=hoststatus&host=${HOSTNAME}&_down_remove=Remove"
+          echo " "
+
+          echo -e "${TXT_BLUE}******************************************| ${TXT_GREEN}REMOVENDO DOWNTIME DA URL $MS_URL NO MONITORAMENTO"
+          curl -I -s "http://${CHECKMK_HOST}/check_mk/view.py?_do_confirm&_transid=-1&_do_actions=yes&_username=${CHECKMK_USER}&_secret=${CHECKMK_SECRET}&view_name=hoststatus&host=${MS_URL}&_down_remove=Remove"
+          echo " "
+
+        done     
+
+        echo -e "${TXT_BLUE}**************************************************************************************************************"
+        echo -e "${TXT_BLUE}*************************************| ${TXT_CYAN}FINISHED AT $DATE |"
+        echo -e "${TXT_BLUE}**************************************************************************************************************"
+        echo " "
+        echo -e "${TXT_GREEN}++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+        echo " "
+  only:
+    - master
+
+valida_donus_prod:
+  stage: valida_prod
+  image: node
+  before_script:
+    - apt update > /dev/null 2>&1 
+    - apt install dos2unix python3 python3-pip jq git unzip zip curl bash openssl wget rsync -y > /dev/null 2>&1
+    - DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends tzdata > /dev/null 2>&1
+    - rm -rf /etc/localtime
+    - ln -s /usr/share/zoneinfo/America/Sao_Paulo /etc/localtime
+    - curl -s https://releases.hashicorp.com/vault/1.5.3/vault_1.5.3_linux_amd64.zip -o "vault.zip"
+    - unzip -q vault.zip ; mv vault /usr/bin/ ; chmod +x /usr/bin/vault
+    - curl -s "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+    - unzip -q awscliv2.zip
+    - ./aws/install
+    - aws --version
+    - vault -v
+    - DATE=$(date +%d-%m-%YH%H:%M:%S)
+    - echo $DATE
+    - 'which ssh-agent || ( apt-get install -qq openssh-client )'
+    - eval $(ssh-agent -s)
+    # Setup SSH deploy keys
+    - ssh-add <(echo "$SSH_PRIVATE_KEY")
+    - mkdir -p ~/.ssh
+    - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
+    - TXT_RED="\e[31m" && TXT_BLUE="\e[34m" && TXT_GREEN="\e[32m" && TXT_CYAN="\e[36m" && TXT_YELLOW="\e[33m"
+    - export VAULT_ADDR="${VAULT_ADDR}"
+    - export VAULT_TOKEN="${VAULT_TOKEN}"
+    - CLIENTE=donus
+    - AWS_DEFAULT_REGION=us-east-1    
+    - ENV=prod
+    - export AWS_ACCESS_KEY_ID="${DONUS_AWS_ACCESS_KEY_ID}"
+    - export AWS_SECRET_ACCESS_KEY="${DONUS_AWS_SECRET_ACCESS_KEY}"
+    - TAG_RELEASE=`git describe --abbrev=0 --tags`
+  script:
+    - >
+      echo " "
+
+        aws ec2 describe-instances --region $AWS_DEFAULT_REGION --filters "Name=tag:Name,Values=$CI_PROJECT_NAME-$ENV" --query 'Reservations[*].Instances[*].{Name:Tags[?Key==`Name`]|[0].Value,PrivateIP:PrivateIpAddress}' | jq '.[] | .[] | .Name' > nameserver.txt
+        INSTANCE_NAME=`cat nameserver.txt | cut -d '"' -f2`
+        aws ec2 describe-instances --region $AWS_DEFAULT_REGION --filters "Name=tag:Name,Values=$CI_PROJECT_NAME-$ENV" --query 'Reservations[*].Instances[*].{Name:Tags[?Key==`Name`]|[0].Value,PrivateIP:PrivateIpAddress}' | jq '.[] | .[] | .PrivateIP' > servers.txt
+        IP=`cat servers.txt | cut -d '"' -f2`
+        
+        for s in $(cat servers.txt | cut -d '"' -f2);
+        do
+
+          ssh ubuntu@$s "sudo hostname | grep $CI_PROJECT_NAME" > hostname.txt
+          HOSTNAME=`cat hostname.txt`
+          
+          echo -e "${TXT_BLUE}**************************************************************************************************************"
+          echo -e "${TXT_BLUE}******************************************| ${TXT_CYAN}STARTED AT: $DATE"
+          echo -e "${TXT_BLUE}******************************************| ${TXT_CYAN}MICROSERVICO: $CI_PROJECT_NAME"
+          echo -e "${TXT_BLUE}******************************************| ${TXT_CYAN}TAG RELEASE: $TAG_RELEASE"
+          echo -e "${TXT_BLUE}******************************************| ${TXT_CYAN}AMBIENTE: $ENV"
+          echo -e "${TXT_BLUE}******************************************| ${TXT_CYAN}USER: $GITLAB_USER_LOGIN"
+          echo -e "${TXT_BLUE}******************************************| ${TXT_CYAN}SERVIDOR: $HOSTNAME"
+          echo -e "${TXT_BLUE}******************************************| ${TXT_CYAN}IP: $s"
+          echo -e "${TXT_BLUE}**************************************************************************************************************"
+          echo " " 
+
+          HEALTH_PATH=`vault kv get -field=HEALTHCHECK kv-v1/$CLIENTE/microservicos/$CI_PROJECT_NAME | cut -d "." -f4 | cut -d "/" -f2-6`
+          
+          echo -e "${TXT_BLUE}******************************************| ${TXT_YELLOW}LISTANDO PROCESSOS DA APLICAO EM EXECUSAO NO SERVIDOR"
+          ssh ubuntu@$s "export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; pm2 list" > /dev/null 2>&1
+          echo " "
+
+          ssh ubuntu@$s "export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; pm2 show '${CI_PROJECT_NAME}'"
+          echo " "
+
+          ssh ubuntu@$s "sudo netstat -ntpl | grep 5000"
+          echo " "
+
+          echo -e "${TXT_BLUE}******************************************| ${TXT_YELLOW}TESTANDO RETORNO HEALTHCHECK VIA LOCALHOST"
+          ssh ubuntu@$s "curl -s -I -X GET http://localhost:5000/$HEALTH_PATH";
+          echo " "
+
+          echo -e "${TXT_BLUE}******************************************| ${TXT_YELLOW}TESTANDO RETORNO HEALTHCHECK VIA IP $s"
+          STATUS_CODE=`curl -s -I -X GET http://$s:5000/$HEALTH_PATH | grep HTTP | awk '{print $2}'`
+          if [ $? -eq 0 ]; then
+
+            if [[ "$STATUS_CODE" == "200" ]]; then
+
+                    echo -e "${TXT_BLUE}******************************************| ${TXT_GREEN}APLICACAO RETORNANDO STATUS CODE $STATUS_CODE AO CONSULTAR A URL http://$s:5000/$HEALTH_PATH" 
+                    curl -s -I -X GET http://$s:5000/$HEALTH_PATH
+                    echo " "
+
+            else 
+                    echo -e "${TXT_RED}******************************************| APLICACAO RETORNANDO STATUS CODE DE ERRO $STATUS_CODE AO CONSULTAR A URL http://$s:5000/$HEALTH_PATH" 
+                    curl -s -I -X GET http://$s:5000/$HEALTH_PATH
+                    exit 1
+                    echo " "
+
+            fi
+
+          else
+
+            echo $STATUS_CODE;
+            echo -e "${TXT_RED}******************************************| FALHA AO TENTAR CONECTAR NA URL http://$s:5000/$HEALTH_PATH"
+            exit 1
+            echo " "
+
+          fi
+
+          HEALTHCHECK=`vault kv get -field=HEALTHCHECK kv-v1/$CLIENTE/microservicos/$CI_PROJECT_NAME`
+          echo -e "${TXT_BLUE}******************************************| ${TXT_YELLOW}TESTANDO RETORNO HEALTHCHECK VIA URL $HEALTHCHECK"
+          STATUS=`curl -s -I -X GET $HEALTHCHECK | grep HTTP | awk '{print $2}'`;
+          if [ $? -eq 0 ]; then
+
+            if [[ "$STATUS" == "200" ]]; then
+
+              echo -e "${TXT_BLUE}******************************************| ${TXT_GREEN}APLICACAO RETORNANDO STATUS CODE $STATUS AO CONSULTAR A URL $HEALTHCHECK" 
+              curl -s -I -X GET $HEALTHCHECK
+              echo " "
+
+            else 
+
+              echo -e "${TXT_RED}******************************************| APLICACAO RETORNANDO STATUS CODE DE ERRO $STATUS AO CONSULTAR A URL $HEALTHCHECK" 
+              curl -s -I -X GET $HEALTHCHECK
+              exit 1
+              echo " "
+
+            fi
+
+          else
+
+            echo $STATUS;
+            echo -e "${TXT_RED}******************************************| FALHA AO TENTAR CONECTAR NA URL $HEALTHCHECK"
+            exit 1
+            echo " "
+
+          fi
+
+        done
+
+        echo -e "${TXT_BLUE}**************************************************************************************************************"
+        echo -e "${TXT_BLUE}*************************************| ${TXT_CYAN}FINISHED AT $DATE |"
+        echo -e "${TXT_BLUE}**************************************************************************************************************"
+        echo " "
+        echo -e "${TXT_GREEN}++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+        echo " "
+
+  only:
+    - master
+  dependencies:
+    - deploy_donus_prod
+  allow_failure: false
