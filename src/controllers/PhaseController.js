@@ -254,6 +254,7 @@ class PhaseController {
             } else if (req.query.departments) {
                 console.log("TESTE")
                 result = await this._getByDepartment(req.query.departments, req.headers.authorization, req.app.locals.db)
+		    console.log("RESULT --->",	result)
             } else {
                 result = await phaseModel.getAllPhase(req.headers.authorization)
 
@@ -393,7 +394,8 @@ class PhaseController {
     async _getByDepartment(departments, authorization, db) {
         try {
             let phases = []
-            departments = JSON.parse(departments)
+//            departments = JSON.parse(departments)
+		console.log("departments",departments)
             if (departments.length > 0) {
                 for (const department of departments) {
 
