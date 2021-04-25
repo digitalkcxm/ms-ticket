@@ -1,13 +1,13 @@
 stages:
   - homol
-  - valida_homol
+  - check_homol
   - release
   - prod
-  - valida_prod
+  - check_prod
 
 deploy_homol:
   stage: homol
-  image: ubuntu
+  image: node:10.14.1
   before_script:
     - apt update > /dev/null 2>&1 
     - apt install dos2unix python3 python3-pip jq git unzip zip curl bash openssl wget rsync -y > /dev/null 2>&1
@@ -45,10 +45,17 @@ deploy_homol:
           echo "$k='$var'" >> .env
         done
 
+        echo -e "${TXT_BLUE}******************************************| ${TXT_YELLOW}REALIZANDO BUILD E START DA NOVA APLICACAO"
 
-        aws ec2 describe-instances --region $AWS_DEFAULT_REGION --filters "Name=tag:Name,Values=$CI_PROJECT_NAME-$ENV" --query 'Reservations[*].Instances[*].{Name:Tags[?Key==`Name`]|[0].Value,PrivateIP:PrivateIpAddress}' | jq '.[] | .[] | .Name' > nameserver.txt
+        npm install
+        echo " "
+
+        npm run migrate:latest
+        echo " "
+
+        aws ec2 describe-instances --region $AWS_DEFAULT_REGION --filters "Name=tag:Name,Values=ms-server*" --query 'Reservations[*].Instances[*].{Name:Tags[?Key==`Name`]|[0].Value,PrivateIP:PrivateIpAddress}' | jq '.[] | .[] | .Name' > nameserver.txt
         INSTANCE_NAME=`cat nameserver.txt | cut -d '"' -f2`
-        aws ec2 describe-instances --region $AWS_DEFAULT_REGION --filters "Name=tag:Name,Values=$CI_PROJECT_NAME-$ENV" --query 'Reservations[*].Instances[*].{Name:Tags[?Key==`Name`]|[0].Value,PrivateIP:PrivateIpAddress}' | jq '.[] | .[] | .PrivateIP' > servers.txt
+        aws ec2 describe-instances --region $AWS_DEFAULT_REGION --filters "Name=tag:Name,Values=ms-server*" --query 'Reservations[*].Instances[*].{Name:Tags[?Key==`Name`]|[0].Value,PrivateIP:PrivateIpAddress}' | jq '.[] | .[] | .PrivateIP' > servers.txt
         IP=`cat servers.txt | cut -d '"' -f2`
         echo " "
      
@@ -73,7 +80,7 @@ deploy_homol:
           echo " "
 
           echo -e "${TXT_BLUE}******************************************| ${TXT_YELLOW}REMOVENDO APLICACAO EM EXECUSAO"
-          ssh ubuntu@$s 'export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; pm2 show '${CI_PROJECT_NAME}'; if [ $? -eq 0 ]; then pm2 delete all; else echo "Nenhum processo encontrado" ; fi'
+          ssh ubuntu@$s 'export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; pm2 show '${CI_PROJECT_NAME}'; if [ $? -eq 0 ]; then pm2 delete '${CI_PROJECT_NAME}'; else echo "Nenhum processo encontrado" ; fi'
           echo " "          
 
           echo -e "${TXT_BLUE}******************************************| ${TXT_YELLOW}REALIZANDO O UPLOAD DOS NOVOS ARQUIVOS PARA O SERVIDOR $s"
@@ -82,11 +89,6 @@ deploy_homol:
           ssh ubuntu@$s "chmod 755 -R /srv/$CI_PROJECT_NAME/"
           ssh ubuntu@$s "cd /srv/$CI_PROJECT_NAME/; git remote set-url origin $CI_PROJECT_URL"
           ssh ubuntu@$s "cd /srv/$CI_PROJECT_NAME/; git checkout ."
-          echo " "
-
-          echo -e "${TXT_BLUE}******************************************| ${TXT_YELLOW}REALIZANDO BUILD E START DA NOVA APLICACAO"
-          ssh ubuntu@$s "export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; cd /srv/$CI_PROJECT_NAME; npm install"
-          ssh ubuntu@$s "export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; cd /srv/$CI_PROJECT_NAME; npm run migrate:latest"
           echo " "
 
           ssh ubuntu@$s "export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; cd /srv/$CI_PROJECT_NAME; pm2 start -f src/index.js --name $CI_PROJECT_NAME --log-date-format='DD-MM-YYYY HH:mm Z' --log-type json"
@@ -108,9 +110,48 @@ deploy_homol:
           ssh ubuntu@$s "export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; pm2 list"
           echo " "
 
-          ssh ubuntu@$s "sudo netstat -ntpl | grep 5000"
+          MS_PORT=`vault kv get -field=PORT kv-v1/$ENV/microservicos/$CI_PROJECT_NAME`
+          ssh ubuntu@$s "sudo netstat -ntpl | grep '${MS_PORT}'"
           echo " "
           sleep 5
+
+        done
+
+        aws ec2 describe-instances --region $AWS_DEFAULT_REGION --filters "Name=tag:Name,Values=nginx-proxy*" --query 'Reservations[*].Instances[*].{Name:Tags[?Key==`Name`]|[0].Value,PrivateIP:PrivateIpAddress}' | jq '.[] | .[] | .Name' > nginx_nameserver.txt
+        NGINX_INSTANCE=`cat nginx_nameserver.txt | cut -d '"' -f2`
+        aws ec2 describe-instances --region $AWS_DEFAULT_REGION --filters "Name=tag:Name,Values=nginx-proxy*" --query 'Reservations[*].Instances[*].{Name:Tags[?Key==`Name`]|[0].Value,PrivateIP:PrivateIpAddress}' | jq '.[] | .[] | .PrivateIP' > nginx_servers.txt
+        NGINX_IP=`cat nginx_servers.txt | cut -d '"' -f2`
+        echo " "
+
+        for n in $(cat nginx_servers.txt | cut -d '"' -f2)
+        do
+
+          echo -e "${TXT_BLUE}******************************************| ${TXT_YELLOW}CONFIGURANDO ARQUIVOS NGINX PROXY"
+          wget --header='PRIVATE-TOKEN: '${AUTOMACAO_TOKEN}'' 'https://gitlab.com/api/v4/projects/24070595/repository/files/exemple.vhost/raw?ref=master' -O $CI_PROJECT_NAME-$ENV.conf
+          echo " "
+
+          MS_URL=`vault kv get -field=HEALTHCHECK kv-v1/$ENV/microservicos/$CI_PROJECT_NAME | cut -d "/" -f3`  
+          MS_PORT=`vault kv get -field=PORT kv-v1/$ENV/microservicos/$CI_PROJECT_NAME`
+
+          sed -i '/{DOMAIN}/ s/{DOMAIN}/'${MS_URL}'/g' $CI_PROJECT_NAME-$ENV.conf
+          sed -i '/{API_NAME}/ s/{API_NAME}/'${CI_PROJECT_NAME}'/g' $CI_PROJECT_NAME-$ENV.conf
+          sed -i '/{API_SERVER}/ s/{API_SERVER}/'${IP}'/g' $CI_PROJECT_NAME-$ENV.conf
+          sed -i '/{PORT}/ s/{PORT}/'${MS_PORT}'/g' $CI_PROJECT_NAME-$ENV.conf
+          
+          echo -e "${TXT_BLUE}******************************************| ${TXT_YELLOW}ENVIANDO ARQUIVOS DE CONFIGURACAO NGINX PROXY PARA O SERVIDOR"
+          rsync -azr $CI_PROJECT_NAME-$ENV.conf ubuntu@$n:~/
+          ssh ubuntu@$n "sudo mv ~/$CI_PROJECT_NAME-$ENV.conf /etc/nginx/sites-available/"
+          ssh ubuntu@$n "sudo ln -sf /etc/nginx/sites-available/$CI_PROJECT_NAME-$ENV.conf /etc/nginx/sites-enabled/$CI_PROJECT_NAME-$ENV.conf"
+          ssh ubuntu@$n "sudo sudo chown root:root /etc/nginx/sites-enabled/$CI_PROJECT_NAME-$ENV.conf"
+          ssh ubuntu@$n "sudo nginx -t; if [ $? -eq 0 ]; then sudo systemctl reload nginx; else echo "ERRO AO REALIZAR RELOAD DO NGINX" ; fi"
+          echo " "
+
+          ssh ubuntu@$n "sudo systemctl status nginx"
+          echo " "
+
+          sleep 10
+
+          rm -rf $CI_PROJECT_NAME-$ENV.conf nginx_servers.txt nginx_nameserver.txt
 
         done
 
@@ -124,9 +165,9 @@ deploy_homol:
   only:
     - master
 
-valida_homol:
-  stage: valida_homol
-  image: node
+check_homol:
+  stage: check_homol
+  image: node:10.14.1
   before_script:
     - apt update > /dev/null 2>&1 
     - apt install dos2unix python3 python3-pip jq git unzip zip curl bash openssl wget rsync -y > /dev/null 2>&1
@@ -158,9 +199,9 @@ valida_homol:
     - >
       echo " "
 
-        aws ec2 describe-instances --region $AWS_DEFAULT_REGION --filters "Name=tag:Name,Values=$CI_PROJECT_NAME-$ENV" --query 'Reservations[*].Instances[*].{Name:Tags[?Key==`Name`]|[0].Value,PrivateIP:PrivateIpAddress}' | jq '.[] | .[] | .Name' > nameserver.txt
+        aws ec2 describe-instances --region $AWS_DEFAULT_REGION --filters "Name=tag:Name,Values=ms-server*" --query 'Reservations[*].Instances[*].{Name:Tags[?Key==`Name`]|[0].Value,PrivateIP:PrivateIpAddress}' | jq '.[] | .[] | .Name' > nameserver.txt
         INSTANCE_NAME=`cat nameserver.txt | cut -d '"' -f2`
-        aws ec2 describe-instances --region $AWS_DEFAULT_REGION --filters "Name=tag:Name,Values=$CI_PROJECT_NAME-$ENV" --query 'Reservations[*].Instances[*].{Name:Tags[?Key==`Name`]|[0].Value,PrivateIP:PrivateIpAddress}' | jq '.[] | .[] | .PrivateIP' > servers.txt
+        aws ec2 describe-instances --region $AWS_DEFAULT_REGION --filters "Name=tag:Name,Values=ms-server*" --query 'Reservations[*].Instances[*].{Name:Tags[?Key==`Name`]|[0].Value,PrivateIP:PrivateIpAddress}' | jq '.[] | .[] | .PrivateIP' > servers.txt
         IP=`cat servers.txt | cut -d '"' -f2` 
         echo " "
 
@@ -178,6 +219,7 @@ valida_homol:
           echo " "
 
           HEALTH_PATH=`vault kv get -field=HEALTHCHECK kv-v1/$ENV/microservicos/$CI_PROJECT_NAME | cut -d "." -f4 | cut -d "/" -f2-6`
+          MS_PORT=`vault kv get -field=PORT kv-v1/$ENV/microservicos/$CI_PROJECT_NAME`
 
           echo -e "${TXT_BLUE}******************************************| ${TXT_YELLOW}LISTANDO PROCESSOS DA APLICAO EM EXECUSAO NO SERVIDOR"
           ssh ubuntu@$s "export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; pm2 list" > /dev/null 2>&1
@@ -186,26 +228,26 @@ valida_homol:
           ssh ubuntu@$s "export PATH=$PATH:/usr/local/nvm/versions/node/v10.14.1/bin; pm2 show '${CI_PROJECT_NAME}'"
           echo " "
 
-          ssh ubuntu@$s "sudo netstat -ntpl | grep 5000"
+          ssh ubuntu@$s "sudo netstat -ntpl | grep $MS_PORT"
           echo " "
 
           echo -e "${TXT_BLUE}******************************************| ${TXT_YELLOW}TESTANDO RETORNO HEALTHCHECK VIA LOCALHOST"
-          ssh ubuntu@$s "curl -s -I -X GET http://localhost:5000/$HEALTH_PATH";
+          ssh ubuntu@$s "curl -s -I -X GET http://localhost:$MS_PORT/$HEALTH_PATH";
           echo " "
 
           echo -e "${TXT_BLUE}******************************************| ${TXT_YELLOW}TESTANDO RETORNO HEALTHCHECK VIA IP $s"
-          STATUS_CODE=`curl -s -I -X GET http://$s:5000/$HEALTH_PATH | grep HTTP | awk '{print $2}'`
+          STATUS_CODE=`curl -s -I -X GET http://$s:$MS_PORT/$HEALTH_PATH | grep HTTP | awk '{print $2}'`
           if [ $? -eq 0 ]; then
 
             if [[ "$STATUS_CODE" == "200" ]]; then
 
-                    echo -e "${TXT_BLUE}******************************************| ${TXT_GREEN}APLICACAO RETORNANDO STATUS CODE $STATUS_CODE AO CONSULTAR A URL http://$s:5000/$HEALTH_PATH" 
-                    curl -s -I -X GET http://$s:5000/$HEALTH_PATH
+                    echo -e "${TXT_BLUE}******************************************| ${TXT_GREEN}APLICACAO RETORNANDO STATUS CODE $STATUS_CODE AO CONSULTAR A URL http://$s:$MS_PORT/$HEALTH_PATH" 
+                    curl -s -I -X GET http://$s:$MS_PORT/$HEALTH_PATH
                     echo " "
 
             else 
-                    echo -e "${TXT_RED}******************************************| APLICACAO RETORNANDO STATUS CODE DE ERRO $STATUS_CODE AO CONSULTAR A URL http://$s:5000/$HEALTH_PATH" 
-                    curl -s -I -X GET http://$s:5000/$HEALTH_PATH
+                    echo -e "${TXT_RED}******************************************| APLICACAO RETORNANDO STATUS CODE DE ERRO $STATUS_CODE AO CONSULTAR A URL http://$s:$MS_PORT/$HEALTH_PATH" 
+                    curl -s -I -X GET http://$s:$MS_PORT/$HEALTH_PATH
                     exit 1
                     echo " "
 
@@ -214,7 +256,7 @@ valida_homol:
           else
 
             echo $STATUS_CODE;
-            echo -e "${TXT_RED}******************************************| FALHA AO TENTAR CONECTAR NA URL http://$s:5000/$HEALTH_PATH"
+            echo -e "${TXT_RED}******************************************| FALHA AO TENTAR CONECTAR NA URL http://$s:$MS_PORT/$HEALTH_PATH"
             exit 1
             echo " "
 
@@ -291,7 +333,7 @@ create-release:
       - master
   when: manual
   dependencies:
-    - valida_homol
+    - check_homol
   allow_failure: false
 
 deploy_prod:
@@ -431,8 +473,8 @@ deploy_prod:
   only:
     - master
 
-valida_prod:
-  stage: valida_prod
+check_prod:
+  stage: check_prod
   image: node
   before_script:
     - apt update > /dev/null 2>&1 
@@ -571,3 +613,4 @@ valida_prod:
   dependencies:
     - deploy_prod
   allow_failure: false
+
