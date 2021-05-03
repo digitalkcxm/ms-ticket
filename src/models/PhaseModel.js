@@ -5,7 +5,6 @@ const tableName = "phase"
 class PhaseModel {
     async createPhase(obj) {
         try {
-            console.log("====>", obj)
             return await database(tableName).returning(["id"]).insert(obj)
         } catch (err) {
             console.log("Error when create phase => ", err)
@@ -25,7 +24,9 @@ class PhaseModel {
                 "responsible_notify_sla": "phase.responsible_notify_sla",
                 "supervisor_notify_sla": "phase.supervisor_notify_sla",
                 "form": "phase.form",
-                "id_form_template": "phase.id_form_template"
+                "id_form_template": "phase.id_form_template",
+                "created_at": "created_at",
+                "updated_at": "updated_at"
             })
                 .leftJoin("unit_of_time", "unit_of_time.id", "phase.id_unit_of_time")
                 .where("phase.id", id_phase)
@@ -35,6 +36,7 @@ class PhaseModel {
             return err
         }
     }
+
     async getPhase(id, id_company) {
         try {
             return await database(tableName).where("id", id).andWhere("id_company", id_company)
@@ -62,18 +64,19 @@ class PhaseModel {
         }
     }
 
-    async linkedEmail(obj) {
+    async linkedDepartment(obj) {
         try {
-            return await database("department_phase").insert(obj)
+            await database("department_phase").update('active', false).where("id_phase", obj.id_phase)
+            return await database("department_phase").returning(["id"]).insert(obj)
         } catch (err) {
             console.log("Error when linked department with phase =>", err)
             return err
         }
     }
 
-    async removeLinkedDepartment(phase_id) {
+    async selectLinkedDepartment(phase_id) {
         try {
-            return await database("department_phase").where("id_phase", phase_id)
+            return await database("department_phase").where("id_phase", phase_id).andWhere("active", true)
         } catch (err) {
             console.log("Error when remove linked =>", err)
             return err
@@ -137,6 +140,7 @@ class PhaseModel {
             return err
         }
     }
+
     async getResponsiblePhaseByIdPhase(id_phase) {
         try {
             return await database("responsible_phase").select({
@@ -166,7 +170,7 @@ class PhaseModel {
             return err
         }
     }
-    
+
     async getDepartmentPhase(id_phase) {
         try {
             return await database("department_phase").select({ id_department: "department.id_department_core" })
@@ -218,6 +222,23 @@ class PhaseModel {
             return await database("notify_phase").andWhere("id_phase", id_phase).del()
         } catch (err) {
             console.log("Error when get responsible Ticket =>", err)
+            return err
+        }
+    }
+
+    async getPhasesByDepartmentID(id_department) {
+        try {
+            return await database("department_phase").select({
+                phase: "phase.id",
+                name: "phase.name",
+                form: "phase.form",
+                id_form_template: "phase.id_form_template"
+            })
+                .leftJoin("phase", "phase.id", "department_phase.id_phase")
+                .where("department_phase.id_department", id_department)
+
+        } catch (err) {
+            console.log("Error when catch department id ==>", err)
             return err
         }
     }

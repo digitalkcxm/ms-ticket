@@ -1,5 +1,6 @@
 const DepartmentModel =require("../models/DepartmentModel")
 const departmentModel = new DepartmentModel()
+const { validationResult } = require('express-validator');
 
 class DepartmentController {
     async checkDepartmentCreated(department, company_id) {
@@ -10,6 +11,7 @@ class DepartmentController {
                     "id_company": company_id,
                     "id_department_core": department
                 })
+                
             return result
         } catch (err) {
             console.log("Error when check department created =>", err)

@@ -11,11 +11,13 @@ const FormDocuments = require("../documents/FormDocuments")
 const asyncRedis = require('async-redis')
 const redis = asyncRedis.createClient(process.env.REDIS_PORT, process.env.REDIS_HOST)
 const UnitOfTimeModel = require("../models/UnitOfTimeModel")
+const { formatTicketForPhase } = require("../helpers/FormatTicket")
+const AttachmentsModel = require("../models/AttachmentsModel")
+const { validationResult } = require('express-validator');
 
 const moment = require("moment")
 const { v1 } = require("uuid")
 const notify = require("../helpers/Notify")
-const { models } = require("mongoose")
 
 const ticketModel = new TicketModel()
 const userController = new UserController()
@@ -25,34 +27,24 @@ const userModel = new UserModel()
 const companyModel = new CompanyModel()
 const emailService = new EmailService()
 const emailModel = new EmailModel()
+const attachmentsModel = new AttachmentsModel()
+
+const ActivitiesModel = require("../models/ActivitiesModel")
+const activitiesModel = new ActivitiesModel()
+
 class TicketController {
     async create(req, res) {
+        const errors = validationResult(req)
+        if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() })
+
         try {
             let userResponsible = []
-            let emailResponsible = []
-            if (!req.body.id_user)
-                return res.status(400).send({ error: "Whitout id_user, please inform your user_id " })
-
             let id_user = await userController.checkUserCreated(req.body.id_user, req.headers.authorization)
-
-            if (!id_user || !id_user.id)
-                return res.status(400).send({ error: "Error when get user by id" })
-
-            if (!req.body.id_phase)
-                return res.status(400).send({ error: "Whitout id_phase, please inform  id_phase" })
-
-            if (!req.body.responsible || req.body.responsible.length <= 0)
-                return res.status(400).send({ error: "Please inform ticket responsible" })
 
             req.body.responsible.map(async responsible => {
                 let result
-                if (responsible.id) {
-                    result = await userController.checkUserCreated(responsible.id, req.headers.authorization, responsible.name)
-                    userResponsible.push(result.id)
-                } else if (responsible.email) {
-                    result = await emailController.checkEmailCreated(responsible.email, req.headers.authorization)
-                    emailResponsible.push(result.id)
-                }
+                result = await userController.checkUserCreated(responsible, req.headers.authorization, responsible.name)
+                userResponsible.push(result.id)
             })
 
             let obj = {
@@ -65,58 +57,43 @@ class TicketController {
                 created_at: moment().format(),
                 updated_at: moment().format()
             }
-
             let phase = await phaseModel.getPhase(req.body.id_phase, req.headers.authorization)
 
-            if (phase[0].form) {
-                let errors = await this._validateForm(req.app.locals.db, phase[0].id_form_template, req.body.form)
-                if (errors.length > 0)
-                    return res.status(400).send({ errors: errors })
+            if (Object.keys(req.body.form).length > 0) {
+                if (phase[0].form) {
+                    let errors = await this._validateForm(req.app.locals.db, phase[0].id_form_template, req.body.form)
+                    if (errors.length > 0)
+                        return res.status(400).send({ errors: errors })
 
-                obj.id_form = await new FormDocuments(req.app.locals.db).createRegister(req.body.form)
+                    obj.id_form = await new FormDocuments(req.app.locals.db).createRegister(req.body.form)
+                }
             }
 
-            let result = await ticketModel.create(obj, "ticket")
 
-            await this._createResponsibles(userResponsible, emailResponsible, obj.id)
+            let result = await ticketModel.create(obj)
+            await this._createResponsibles(userResponsible, obj.id)
 
             if (!phase || phase.length <= 0)
                 return res.status(400).send({ error: "Invalid id_phase uuid" })
 
-            let phase_id = await ticketModel.create({
+            let phase_id = await ticketModel.createPhaseTicket({
                 "id_phase": phase[0].id,
                 "id_ticket": obj.id
-            }, "phase_ticket")
+            })
 
-            if (!phase_id || phase.length <= 0)
+            if (!phase_id || phase_id.length <= 0)
                 return res.status(500).send({ error: "There was an error" })
 
-            await this._notify(phase[0].id, req.company[0].notify_token, obj.id, userResponsible, emailResponsible, req.headers.authorization, 4, req.app.locals.db)
+            // await this._notify(phase[0].id, req.company[0].notify_token, obj.id, userResponsible, emailResponsible, req.headers.authorization, 4, req.app.locals.db)
 
             let ticket = await ticketModel.getTicketById(obj.id, req.headers.authorization)
             await redis.set(`msTicket:ticket:${ticket.id}`, JSON.stringify(ticket[0]))
 
             if (result && result.length > 0 && result[0].id) {
-                const typeMoment = await new UnitOfTimeModel().checkUnitOfTime(ticket[0].unit_of_time)
-                ticket[0].countSLA = moment(ticket[0].created_at).add(ticket[0].sla_time, typeMoment)
-                ticket[0].countSLA = moment(ticket.countSLA).format("DD/MM/YYYY HH:mm:ss")
-                let first_interaction = await ticketModel.first_interaction(ticket[0].id)
-                first_interaction.length ? ticket[0].first_message = moment(first_interaction[0].created_at).format("DD/MM/YYYY HH:mm:ss") : null
-                ticket.attachments = ticketModel.getAttachments(ticket[0].id)
+                ticket = await formatTicketForPhase(ticket, req.app.locals.db, ticket[0])
 
-                if (ticket[0].id_form) {
-                    ticket[0].form_data = await new FormDocuments(req.app.locals.db).findRegister(ticket[0].id_form)
-                    delete ticket[0].id_form
-                }
-
-                let last_interaction = await ticketModel.last_interaction_ticket(ticket[0].id)
-                if (last_interaction && last_interaction.length) {
-                    ticket[0].last_message = last_interaction[0]
-                    ticket[0].last_message.created_at = moment(ticket[0].last_message.created_at).format("DD/MM/YYYY HH:mm:ss")
-                }
-
-                delete ticket[0].id_company
-                return res.status(200).send(ticket[0])
+                // delete ticket[0].id_company
+                return res.status(200).send(ticket)
             }
 
             return res.status(400).send({ error: "There was an error" })
@@ -126,25 +103,16 @@ class TicketController {
         }
     }
 
-    async _createResponsibles(userResponsible = null, emailResponsible = null, ticket_id, db) {
+    async _createResponsibles(userResponsible = null, ticket_id) {
         try {
             await ticketModel.delResponsibleTicket(ticket_id)
             if (userResponsible.length > 0) {
                 userResponsible.map(async user => {
-                    await ticketModel.create({
+                    await ticketModel.createResponsibleTicket({
                         "id_ticket": ticket_id,
                         "id_user": user,
                         "id_type_of_responsible": 2
-                    }, "responsible_ticket")
-                })
-            }
-            if (emailResponsible.length > 0) {
-                emailResponsible.map(async email => {
-                    await ticketModel.create({
-                        "id_ticket": ticket_id,
-                        "id_email": email,
-                        "id_type_of_responsible": 2
-                    }, "responsible_ticket")
+                    })
                 })
             }
 
@@ -352,23 +320,11 @@ class TicketController {
                 "updated_at": moment().format()
             }
 
-            let result = await ticketModel.create(obj, "activities_ticket")
+            let result = await activitiesModel.create(obj)
 
             if (result && result.length > 0) {
                 obj.id = result[0].id
 
-                const allResponsibles = await ticketModel.getAllResponsibleTicket(req.body.id_ticket)
-                let userResponsibleTicket = []
-                let emailResponsibleTicket = []
-                await allResponsibles.map(value => {
-                    if (value.id_user) {
-                        userResponsibleTicket.push(value.id_user)
-                    } else if (value.id_email) {
-                        emailResponsibleTicket.push(value.id_email)
-                    }
-                })
-
-                await this._notify(ticket[0].phase_id, req.company[0].notify_token, req.body.id_ticket, userResponsibleTicket, emailResponsibleTicket, ticket[0].id_company, 5, req.app.locals.db)
                 return res.status(200).send(obj)
             }
 
@@ -408,22 +364,10 @@ class TicketController {
                 "updated_at": moment()
             }
 
-            let result = await ticketModel.create(obj, "attachments_ticket")
+            let result = await attachmentsModel.create(obj)
 
             if (result && result.length > 0) {
                 obj.id = result[0].id
-
-                const allResponsibles = await ticketModel.getAllResponsibleTicket(req.body.id_ticket)
-                let userResponsibleTicket = []
-                let emailResponsibleTicket = []
-                await allResponsibles.map(value => {
-                    if (value.id_user) {
-                        userResponsibleTicket.push(value.id_user)
-                    } else if (value.id_email) {
-                        emailResponsibleTicket.push(value.id_email)
-                    }
-                })
-                await this._notify(ticket[0].phase_id, req.company[0].notify_token, req.body.id_ticket, userResponsibleTicket, emailResponsibleTicket, req.headers.authorization, 5, req.app.locals.db)
 
                 return res.status(200).send(obj)
             }
@@ -437,32 +381,33 @@ class TicketController {
 
     async getTicketByID(req, res) {
         try {
-            const result = await ticketModel.getTicketById(req.params.id, req.headers.authorization)
+            let result = await ticketModel.getTicketById(req.params.id, req.headers.authorization)
             if (result.name && result.name == 'error')
                 return res.status(400).send({ error: "There was an error" })
 
-            if (result[0].form) {
-                result[0].form_data = await new FormDocuments(req.app.locals.db).findRegister(result[0].id_form)
-                delete result[0].form
-                delete result[0].id_form
-            }
-            const typeMoment = await new UnitOfTimeModel().checkUnitOfTime(result[0].unit_of_time)
-            result[0].countSLA = moment(result[0].created_at).add(result[0].sla_time, typeMoment)
-            result[0].countSLA = moment(result[0].countSLA).format("DD/MM/YYYY HH:mm:ss")
-            let first_interaction = await ticketModel.first_interaction(result[0].id)
-            first_interaction.length ? result[0].first_message = moment(first_interaction[0].created_at).format("DD/MM/YYYY HH:mm:ss") : null
+            if (result && result.length <= 0)
+                return res.status(400).send({ error: "There is no ticket with this ID" })
 
-            let last_interaction = await ticketModel.last_interaction()
-            if (last_interaction && last_interaction.length > 0) {
-                result[0].last_interaction = last_interaction[0].name
-            } else { result[0].last_interaction = null }
+            result = await formatTicketForPhase(result, req.app.locals.db, result[0])
 
-            if (result && result.length > 0) {
-                delete result[0].id_company
-                return res.status(200).send(result)
-            }
+            result.attachments = await attachmentsModel.getAttachments(result.id)
+            result.attachments.map(value => {
+                value.created_at = moment(value.created_at).format("DD/MM/YYYY HH:mm:ss")
+                value.updated_at = moment(value.updated_at).format("DD/MM/YYYY HH:mm:ss")
+            })
 
-            return res.status(400).send({ error: "There was an error" })
+            result.activities = await activitiesModel.getActivities(result.id)
+            result.activities.map(value => {
+                value.created_at = moment(value.created_at).format("DD/MM/YYYY HH:mm:ss")
+                value.updated_at = moment(value.updated_at).format("DD/MM/YYYY HH:mm:ss")
+            })
+
+            result.history_phase = await ticketModel.getHistoryTicket(result.id)
+            result.history_phase.map(value => {
+                value.created_at = moment(value.created_at).format("DD/MM/YYYY HH:mm:ss")
+            })
+            return res.status(200).send(result)
+
         } catch (err) {
             console.log("Error when select ticket by id =>", err)
             return res.status(400).send({ error: "There was an error" })
@@ -478,18 +423,23 @@ class TicketController {
             req.query.range ? obj.range = JSON.parse(req.query.range) : ""
 
             const result = await ticketModel.getAllTickets(req.headers.authorization, obj)
+
             if (result.name && result.name == 'error')
                 return res.status(400).send({ error: "There was an error" })
 
             if (!result && result.length <= 0)
-                return res.status(400).send({ error: "There was an error" })
+                return res.status(400).send({ error: "There are no tickets" })
 
-            for (let ticket of result) {
-                let responsibles = ticketModel.getAllResponsibleTicket(id_ticket)
-
+            const tickets = []
+            for (const ticket of result) {
+                console.log
+                const t = [ticket]
+                const ticketFormated = await formatTicketForPhase(t, req.app.locals.db, ticket)
+                tickets.push(ticketFormated)
             }
 
-            return res.status(200).send(result)
+
+            return res.status(200).send(tickets)
         } catch (err) {
             console.log("Error when select ticket by id =>", err)
             return res.status(400).send({ error: "There was an error" })
@@ -499,24 +449,16 @@ class TicketController {
     async updateTicket(req, res) {
         try {
             let userResponsible = []
-            let emailResponsible = []
-
-            if (!req.body.id_phase)
-                return res.status(400).send({ error: "Whitout id_phase, please inform  id_phase" })
-
-            if (!req.body.responsible || req.body.responsible.length <= 0)
-                return res.status(400).send({ error: "Please inform ticket responsible" })
 
             req.body.responsible.map(async responsible => {
                 let result
-                if (responsible.id) {
-                    result = await userController.checkUserCreated(responsible.id, req.headers.authorization, responsible.name)
-                    userResponsible.push(result.id)
-                } else if (responsible.email) {
-                    result = await emailController.checkEmailCreated(responsible.email, req.headers.authorization)
-                    emailResponsible.push(result.id)
-                }
+                result = await userController.checkUserCreated(responsible, req.headers.authorization, responsible.name)
+                userResponsible.push(result.id)
             })
+            let ticket = await ticketModel.getTicketById(req.params.id, req.headers.authorization)
+
+            if (!ticket || ticket.length <= 0)
+                return res.status(400).send({ error: "There is no ticket with this ID " })
 
             let obj = {
                 ids_crm: req.body.ids_crm,
@@ -527,30 +469,44 @@ class TicketController {
 
             let result = await ticketModel.updateTicket(obj, req.params.id, req.headers.authorization)
 
-            await this._createResponsibles(userResponsible, emailResponsible, req.params.id)
+            await this._createResponsibles(userResponsible, req.params.id)
+
 
             let phase = await phaseModel.getPhase(req.body.id_phase, req.headers.authorization)
 
             if (!phase || phase.length <= 0)
                 return res.status(400).send({ error: "Invalid id_phase uuid" })
 
-            await phaseModel.disablePhaseTicket(req.params.id)
+            if (ticket[0].phase_id != phase[0].id) {
 
-            let phase_id = await ticketModel.create({
-                "id_phase": phase[0].id,
-                "id_ticket": req.params.id
-            }, "phase_ticket")
+                await phaseModel.disablePhaseTicket(req.params.id)
 
-            if (!phase_id || phase.length <= 0)
-                return res.status(500).send({ error: "There was an error" })
+                let phase_id = await ticketModel.createPhaseTicket({
+                    "id_phase": phase[0].id,
+                    "id_ticket": req.params.id
+                })
+                if (!phase_id || phase_id.length <= 0)
+                    return res.status(500).send({ error: "There was an error" })
+            }
 
-            await this._notify(phase[0].id, req.company[0].notify_token, req.params.id, userResponsible, emailResponsible, req.headers.authorization, 5, req.app.locals.db)
 
-            let ticket = await ticketModel.getTicketById(req.params.id, req.headers.authorization)
-            await redis.set(`msTicket:ticket:${req.params.id}`, JSON.stringify(ticket[0]))
+            if (Object.keys(req.body.form).length > 0) {
+                const firstPhase = await ticketModel.getFirstFormTicket(ticket[0].id)
+                if (firstPhase[0].form) {
+                    let errors = await this._validateUpdate(req.app.locals.db, firstPhase[0].id_form_template, req.body.form, ticket[0].id_form)
+                    if (errors.length > 0)
+                        return res.status(400).send({ errors: errors })
+
+                    console.log("FORM ====>", req.body.form)
+                    obj.id_form = await new FormDocuments(req.app.locals.db).updateRegister(ticket[0].id_form, req.body.form)
+                }
+            }
+
+            ticket = await formatTicketForPhase(ticket, req.app.locals.db, ticket[0])
+            await redis.set(`msTicket:ticket:${req.params.id}`, JSON.stringify(ticket))
 
             if (result)
-                return res.status(200).send(obj)
+                return res.status(200).send(ticket)
 
             return res.status(400).send({ error: "There was an error" })
         } catch (err) {
@@ -567,27 +523,9 @@ class TicketController {
 
                 let ticket = await ticketModel.getTicketById(req.params.id, req.headers.authorization)
 
-                const typeMoment = await new UnitOfTimeModel().checkUnitOfTime(ticket[0].unit_of_time)
-                ticket[0].countSLA = moment(ticket[0].created_at).add(ticket[0].sla_time, typeMoment)
-                ticket[0].countSLA = moment(ticket.countSLA).format("DD/MM/YYYY HH:mm:ss")
-                let first_interaction = await ticketModel.first_interaction(ticket[0].id)
-                first_interaction.length ? ticket[0].first_message = moment(first_interaction[0].created_at).format("DD/MM/YYYY HH:mm:ss") : null
-                ticket.attachments = await ticketModel.getAttachments(ticket[0].id)
+                ticket[0] = await formatTicketForPhase(ticket, req.app.locals.db, ticket[0])
 
-                if (ticket[0].id_form) {
-                    ticket[0].form_data = await new FormDocuments(req.app.locals.db).findRegister(ticket[0].id_form)
-                    delete ticket[0].id_form
-                }
-
-                let last_interaction = await ticketModel.last_interaction_ticket(ticket[0].id)
-                if (last_interaction && last_interaction.length) {
-                    ticket[0].last_message = last_interaction[0]
-                    ticket[0].last_message.created_at = moment(ticket[0].last_message.created_at).format("DD/MM/YYYY HH:mm:ss")
-                }
-
-                delete ticket[0].id_company
                 return res.status(200).send(ticket[0])
-
             }
             return res.status(400).send({ error: "There was an error" })
         } catch (err) {
@@ -614,7 +552,6 @@ class TicketController {
             })
         })
     }
-
 
     async checkSLATicket() {
         await redis.KEYS(`msTicket:ticket:*`, async (err, res) => {
@@ -677,7 +614,7 @@ class TicketController {
         return timeNow
     }
 
-    async _validateForm(db, id_form_template, form) {
+    async _validateForm(db, id_form_template, form, update = false) {
         try {
             const errors = []
             const form_template = await new FormTemplate(db).findRegistes(id_form_template)
@@ -691,16 +628,47 @@ class TicketController {
         }
     }
 
+    async _validateUpdate(db, id_form_template, form, id_form_ticket) {
+        try {
+            const errors = []
+            const form_template = await new FormTemplate(db).findRegistes(id_form_template)
+            const form_register = await new FormDocuments(db).findRegister(id_form_ticket)
+            for (let column of form_template.column) {
+                column.required && form[column.column] ? "" : errors.push(`O campo ${column.label} é obrigatório`)
+
+                if (form[column.column] != form_register[column.column])
+                    !column.editable && form[column.column] ? errors.push(`O campo ${column.label} não é editavel`) : ''
+            }
+            return errors
+        } catch (err) {
+            console.log("Error when generate Doc =>", err)
+            return err
+        }
+    }
+
     async getTicketByCustomerOrProtocol(req, res) {
         try {
             let result = await ticketModel.getTicketByCustomerOrProtocol(req.params.id)
 
             for (let ticket of result) {
-                const typeMoment = await new UnitOfTimeModel().checkUnitOfTime(ticket.unit_of_time)
-                ticket.countSLA = moment(ticket.created_at).add(ticket.sla_time, typeMoment)
-                ticket.countSLA = moment(ticket.countSLA).format("DD/MM/YYYY HH:mm:ss")
-                let first_interaction = await ticketModel.first_interaction(ticket.id)
-                first_interaction.length ? ticket.first_message = moment(first_interaction[0].created_at).format("DD/MM/YYYY HH:mm:ss") : null
+                ticket = await formatTicketForPhase([ticket], req.app.locals.db, ticket)
+
+                ticket.attachments = await attachmentsModel.getAttachments(ticket.id)
+                ticket.attachments.map(value => {
+                    value.created_at = moment(value.created_at).format("DD/MM/YYYY HH:mm:ss")
+                    value.updated_at = moment(value.updated_at).format("DD/MM/YYYY HH:mm:ss")
+                })
+
+                ticket.activities = await activitiesModel.getActivities(ticket.id)
+                ticket.activities.map(value => {
+                    value.created_at = moment(value.created_at).format("DD/MM/YYYY HH:mm:ss")
+                    value.updated_at = moment(value.updated_at).format("DD/MM/YYYY HH:mm:ss")
+                })
+
+                ticket.history_phase = await ticketModel.getHistoryTicket(ticket.id)
+                ticket.history_phase.map(value => {
+                    value.created_at = moment(value.created_at).format("DD/MM/YYYY HH:mm:ss")
+                })
             }
 
             if (!result && result.length <= 0)

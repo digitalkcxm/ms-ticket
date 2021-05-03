@@ -36,6 +36,16 @@ class FormDocuments {
             return err
         }
     }
+    
+    async updateRegister(id, obj) {
+        try {
+            id = JSON.parse(id)
+            return await this._db.collection(collection).updateOne({ "_id": new ObjectID(id) }, { $set: obj })
+        } catch (err) {
+            console.log("Error when update register =>", err)
+            return err
+        }
+    }
 
 }
 

@@ -1,5 +1,4 @@
 const express = require("express")
-// const expressValidator = require("express-validator")
 const bodyParser = require("body-parser")
 const routes = require("./routes.js")
 const cors = require("cors")
@@ -19,11 +18,10 @@ const connect = require("../config/database/mongoConnection")
 // span.finish();
 
 const server = require("http").createServer(app)
-
 app.use(cors())
 app.use(bodyParser.json({ limit: "256mb", extended: true }))
 app.use(bodyParser.urlencoded({ extended: true, limit: "256mb" }))
-// app.use(expressValidator)
+// app.use(expressValidator())
 
 app.use(routes)
 connect(app, () => {

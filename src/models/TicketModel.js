@@ -1,16 +1,33 @@
 const database = require("../config/database/database")
 const moment = require("moment")
+const { leftJoin } = require("../config/database/database")
 const tableName = "ticket"
 class TicketModel {
-    async create(obj, table) {
+    async create(obj) {
         try {
-            return await database(table).returning(["id"]).insert(obj)
+            return await database(tableName).returning(["id"]).insert(obj)
         } catch (err) {
-            console.log("Error when create ticket =>", err)
+            console.log("Error 1111 when create ticket =>", err)
+            return err
+        }
+    }
+    async createPhaseTicket(obj) {
+        try {
+            return await database("phase_ticket").returning(["id"]).insert(obj)
+        } catch (err) {
+            console.log("Error when create phase ticket =>", err)
             return err
         }
     }
 
+    async createResponsibleTicket(obj) {
+        try {
+            return await database("responsible_ticket").returning(["id"]).insert(obj)
+        } catch (err) {
+            console.log("Error when create responsible ticket =>", err)
+            return err
+        }
+    }
     async getTicketById(id, id_company) {
         try {
             return await database(tableName)
@@ -26,13 +43,12 @@ class TicketModel {
                     id_user: "users.id_users_core",
                     name: "users.name",
                     sla_time: "phase.sla_time",
-                    unit_of_time: "phase.id_unit_of_time",
+                    id_unit_of_time: "phase.id_unit_of_time",
                     form: "phase.form",
                     closed: `${tableName}.closed`,
                     id_form: `${tableName}.id_form`,
                     created_at: `${tableName}.created_at`,
                     updated_at: `${tableName}.updated_at`
-
                 })
                 .leftJoin("users", "users.id", `${tableName}.id_user`)
                 .leftJoin("phase_ticket", "phase_ticket.id_ticket", `${tableName}.id`)
@@ -60,14 +76,19 @@ class TicketModel {
             return await database(tableName)
                 .select({
                     id: `${tableName}.id`,
-                    sla: `${tableName}.sla`,
                     id_seq: `${tableName}.id_seq`,
-                    id_protocol: `${tableName}.id_protocol`,
+                    ids_crm: `${tableName}.ids_crm`,
                     id_customer: `${tableName}.id_customer`,
-                    department: `department.id_department_core`,
-                    phase: "phase.name",
+                    id_protocol: `${tableName}.id_protocol`,
                     id_phase: "phase.id",
+                    phase: "phase.name",
+                    id_user: "users.id_users_core",
+                    name: "users.name",
+                    sla_time: "phase.sla_time",
+                    id_unit_of_time: "phase.id_unit_of_time",
+                    form: "phase.form",
                     closed: `${tableName}.closed`,
+                    id_form: `${tableName}.id_form`,
                     created_at: `${tableName}.created_at`,
                     updated_at: `${tableName}.updated_at`
                 })
@@ -86,7 +107,7 @@ class TicketModel {
 
     async getTypeAttachments(id) {
         try {
-            return await database("type_attachments").where("name", id)
+            return await database("type_attachments").where("id", id)
         } catch (err) {
             console.log("Error when get type attachments by id => ", err)
             return err
@@ -199,7 +220,8 @@ class TicketModel {
                     "closed": "ticket.closed",
                     "sla": "ticket.sla",
                     "sla_time": "phase.sla_time",
-                    "unit_of_time": "phase.id_unit_of_time",
+                    "id_unit_of_time": "phase.id_unit_of_time",
+                    "id_form": "ticket.id_form",
                     "created_at": "ticket.created_at",
                     "updated_at": "ticket.updated_at"
                 })
@@ -221,6 +243,7 @@ class TicketModel {
             return err
         }
     }
+
     async first_interaction(id) {
         try {
             return await database("activities_ticket").select("created_at").where('id_ticket', id).orderBy("created_at", "asc").limit(1)
@@ -229,6 +252,7 @@ class TicketModel {
             return err
         }
     }
+
     async last_interaction_ticket(id) {
         try {
             return await database("activities_ticket").select(["users.id_users_core", "activities_ticket.created_at"]).leftJoin("users", "users.id", "activities_ticket.id_user").where('id_ticket', id).orderBy("activities_ticket.created_at", "desc").limit(1)
@@ -276,22 +300,29 @@ class TicketModel {
         }
     }
 
-    async getAttachments(id_ticket) {
+    async getHistoryTicket(id_ticket) {
         try {
-            return await database("attachments_ticket").select({
-                "id": "attachments_ticket.id",
-                "url": "attachments_ticket.url",
-                "type": "type_attachments.name",
+            return await database("phase_ticket").select({
+                "id": "phase_ticket.id",
+                "id_phase": "phase_ticket.id_phase",
                 "id_user": "users.id_users_core",
-                "name": "attachments_ticket.name",
-                "created_at": "attachments_ticket.created_at",
-                "updated_at": "attachments_ticket.updated_at"
+                "created_at": "phase_ticket.created_at"
             })
-                .leftJoin("type_attachments", "type_attachments.id", "attachments_ticket.type")
-                .leftJoin("users", "users.id", "attachments_ticket.id_user")
-                .where("attachments_ticket.id_ticket", id_ticket)
+                .leftJoin("users", "users.id", "phase_ticket.id_user")
+                .where("phase_ticket.id_ticket", id_ticket)
         } catch (err) {
-            console.log("Error get Attachments ====>", err)
+            console.log("Error when select history ticket ===>", err)
+            return err
+        }
+    }
+
+    async getFirstFormTicket(id_ticket) {
+        try {
+            return await database('phase_ticket').select("phase.id", "phase.id_form_template", "phase_ticket.created_at", "phase.form")
+                .leftJoin("phase", "phase.id", "phase_ticket.id_phase")
+                .where("phase_ticket.id_ticket", id_ticket).orderBy("phase_ticket.created_at", "asc")
+        } catch (err) {
+            console.log('Error Get First Form Ticket ==>', err)
             return err
         }
     }
