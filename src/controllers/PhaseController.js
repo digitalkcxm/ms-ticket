@@ -147,7 +147,7 @@ class PhaseController {
                         for (const mongoResult of searchMongo) {
                             let ticket = await ticketModel.getTicketByIDForm(mongoResult._id, result[i].id)
                             if (ticket)
-                                result[i].ticket = await formatTicketForPhase(result[i].id, req.app.locals.db, ticket)
+                                result[i].ticket.push(await formatTicketForPhase(result[i].id, req.app.locals.db, ticket))
                         }
                         result[i] = await this._formatPhase(result[i], req.app.locals.db)
                     }
