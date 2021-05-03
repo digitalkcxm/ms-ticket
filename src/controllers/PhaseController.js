@@ -393,6 +393,16 @@ class PhaseController {
             return { error: "Houve algum erro ao captar o departamento pelo id" }
         }
     }
+
+    async disablePhase(req, res) {
+        try {
+            await phaseModel.updatePhase({ active: req.body.active }, req.params.id, req.headers.authorization)
+            return res.status(200).send({ status: "ok" })
+        } catch (err) {
+            console.log(err)
+            return res.status(400).send({ error: "Error when disable phase" })
+        }
+    }
 }
 
 module.exports = PhaseController

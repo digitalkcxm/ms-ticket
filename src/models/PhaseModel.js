@@ -25,6 +25,7 @@ class PhaseModel {
                 "supervisor_notify_sla": "phase.supervisor_notify_sla",
                 "form": "phase.form",
                 "id_form_template": "phase.id_form_template",
+                "active": "phase.active",
                 "created_at": "created_at",
                 "updated_at": "updated_at"
             })
@@ -210,7 +211,7 @@ class PhaseModel {
 
     async getAllPhase(id_company) {
         try {
-            return await database(tableName).select(["id", "id_unit_of_time", "icon", "name", "sla_time", "responsible_notify_sla", "supervisor_notify_sla", "id_form_template", "created_at", "updated_at"]).where("id_company", id_company)
+            return await database(tableName).select(["id", "id_unit_of_time", "icon", "name", "sla_time", "responsible_notify_sla", "supervisor_notify_sla", "id_form_template", "active", "created_at", "updated_at"]).where("id_company", id_company)
         } catch (err) {
             return res.status(400).send({ error: "There was an error " })
         }

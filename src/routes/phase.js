@@ -11,6 +11,8 @@ const phaseController = new PhaseController()
 router.get("/:id", (req, res) => phaseController.getPhaseByID(req, res))
 router.get("/", (req, res) => phaseController.getAllPhase(req, res))
 
+router.put("/disable/:id", (req, res) => phaseController.disablePhase(req, res))
+
 router.use(
     body("name").notEmpty(),
     body("department").isNumeric(),
@@ -24,5 +26,6 @@ router.use(
 
 router.post("/", (req, res) => phaseController.create(req, res))
 router.put("/:id", (req, res) => phaseController.updatePhase(req, res))
+
 
 module.exports = router
