@@ -132,10 +132,12 @@ class PhaseController {
 
     async getAllPhase(req, res) {
         const search = (req.query.search) ? req.query.search : ''
+        let result
         try {
-            let result = await phaseModel.getAllPhase(req.headers.authorization)
 
             if (search) {
+                result = await phaseModel.getAllPhase(req.headers.authorization)
+
                 if (isNaN(search)) {
                     const searchMongo = await new FormDocuments(req.app.locals.db).searchRegister(search)
 
@@ -162,6 +164,8 @@ class PhaseController {
             } else if (req.query.departments) {
                 result = await this._getByDepartment(req.query.departments, req.headers.authorization, req.app.locals.db)
             } else {
+                result = await phaseModel.getAllPhase(req.headers.authorization)
+
                 for (let i in result) {
                     const tickets = await ticketModel.getTicketByPhase(result[i].id, search)
                     result[i].ticket = []

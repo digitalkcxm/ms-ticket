@@ -5,9 +5,9 @@ module.exports = {
   development: {
     client: 'postgresql',
     connection: {
-      host:     process.env.DB_HOST,
+      host: process.env.DB_HOST,
       database: process.env.DB,
-      user:     process.env.DB_USERNAME,
+      user: process.env.DB_USERNAME,
       password: process.env.DB_PASSWORD
     },
     migrations: {
@@ -17,20 +17,20 @@ module.exports = {
       directory: __dirname + '/src/config/database/seeds'
     },
     pool: {
-      afterCreate: function(connection, callback) {
-        connection.query('SET timezone = -3;', function(err) {
+      afterCreate: function (connection, callback) {
+        connection.query('SET timezone = -3;', function (err) {
           callback(err, connection);
         });
       }
-   }
+    }
   },
 
   production: {
     client: 'postgresql',
     connection: {
-      host:     process.env.DB_HOST,
+      host: process.env.DB_HOST,
       database: process.env.DB,
-      user:     process.env.DB_USERNAME,
+      user: process.env.DB_USERNAME,
       password: process.env.DB_PASSWORD
     },
     migrations: {
@@ -40,12 +40,12 @@ module.exports = {
       directory: __dirname + '/src/config/database/seeds'
     },
     pool: {
-      afterCreate: function(connection, callback) {
-        connection.query('SET timezone = -3;', function(err) {
+      afterCreate: function (connection, callback) {
+        connection.query('SET timezone = -3;', function (err) {
           callback(err, connection);
         });
       }
-   }
+    }
   }
 
 };

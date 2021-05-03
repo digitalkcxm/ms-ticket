@@ -237,7 +237,7 @@ class TicketModel {
 
     async last_interaction() {
         try {
-            return await database("activities_ticket").select("users.name").leftJoin("users", "users.id", "activities_ticket.id_user").orderBy("activities_ticket.created_at", desc).limit(1)
+            return await database("activities_ticket").select("users.name").leftJoin("users", "users.id", "activities_ticket.id_user").orderBy("activities_ticket.created_at", "desc").limit(1)
         } catch (err) {
             console.log("====Error last interaction ===>", err)
             return err
@@ -262,9 +262,9 @@ class TicketModel {
         }
     }
 
-    async getTicketStatusCount() {
+    async getTicketStatusCount(id_company) {
         try {
-            return await database("vw_dash_tickets").select("*")
+            return await database("vw_dash_tickets").select("*").where({id_company})
         }
         catch (err) {
             console.log("status ====>", err)
