@@ -156,7 +156,7 @@ class PhaseController {
                         const tickets = await ticketModel.getTicketByPhase(result[i].id, search)
                         result[i].ticket = []
                         for await (let ticket of tickets) {
-                            result[i].ticket = await formatTicketForPhase(result[i].id, req.app.locals.db, ticket)
+                            result[i].ticket.push(await formatTicketForPhase(result[i].id, req.app.locals.db, ticket))
                         }
                         result[i] = await this._formatPhase(result[i], req.app.locals.db)
                     }
@@ -170,7 +170,7 @@ class PhaseController {
                     const tickets = await ticketModel.getTicketByPhase(result[i].id, search)
                     result[i].ticket = []
                     for await (let ticket of tickets) {
-                        result[i].ticket = await formatTicketForPhase(result[i].id, req.app.locals.db, ticket)
+                        result[i].ticket.push(await formatTicketForPhase(result[i].id, req.app.locals.db, ticket))
                     }
                     result[i] = await this._formatPhase(result[i], req.app.locals.db)
                 }
