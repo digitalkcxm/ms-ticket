@@ -12,6 +12,8 @@ router.get("/:id", (req, res) => phaseController.getPhaseByID(req, res))
 router.get("/", (req, res) => phaseController.getAllPhase(req, res))
 
 router.put("/disable/:id", (req, res) => phaseController.disablePhase(req, res))
+router.put("/close_massive/:id", (req, res) => phaseController.closeMassive(req, res))
+router.put("/transfer_massive/:id", (req, res) => phaseController.transferMassive(req, res))
 
 router.use(
     body("name").notEmpty(),

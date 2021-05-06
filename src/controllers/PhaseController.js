@@ -33,6 +33,8 @@ const { validationResult } = require('express-validator');
 const DepartmentModel = require("../models/DepartmentModel")
 const departmentModel = new DepartmentModel()
 
+const ActivitiesModel = require("../models/ActivitiesModel")
+const activitiesModel = new ActivitiesModel()
 class PhaseController {
     async create(req, res) {
         const errors = validationResult(req)
@@ -338,8 +340,10 @@ class PhaseController {
     }
 
     async _formatPhase(result, mongodb) {
+
         const department = await phaseModel.getDepartmentPhase(result.id)
-        result.department = department[0].id_department
+
+        department.length > 0 ? result.department = department[0].id_department : 0
 
         const unit_of_time = await unitOfTimeModel.getUnitOfTime(result.id_unit_of_time)
         result.unit_of_time = unit_of_time[0].name
@@ -401,6 +405,108 @@ class PhaseController {
         } catch (err) {
             console.log(err)
             return res.status(400).send({ error: "Error when disable phase" })
+        }
+    }
+
+    async closeMassive(req, res) {
+        try {
+            //Verifica se o id do usuario está sendo passado no body da requisição.
+            if (!req.body.id_user)
+                return res.status(400).send({ error: "Whitout id_user" })
+
+            //Faz a verificação de usuario, caso ele não exista ele cria na base.
+            let user = await userController.checkUserCreated(req.body.id_user, req.headers.authorization, req.body.name_user)
+
+            //Verifica se ocorreu algum erro na checagem de usuario.
+            if (!user || !user.id)
+                return res.status(400).send({ error: "There was an error" })
+
+            //Faz o get dos tickets pelo id da fase.
+            const tickets = await ticketModel.getTicketByPhase(req.params.id, "")
+
+            //Retorna um erro caso a fase não contenha tickets na fase.
+            if (tickets.length <= 0)
+                return res.status(400).send({ error: "Não há tickets ativos nessa phase" })
+
+            //Faz um laço de repetição finalizando todos os tickets relacionados a phase.
+            for (const ticket of tickets) {
+                if (!ticket.closed) {
+                    await ticketModel.closedTicket(ticket.id)
+
+                    //Cria uma atividade para registrar a ação do usuario
+                    let obj = {
+                        "text": `Ticket finalizado massivamente pelo usuario ${req.body.name_user}`,
+                        "id_ticket": ticket.id,
+                        "id_user": user.id,
+                        "created_at": moment().format(),
+                        "updated_at": moment().format()
+                    }
+
+                    await activitiesModel.create(obj)
+                }
+            }
+
+            return res.status(200).send({ msg: "OK" })
+        } catch (err) {
+            return res.status(500).send({ error: "Houve um erro ao finalizar os tickets" })
+
+        }
+    }
+
+    async transferMassive(req, res) {
+        try {
+            //Verifica se a nova fase dos tickets é valido e existe dentro do banco de dados
+            const newPhase = await phaseModel.getPhaseById(req.body.new_phase, req.headers.authorization)
+            if (newPhase.length <= 0)
+                return res.status(400).send({ error: "Id da phase invalido" })
+
+            //Verifica se o id do usuario está sendo passado no body da requisição.
+            if (!req.body.id_user)
+                return res.status(400).send({ error: "Whitout id_user" })
+
+            //Faz a verificação de usuario, caso ele não exista ele cria na base.
+            let user = await userController.checkUserCreated(req.body.id_user, req.headers.authorization, req.body.name_user)
+
+            //Verifica se ocorreu algum erro na checagem de usuario.
+            if (!user || !user.id)
+                return res.status(400).send({ error: "There was an error" })
+
+            //Faz o get dos tickets pelo id da fase.
+            const tickets = await ticketModel.getTicketByPhase(req.params.id, "")
+
+            //Retorna um erro caso a fase não contenha tickets na fase.
+            if (tickets.length <= 0)
+                return res.status(400).send({ error: "Não há tickets ativos nessa phase" })
+
+            //Faz um laço de repetição finalizando todos os tickets relacionados a phase.
+            for (const ticket of tickets) {
+
+                //Desativa o registro da fase atual.
+                await phaseModel.disablePhaseTicket(ticket.id)
+
+                //Cria um novo registro com a nova fase.
+                await ticketModel.createPhaseTicket({
+                    "id_phase": req.body.new_phase,
+                    "id_ticket": ticket.id
+                })
+
+                //Cria uma atividade para registrar a ação do usuario.
+                let obj = {
+                    "text": `Ticket transferido massivamente pelo usuario ${req.body.name_user} para a fase ${newPhase[0].name}`,
+                    "id_ticket": ticket.id,
+                    "id_user": user.id,
+                    "created_at": moment().format(),
+                    "updated_at": moment().format()
+                }
+
+                await activitiesModel.create(obj)
+
+            }
+
+            return res.status(200).send({ msg: "OK" })
+        } catch (err) {
+            return res.status(500).send({ error: "Houve um erro ao finalizar os tickets" })
+
         }
     }
 }

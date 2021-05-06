@@ -3,7 +3,7 @@ const UserModel = require("../models/UserModel")
 const userModel = new UserModel
 
 class UserController {
-    async checkUserCreated(user, company_id, name) {
+    async checkUserCreated(user, company_id, name = '') {
         try {
             let result = await userModel.getUserByID(user, company_id)
             if (!result || result.length <= 0) {
