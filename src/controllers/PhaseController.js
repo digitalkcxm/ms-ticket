@@ -410,10 +410,13 @@ class PhaseController {
 
     async closeMassive(req, res) {
         try {
+
+            console.log("Iniciou processo de fechamento");
             //Verifica se o id do usuario está sendo passado no body da requisição.
             if (!req.body.id_user)
                 return res.status(400).send({ error: "Whitout id_user" })
 
+            console.log("Recebeu ID do usuario");
             //Faz a verificação de usuario, caso ele não exista ele cria na base.
             let user = await userController.checkUserCreated(req.body.id_user, req.headers.authorization, req.body.name_user)
 
@@ -421,12 +424,18 @@ class PhaseController {
             if (!user || !user.id)
                 return res.status(400).send({ error: "Ocorreu algum erro na checagem de usuario" })
 
+            console.log("Usuario checado")
+
             //Faz o get dos tickets pelo id da fase.
             const tickets = await ticketModel.getTicketByPhase(req.params.id, "")
+
+            console.log("Buscou os tickets")
 
             //Retorna um erro caso a fase não contenha tickets na fase.
             if (tickets.length <= 0)
                 return res.status(400).send({ error: "Não há tickets ativos nessa phase" })
+
+            console.log("Há tickets ativos");
 
             //Faz um laço de repetição finalizando todos os tickets relacionados a phase.
             for (const ticket of tickets) {
@@ -446,6 +455,8 @@ class PhaseController {
                 }
             }
 
+            console.log("Finalizou o laço");
+
             return res.status(200).send({ msg: "OK" })
         } catch (err) {
             console.log("O erro foi ====> " + err);
@@ -456,6 +467,7 @@ class PhaseController {
 
     async transferMassive(req, res) {
         try {
+            console.log("Iniciou processo de transferencia");
             //Verifica se a nova fase dos tickets é valido e existe dentro do banco de dados
             const newPhase = await phaseModel.getPhaseById(req.body.new_phase, req.headers.authorization)
             if (newPhase.length <= 0)
@@ -465,6 +477,8 @@ class PhaseController {
             if (!req.body.id_user)
                 return res.status(400).send({ error: "Whitout id_user" })
 
+            console.log("Recebeu ID do usuario");
+
             //Faz a verificação de usuario, caso ele não exista ele cria na base.
             let user = await userController.checkUserCreated(req.body.id_user, req.headers.authorization, req.body.name_user)
 
@@ -472,12 +486,18 @@ class PhaseController {
             if (!user || !user.id)
                 return res.status(400).send({ error: "Ocorreu algum erro na checagem de usuario" })
 
+            console.log("Usuario checado")
+
             //Faz o get dos tickets pelo id da fase.
             const tickets = await ticketModel.getTicketByPhase(req.params.id, "")
+
+            console.log("Buscou os tickets")
 
             //Retorna um erro caso a fase não contenha tickets na fase.
             if (tickets.length <= 0)
                 return res.status(400).send({ error: "Não há tickets ativos nessa phase" })
+
+            console.log("Há tickets ativos");
 
             //Faz um laço de repetição finalizando todos os tickets relacionados a phase.
             for (const ticket of tickets) {
@@ -503,6 +523,8 @@ class PhaseController {
                 await activitiesModel.create(obj)
 
             }
+
+            console.log("Finalizou o laço");
 
             return res.status(200).send({ msg: "OK" })
         } catch (err) {
