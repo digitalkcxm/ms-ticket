@@ -419,7 +419,7 @@ class PhaseController {
 
             //Verifica se ocorreu algum erro na checagem de usuario.
             if (!user || !user.id)
-                return res.status(400).send({ error: "There was an error" })
+                return res.status(400).send({ error: "Ocorreu algum erro na checagem de usuario" })
 
             //Faz o get dos tickets pelo id da fase.
             const tickets = await ticketModel.getTicketByPhase(req.params.id, "")
@@ -448,7 +448,7 @@ class PhaseController {
 
             return res.status(200).send({ msg: "OK" })
         } catch (err) {
-            console.log(err);
+            console.log("O erro foi ====> " + err);
             return res.status(500).send({ error: "Houve um erro ao finalizar os tickets" })
 
         }
@@ -470,7 +470,7 @@ class PhaseController {
 
             //Verifica se ocorreu algum erro na checagem de usuario.
             if (!user || !user.id)
-                return res.status(400).send({ error: "There was an error" })
+                return res.status(400).send({ error: "Ocorreu algum erro na checagem de usuario" })
 
             //Faz o get dos tickets pelo id da fase.
             const tickets = await ticketModel.getTicketByPhase(req.params.id, "")
@@ -506,7 +506,7 @@ class PhaseController {
 
             return res.status(200).send({ msg: "OK" })
         } catch (err) {
-            console.log(err);
+            console.log("O erro foi ====> " + err);
             return res.status(500).send({ error: "Houve um erro ao mover os tickets" })
 
         }
