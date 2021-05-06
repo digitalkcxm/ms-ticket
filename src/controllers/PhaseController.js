@@ -448,6 +448,7 @@ class PhaseController {
 
             return res.status(200).send({ msg: "OK" })
         } catch (err) {
+            console.log(err);
             return res.status(500).send({ error: "Houve um erro ao finalizar os tickets" })
 
         }
@@ -505,7 +506,8 @@ class PhaseController {
 
             return res.status(200).send({ msg: "OK" })
         } catch (err) {
-            return res.status(500).send({ error: "Houve um erro ao finalizar os tickets" })
+            console.log(err);
+            return res.status(500).send({ error: "Houve um erro ao mover os tickets" })
 
         }
     }
