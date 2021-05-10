@@ -59,16 +59,17 @@ class TicketController {
             }
             let phase = await phaseModel.getPhase(req.body.id_phase, req.headers.authorization)
 
-            if (Object.keys(req.body.form).length > 0) {
-                if (phase[0].form) {
-                    let errors = await this._validateForm(req.app.locals.db, phase[0].id_form_template, req.body.form)
-                    if (errors.length > 0)
-                        return res.status(400).send({ errors: errors })
-
-                    obj.id_form = await new FormDocuments(req.app.locals.db).createRegister(req.body.form)
+            if(req.body.form){
+                if (Object.keys(req.body.form).length > 0) {
+                    if (phase[0].form) {
+                        let errors = await this._validateForm(req.app.locals.db, phase[0].id_form_template, req.body.form)
+                        if (errors.length > 0)
+                            return res.status(400).send({ errors: errors })
+    
+                        obj.id_form = await new FormDocuments(req.app.locals.db).createRegister(req.body.form)
+                    }
                 }
             }
-
 
             let result = await ticketModel.create(obj)
             await this._createResponsibles(userResponsible, obj.id)
