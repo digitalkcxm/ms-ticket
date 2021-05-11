@@ -20,7 +20,7 @@
     "elastic-apm-node": "^3.7.0",
     "elastic-apm-node-opentracing": "^2.0.0",
     "express": "^4.17.1",
-    "express-validator": "^6.6.1",
+    "express-validator": "^6.10.0",
     "knex": "^0.21.5",
     "moment": "^2.29.0",
     "mongodb": "^3.6.2",
