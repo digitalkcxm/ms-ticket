@@ -59,13 +59,13 @@ class TicketController {
             }
             let phase = await phaseModel.getPhase(req.body.id_phase, req.headers.authorization)
 
-            if (req.body.form){
+            if (req.body.form) {
                 if (Object.keys(req.body.form).length > 0) {
                     if (phase[0].form) {
                         let errors = await this._validateForm(req.app.locals.db, phase[0].id_form_template, req.body.form)
                         if (errors.length > 0)
                             return res.status(400).send({ errors: errors })
-    
+
                         obj.id_form = await new FormDocuments(req.app.locals.db).createRegister(req.body.form)
                     }
                 }
@@ -491,7 +491,7 @@ class TicketController {
             }
 
 
-            if (Object.keys(req.body.form).length > 0) {
+            if (req.body.form && Object.keys(req.body.form).length > 0) {
                 const firstPhase = await ticketModel.getFirstFormTicket(ticket[0].id)
                 if (firstPhase[0].form) {
                     let errors = await this._validateUpdate(req.app.locals.db, firstPhase[0].id_form_template, req.body.form, ticket[0].id_form)
@@ -684,23 +684,23 @@ class TicketController {
 
     async ticketStatusCount(req, res) {
         try {
-          const id_company = req.headers.authorization
-          let result = await ticketModel.getTicketStatusCount(id_company)
+            const id_company = req.headers.authorization
+            let result = await ticketModel.getTicketStatusCount(id_company)
 
-          let retorno
-          if (result.length && result.length > 0 && result[0].id_company.length > 0) {
+            let retorno
+            if (result.length && result.length > 0 && result[0].id_company.length > 0) {
 
-              retorno = {
-                      tickets_abertos: parseInt(result[0].tickets_abertos),
-                      tickets_respondidos: parseInt(result[0].tickets_respondidos),
-                      tickets_atrasados: parseInt(result[0].tickets_atrasados)
-              }
-          } else {
-              retorno = {tickets_abertos: 0, tickets_respondidos: 0, tickets_atrasados: 0}
-          }
+                retorno = {
+                    tickets_abertos: parseInt(result[0].tickets_abertos),
+                    tickets_respondidos: parseInt(result[0].tickets_respondidos),
+                    tickets_atrasados: parseInt(result[0].tickets_atrasados)
+                }
+            } else {
+                retorno = { tickets_abertos: 0, tickets_respondidos: 0, tickets_atrasados: 0 }
+            }
 
 
-          return res.status(200).json(retorno)
+            return res.status(200).json(retorno)
         }
         catch (err) {
             console.log("status ====>", err)
