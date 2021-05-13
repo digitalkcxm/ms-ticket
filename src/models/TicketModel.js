@@ -47,6 +47,7 @@ class TicketModel {
                     form: "phase.form",
                     closed: `${tableName}.closed`,
                     id_form: `${tableName}.id_form`,
+                    department_origin: `${tableName}.department_origin`,
                     created_at: `${tableName}.created_at`,
                     updated_at: `${tableName}.updated_at`
                 })
@@ -89,6 +90,7 @@ class TicketModel {
                     form: "phase.form",
                     closed: `${tableName}.closed`,
                     id_form: `${tableName}.id_form`,
+                    department_origin: `${tableName}.department_origin`,
                     created_at: `${tableName}.created_at`,
                     updated_at: `${tableName}.updated_at`
                 })
@@ -191,6 +193,7 @@ class TicketModel {
                 "closed": "ticket.closed",
                 "sla": "ticket.sla",
                 "id_form": `ticket.id_form`,
+                "department_origin": `ticket.department_origin`,
                 "created_at": "ticket.created_at",
                 "updated_at": "ticket.updated_at"
             })
@@ -222,6 +225,7 @@ class TicketModel {
                     "sla_time": "phase.sla_time",
                     "id_unit_of_time": "phase.id_unit_of_time",
                     "id_form": "ticket.id_form",
+                    "department_origin": `ticket.department_origin`,
                     "created_at": "ticket.created_at",
                     "updated_at": "ticket.updated_at"
                 })
@@ -284,6 +288,7 @@ class TicketModel {
                 "closed": "ticket.closed",
                 "sla": "ticket.sla",
                 "id_form": `ticket.id_form`,
+                "department_origin": `ticket.department_origin`,
                 "created_at": "ticket.created_at",
                 "updated_at": "ticket.updated_at"
             })
