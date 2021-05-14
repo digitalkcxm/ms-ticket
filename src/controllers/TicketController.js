@@ -1,5 +1,6 @@
 const TicketModel = require("../models/TicketModel")
 const UserController = require("./UserController")
+const DepartmentController = require("./DepartmentController")
 const PhaseModel = require("../models/PhaseModel")
 const EmailController = require("./EmailController")
 const UserModel = require("../models/UserModel")
@@ -28,6 +29,7 @@ const companyModel = new CompanyModel()
 const emailService = new EmailService()
 const emailModel = new EmailModel()
 const attachmentsModel = new AttachmentsModel()
+const departmentController = new DepartmentController()
 
 const ActivitiesModel = require("../models/ActivitiesModel")
 const activitiesModel = new ActivitiesModel()
@@ -57,6 +59,12 @@ class TicketController {
                 created_at: moment().format(),
                 updated_at: moment().format()
             }
+
+            if(req.body.department_origin){
+                let department = await departmentController.checkDepartmentCreated(req.body.department_origin, req.headers.authorization)
+                obj.department_origin = department[0].id
+            }
+
             let phase = await phaseModel.getPhase(req.body.id_phase, req.headers.authorization)
 
             if (req.body.form) {

@@ -5,6 +5,8 @@
   "main": "index.js",
   "scripts": {
     "migrate:latest": "./node_modules/.bin/run.env ./node_modules/.bin/knex migrate:latest",
+    "migrate:rollback": "./node_modules/.bin/run.env ./node_modules/.bin/knex migrate:rollback",
+    "migrate:make": "./node_modules/.bin/run.env ./node_modules/.bin/knex migrate:make",
     "dev": "nodemon src/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
