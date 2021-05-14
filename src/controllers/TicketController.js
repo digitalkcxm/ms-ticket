@@ -61,7 +61,7 @@ class TicketController {
             }
 
             if(req.body.department_origin){
-                let department = departmentController.checkDepartmentCreated(req.body.department_origin, req.headers.authorization)
+                let department = await departmentController.checkDepartmentCreated(req.body.department_origin, req.headers.authorization)
                 obj.department_origin = department[0].id
             }
 
