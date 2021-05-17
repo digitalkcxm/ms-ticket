@@ -183,7 +183,7 @@ class TicketModel {
 
     async getCountResponsibleTicket(id_company) {
         try {
-            return await database("ticket").select("users.id_users_core as id_user").count('ticket.id', {as: 'count'})
+            return await database("ticket").select(knex.raw('users.id_users_core as id_user, count(ticket.id) as count'))
                 .leftJoin("responsible_ticket", "responsible_ticket.id_ticket", "ticket.id")
                 .leftJoin("users", "users.id", "responsible_ticket.id_user")
                 .where('users.id_company', id_company)
