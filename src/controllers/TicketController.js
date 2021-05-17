@@ -724,6 +724,7 @@ class TicketController {
             let response = []
             if (result.length && result.length > 0) {
                 for (let obj in result){
+                    console.log(obj)
                     response.push({
                         id_user: obj.id_user,
                         count: parseInt(obj.count)
