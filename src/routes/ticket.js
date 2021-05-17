@@ -12,6 +12,7 @@ router.get("/status", (req, res) => ticketController.ticketStatusCount(req, res)
 router.get("/:id", (req, res) => ticketController.getTicketByID(req, res))
 router.get("/protocol/:id", (req, res) => ticketController.getTicketByCustomerOrProtocol(req, res))
 router.get("/", (req, res) => ticketController.getAllTicket(req, res))
+router.get("/count", (req, res) => ticketController.ticketResponsibleCount(req, res))
 
 router.post("/activities", (req, res) => ticketController.createActivities(req, res))
 router.post("/attachments", (req, res) => ticketController.createAttachments(req, res))

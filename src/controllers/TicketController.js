@@ -715,6 +715,18 @@ class TicketController {
             return res.status(400).send({ error: "There was an error while trying to obtain status" })
         }
     }
+
+    async ticketResponsibleCount(req, res){
+        try {
+            const id_company = req.headers.authorization
+            let result = await ticketModel.getCountResponsibleTicket(id_company)
+            return res.status(200).json(result)
+        }
+        catch (err) {
+            console.log("status ====>", err)
+            return res.status(400).send({ error: "There was an error while trying to obtain status" })
+        }
+    }
 }
 
 module.exports = TicketController

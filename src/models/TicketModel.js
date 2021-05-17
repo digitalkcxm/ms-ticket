@@ -181,6 +181,19 @@ class TicketModel {
         }
     }
 
+    async getCountResponsibleTicket(id_company) {
+        try {
+            return await database("ticket").select("users.id_users_core as id_user").count("ticket.id as count")
+                .leftJoin("responsible_ticket", "responsible_ticket.id_ticket", "ticket.id")
+                .leftJoin("users", "users.id", "responsible_ticket.id_user")
+                .where('users.id_company', id_company)
+                .groupBy('users.id_users_core')
+        } catch (err) {
+            console.log("Error when get all responsible ticket => ", err)
+            return err
+        }
+    }
+
     async getTicketByPhase(id_phase, search = '') {
         try {
             return await database("phase_ticket").select({
