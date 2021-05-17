@@ -720,7 +720,18 @@ class TicketController {
         try {
             const id_company = req.headers.authorization
             let result = await ticketModel.getCountResponsibleTicket(id_company)
-            return res.status(200).json(result)
+
+            let response = []
+            if (result.length && result.length > 0) {
+                for (let obj in result){
+                    response.push({
+                        id_user: obj.id_user,
+                        count: parseInt(obj.count)
+                    })
+                }
+            }
+
+            return res.status(200).json(response)
         }
         catch (err) {
             console.log("status ====>", err)
