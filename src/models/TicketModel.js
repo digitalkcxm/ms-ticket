@@ -181,12 +181,18 @@ class TicketModel {
         }
     }
 
-    async getCountResponsibleTicket(id_company) {
+    async getCountResponsibleTicket(id_company, obj) {
         try {
+            let stringWhere = `users.id_company = '${id_company}'`
+
+            if (obj.department && obj.department.length > 0) { stringWhere = stringWhere + ` AND ticket.department_origin in (${obj.department}) ` }
+            if (obj.users && obj.users.length > 0) { stringWhere = stringWhere + ` AND users.id_users_core in (${obj.users}) ` }
+            if (obj.closed && obj.closed.length > 0) { stringWhere = stringWhere + ` AND ticket.closed in (${obj.closed}) ` }
+            if (obj.range && obj.range.length > 0) { stringWhere = stringWhere + `AND ticket.created_at beetwen ${obj.range[0]} and ${obj.range[1]} ` }
             return await database("ticket").select("users.id_users_core as id_user").count('ticket.id as count')
                 .leftJoin("responsible_ticket", "responsible_ticket.id_ticket", "ticket.id")
                 .leftJoin("users", "users.id", "responsible_ticket.id_user")
-                .where('users.id_company', id_company)
+                .whereRaw(stringWhere)
                 .groupBy('users.id_users_core')
         } catch (err) {
             console.log("Error when get all responsible ticket => ", err)
@@ -194,7 +200,7 @@ class TicketModel {
         }
     }
 
-    async getTicketByPhase(id_phase, search = '') {
+    async getTicketByPhase(id_phase) {
         try {
             return await database("phase_ticket").select({
                 "id": "ticket.id",
@@ -214,9 +220,6 @@ class TicketModel {
                 .leftJoin("users", "users.id", "ticket.id_user")
                 .where("phase_ticket.id_phase", id_phase)
                 .andWhere("phase_ticket.active", true)
-                .where((builder) => {
-                    if (search) builder.where("ticket.id_seq", search).orWhere("ticket.id_protocol", search)
-                })
         } catch (err) {
             console.log("Error when get Ticket by phase =>", err)
             return err

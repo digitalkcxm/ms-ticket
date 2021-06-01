@@ -719,7 +719,14 @@ class TicketController {
     async ticketResponsibleCount(req, res){
         try {
             const id_company = req.headers.authorization
-            let result = await ticketModel.getCountResponsibleTicket(id_company)
+
+            let obj = {}
+            req.query.department ? obj.department = JSON.parse(req.query.department) : ""
+            req.query.users ? obj.users = JSON.parse(req.query.users) : ""
+            req.query.closed ? obj.closed = JSON.parse(req.query.closed) : obj.closed = [true, false]
+            req.query.range ? obj.range = JSON.parse(req.query.range) : ""
+
+            let result = await ticketModel.getCountResponsibleTicket(id_company, obj)
 
             let response = []
             if (result.length && result.length > 0) {
