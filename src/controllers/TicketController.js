@@ -728,6 +728,12 @@ class TicketController {
 
             let result = await ticketModel.getCountResponsibleTicket(id_company, obj)
 
+            if (result.name && result.name == 'error')
+                return res.status(400).send({ error: "There was an error" })
+
+            if (!result && result.length <= 0)
+                return res.status(400).send({ error: "There are no tickets" })
+
             let response = []
             if (result.length && result.length > 0) {
                 for (let obj of result){
