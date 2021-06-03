@@ -185,13 +185,17 @@ class TicketModel {
         try {
             let stringWhere = `users.id_company = '${id_company}'`
 
-            if (obj.department && obj.department.length > 0) { stringWhere = stringWhere + ` AND ticket.department_origin in (${obj.department}) ` }
+            if (obj.department && obj.department.length > 0) { stringWhere = stringWhere + ` AND department.id_department_core in (${obj.department}) ` }
             if (obj.users && obj.users.length > 0) { stringWhere = stringWhere + ` AND users.id_users_core in (${obj.users}) ` }
             if (obj.closed && obj.closed.length > 0) { stringWhere = stringWhere + ` AND ticket.closed in (${obj.closed}) ` }
             if (obj.range && obj.range.length > 0) { stringWhere = stringWhere + `AND ticket.created_at beetwen ${obj.range[0]} and ${obj.range[1]} ` }
             return await database("ticket").select("users.id_users_core as id_user").count('ticket.id as count')
                 .leftJoin("responsible_ticket", "responsible_ticket.id_ticket", "ticket.id")
                 .leftJoin("users", "users.id", "responsible_ticket.id_user")
+                .leftJoin("phase_ticket", "phase_ticket.id_ticket", `ticket.id`)
+                .leftJoin("phase", "phase.id", "phase_ticket.id_phase")
+                .leftJoin("department_phase", "department_phase.id_phase", "phase.id")
+                .leftJoin("department", "department.id", "department_phase.id_department")
                 .whereRaw(stringWhere)
                 .groupBy('users.id_users_core')
         } catch (err) {
