@@ -72,7 +72,7 @@ class TicketModel {
             if (obj.users && obj.users.length > 0) { stringWhere = stringWhere + ` AND users.id_users_core in (${obj.users}) ` }
             if (obj.closed && obj.closed.length > 0) { stringWhere = stringWhere + ` AND ticket.closed in (${obj.closed}) ` }
             if (obj.sla && obj.sla.length > 0) { stringWhere = stringWhere + ` AND ticket.sla in (${obj.sla}) ` }
-            if (obj.range && obj.range.length > 0) { stringWhere = stringWhere + `AND ticket.created_at >= "${obj.range[0]}" AND ticket.created_at <= "${obj.range[1]}" ` }
+            if (obj.range && obj.range.length > 0) { stringWhere = stringWhere + `AND ticket.created_at >= '${obj.range[0]}' AND ticket.created_at <= '${obj.range[1]}'` }
 
             return await database(tableName)
                 .select({
@@ -188,7 +188,7 @@ class TicketModel {
             if (obj.department && obj.department.length > 0) { stringWhere = stringWhere + ` AND department.id_department_core in (${obj.department}) ` }
             if (obj.users && obj.users.length > 0) { stringWhere = stringWhere + ` AND users.id_users_core in (${obj.users}) ` }
             if (obj.closed && obj.closed.length > 0) { stringWhere = stringWhere + ` AND ticket.closed in (${obj.closed}) ` }
-            if (obj.range && obj.range.length > 0) { stringWhere = stringWhere + `AND ticket.created_at >= "${obj.range[0]}" AND ticket.created_at <= "${obj.range[1]}" ` }
+            if (obj.range && obj.range.length > 0) { stringWhere = stringWhere + `AND ticket.created_at >= '${obj.range[0]}' AND ticket.created_at <= '${obj.range[1]}'`}
             return await database("ticket").select("users.id_users_core as id_user").count('ticket.id as count')
                 .leftJoin("responsible_ticket", "responsible_ticket.id_ticket", "ticket.id")
                 .leftJoin("users", "users.id", "responsible_ticket.id_user")
