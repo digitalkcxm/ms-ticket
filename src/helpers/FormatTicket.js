@@ -14,11 +14,11 @@ const ActivitiesModel = require("../models/ActivitiesModel")
 const activitiesModel = new ActivitiesModel()
 
 async function formatTicketForPhase(phase, db, ticket) {
-    const typeMoment = await new UnitOfTimeModel().checkUnitOfTime(phase[0].id_unit_of_time)
-    ticket.countSLA = moment(ticket.created_at).add(phase[0].sla_time, typeMoment)
+    const typeMoment = await new UnitOfTimeModel().checkUnitOfTime(phase.id_unit_of_time)
+    ticket.countSLA = moment(ticket.created_at).add(phase.sla_time, typeMoment)
     ticket.countSLA = moment(ticket.countSLA).format("DD/MM/YYYY HH:mm:ss")
-    // let first_interaction = await ticketModel.first_interaction(ticket.id)
-    // first_interaction.length ? ticket.first_message = moment(first_interaction[0].created_at).format("DD/MM/YYYY HH:mm:ss") : ticket.first_message = null
+    let first_interaction = await ticketModel.first_interaction(ticket.id)
+    first_interaction.length ? ticket.first_message = moment(first_interaction[0].created_at).format("DD/MM/YYYY HH:mm:ss") : ticket.first_message = null
 
     ticket.count_attachments = await attachmentsModel.getCountAttachments(ticket.id)
     ticket.count_activities = await activitiesModel.getCountActivities(ticket.id)
