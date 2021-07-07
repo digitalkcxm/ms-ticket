@@ -53,9 +53,9 @@ deploy_homol:
         npm run migrate:latest
         echo " "
 
-        aws ec2 describe-instances --region $AWS_DEFAULT_REGION --filters "Name=tag:Name,Values=ms-server*" --query 'Reservations[*].Instances[*].{Name:Tags[?Key==`Name`]|[0].Value,PrivateIP:PrivateIpAddress}' | jq '.[] | .[] | .Name' > nameserver.txt
+        aws ec2 describe-instances --region $AWS_DEFAULT_REGION --filters "Name=tag:Name,Values=ms-servers*" --query 'Reservations[*].Instances[*].{Name:Tags[?Key==`Name`]|[0].Value,PrivateIP:PrivateIpAddress}' | jq '.[] | .[] | .Name' > nameserver.txt
         INSTANCE_NAME=`cat nameserver.txt | cut -d '"' -f2`
-        aws ec2 describe-instances --region $AWS_DEFAULT_REGION --filters "Name=tag:Name,Values=ms-server*" --query 'Reservations[*].Instances[*].{Name:Tags[?Key==`Name`]|[0].Value,PrivateIP:PrivateIpAddress}' | jq '.[] | .[] | .PrivateIP' > servers.txt
+        aws ec2 describe-instances --region $AWS_DEFAULT_REGION --filters "Name=tag:Name,Values=ms-servers*" --query 'Reservations[*].Instances[*].{Name:Tags[?Key==`Name`]|[0].Value,PrivateIP:PrivateIpAddress}' | jq '.[] | .[] | .PrivateIP' > servers.txt
         IP=`cat servers.txt | cut -d '"' -f2`
         echo " "
      
@@ -199,9 +199,9 @@ check_homol:
     - >
       echo " "
 
-        aws ec2 describe-instances --region $AWS_DEFAULT_REGION --filters "Name=tag:Name,Values=ms-server*" --query 'Reservations[*].Instances[*].{Name:Tags[?Key==`Name`]|[0].Value,PrivateIP:PrivateIpAddress}' | jq '.[] | .[] | .Name' > nameserver.txt
+        aws ec2 describe-instances --region $AWS_DEFAULT_REGION --filters "Name=tag:Name,Values=ms-servers*" --query 'Reservations[*].Instances[*].{Name:Tags[?Key==`Name`]|[0].Value,PrivateIP:PrivateIpAddress}' | jq '.[] | .[] | .Name' > nameserver.txt
         INSTANCE_NAME=`cat nameserver.txt | cut -d '"' -f2`
-        aws ec2 describe-instances --region $AWS_DEFAULT_REGION --filters "Name=tag:Name,Values=ms-server*" --query 'Reservations[*].Instances[*].{Name:Tags[?Key==`Name`]|[0].Value,PrivateIP:PrivateIpAddress}' | jq '.[] | .[] | .PrivateIP' > servers.txt
+        aws ec2 describe-instances --region $AWS_DEFAULT_REGION --filters "Name=tag:Name,Values=ms-servers*" --query 'Reservations[*].Instances[*].{Name:Tags[?Key==`Name`]|[0].Value,PrivateIP:PrivateIpAddress}' | jq '.[] | .[] | .PrivateIP' > servers.txt
         IP=`cat servers.txt | cut -d '"' -f2` 
         echo " "
 
