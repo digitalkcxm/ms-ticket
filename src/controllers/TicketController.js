@@ -14,6 +14,7 @@ const redis = asyncRedis.createClient(process.env.REDIS_PORT, process.env.REDIS_
 const UnitOfTimeModel = require("../models/UnitOfTimeModel")
 const { formatTicketForPhase } = require("../helpers/FormatTicket")
 const AttachmentsModel = require("../models/AttachmentsModel")
+const TabModel = require("../models/TabModel")
 const { validationResult } = require('express-validator');
 
 const moment = require("moment")
@@ -30,6 +31,7 @@ const emailService = new EmailService()
 const emailModel = new EmailModel()
 const attachmentsModel = new AttachmentsModel()
 const departmentController = new DepartmentController()
+const tabModel = new TabModel()
 
 const ActivitiesModel = require("../models/ActivitiesModel")
 const activitiesModel = new ActivitiesModel()
@@ -109,6 +111,32 @@ class TicketController {
         } catch (err) {
             console.log("Error when generate object to save ticket => ", err)
             return res.status(400).send({ error: "Error when generate object to save ticket" })
+        }
+    }
+
+    async tabTicket(){
+        req.assert('id_phase', 'O campo phase é obrigatório').notEmpty()
+        req.assert('id_form', 'O campo form é obrigatório').notEmpty()
+        req.assert('id_ticket', 'O campo ticket é obrigatório!').notEmpty()
+        req.assert('id_tab', 'O campo tab é obrigatório!').notEmpty()
+        if (req.validationErrors()) return res.status(400).send({ errors: req.validationErrors() })
+        try {
+            const tab = await tabModel.getByID(req.body.id_tab)
+            if (!tab || tab.length <= 0) 
+            {
+                const new_tab = await tabModel.create({
+                    id_phase: req.body.id_phase,
+                    id_ticket: req.body.id_ticket,
+                    id_form: req.body.id_form,
+                    id_tab: req.body.id_tab
+                })
+                return res.status(200).send(new_tab)
+            } else {
+                return res.status(400).send({ error: 'Ticket já foi tabulado' })
+            }
+        } catch (err) {
+        console.log('err ===>', err)
+        return res.status(500).send({ error: 'Ocorreu um erro ao tentar tabular o ticket' })
         }
     }
 
