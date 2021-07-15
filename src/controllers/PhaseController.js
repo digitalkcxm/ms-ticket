@@ -368,7 +368,7 @@ class PhaseController {
     async _getByDepartment(departments, authorization, db) {
         try {
             let phases = []
-            departments = JSON.parse(departments)
+            //departments = JSON.parse(departments)
             if (departments.length > 0) {
                 for (const department of departments) {
 
