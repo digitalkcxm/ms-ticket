@@ -120,6 +120,10 @@ class TicketController {
         req.assert('id_ticket', 'O campo ticket é obrigatório!').notEmpty()
         req.assert('id_tab', 'O campo tab é obrigatório!').notEmpty()
         if (req.validationErrors()) return res.status(400).send({ errors: req.validationErrors() })
+
+        
+        let description = req.body.description ? req.body.description : ''
+
         try {
             const tab = await tabModel.getByID(req.body.id_tab)
             if (!tab || tab.length <= 0) 
@@ -128,7 +132,8 @@ class TicketController {
                     id_phase: req.body.id_phase,
                     id_ticket: req.body.id_ticket,
                     id_form: req.body.id_form,
-                    id_tab: req.body.id_tab
+                    id_tab: req.body.id_tab,
+                    description: description
                 })
                 return res.status(200).send(new_tab)
             } else {

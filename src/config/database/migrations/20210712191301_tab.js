@@ -6,6 +6,7 @@ exports.up = function(knex) {
         table.uuid("id_ticket").notNullable()
         table.string("id_form")
         table.uuid("id_tab").notNullable()
+        table.string("description")
         table.timestamps(true, true)
     
         table.foreign("id_phase").references("phase.id")
