@@ -114,7 +114,7 @@ class TicketController {
         }
     }
 
-    async tabTicket(){
+    async tabTicket(req, res){
         req.assert('id_phase', 'O campo phase é obrigatório').notEmpty()
         req.assert('id_form', 'O campo form é obrigatório').notEmpty()
         req.assert('id_ticket', 'O campo ticket é obrigatório!').notEmpty()
@@ -143,6 +143,29 @@ class TicketController {
         console.log('err ===>', err)
         return res.status(500).send({ error: 'Ocorreu um erro ao tentar tabular o ticket' })
         }
+    }
+
+    async tabUpdate(req, res){
+        try {
+            const tab = await tabModel.getByID(req.body.id_tab)
+            if (!tab || tab.length <= 0) 
+            {
+                return res.status(400).send({ error: "Essa tabulação não existe" })
+            }
+
+            let obj = {}
+            req.body.id_phase ? obj.id_phase = req.body.id_phase : ''
+            req.body.id_form ? obj.id_form = req.body.id_form : ''
+            req.body.description ? obj.description = req.body.description : ''
+
+            const upd = await tabModel.update(obj, req.body.id_tab)
+
+            return res.status(200).send(upd)
+            
+        } catch (error) {
+            console.log('err ===>', err)
+            return res.status(500).send({ error: 'Ocorreu um erro ao tentar atualizar a tabulação' })
+        }   
     }
 
     async _createResponsibles(userResponsible = null, ticket_id) {

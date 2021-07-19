@@ -13,7 +13,7 @@ class TabModel {
 
     async getById(id) {
         try {
-            return await database(tableName).where("id", id)
+            return await database(tableName).where("id_tab", id)
         } catch (err) {
             console.log("Error when get company by id ==>", err)
             return false
@@ -22,7 +22,7 @@ class TabModel {
 
     async update(obj, id) {
         try {
-            return await database(tableName).returning("*").update(obj).where("id", id)
+            return await database(tableName).returning("*").update(obj).where("id_tab", id)
         } catch (err) {
             console.log("Error when update company => ", err)
             return err
