@@ -399,6 +399,11 @@ class TicketController {
 
             result = await formatTicketForPhase(result, req.app.locals.db, result[0])
 
+            if (result.id_form) {
+                result.form_data = await new FormDocuments(req.app.locals.db).findRegister(result.id_form)
+                delete result.id_form
+            }
+        
             result.attachments = await attachmentsModel.getAttachments(result.id)
             result.attachments.map(value => {
                 value.created_at = moment(value.created_at).format("DD/MM/YYYY HH:mm:ss")
@@ -415,6 +420,8 @@ class TicketController {
             result.history_phase.map(value => {
                 value.created_at = moment(value.created_at).format("DD/MM/YYYY HH:mm:ss")
             })
+
+            
             return res.status(200).send(result)
 
         } catch (err) {

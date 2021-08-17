@@ -23,10 +23,10 @@ async function formatTicketForPhase(phase, db, ticket) {
     ticket.count_attachments = await attachmentsModel.getCountAttachments(ticket.id)
     ticket.count_activities = await activitiesModel.getCountActivities(ticket.id)
 
-    if (ticket.id_form) {
-        ticket.form_data = await new FormDocuments(db).findRegister(ticket.id_form)
-        delete ticket.id_form
-    }
+    // if (ticket.id_form) {
+    //     ticket.form_data = await new FormDocuments(db).findRegister(ticket.id_form)
+    //     delete ticket.id_form
+    // }
 
     let last_interaction = await ticketModel.last_interaction_ticket(ticket.id)
     if (last_interaction && last_interaction.length) {
