@@ -10,6 +10,7 @@ const phaseController = new PhaseController()
 
 router.get("/:id", (req, res) => phaseController.getPhaseByID(req, res))
 router.get("/", (req, res) => phaseController.getAllPhase(req, res))
+router.get("/cache",(req,res)=> phaseController.getAllPhaseForCache(req,res))
 
 router.put("/disable/:id", (req, res) => phaseController.disablePhase(req, res))
 router.put("/close_massive/:id", (req, res) => phaseController.closeMassive(req, res))
