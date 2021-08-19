@@ -314,14 +314,15 @@ class TicketModel {
     }
   }
 
-  async countTicket(status) {
-    return await database("phase_ticket")
+  async countTicket(id_phase,status) {
+    const result = await database("phase_ticket")
       .count("ticket.id")
       .leftJoin("ticket", "ticket.id", "phase_ticket.id_ticket")
       .leftJoin("users", "users.id", "ticket.id_user")
       .where("phase_ticket.id_phase", id_phase)
       .andWhere("phase_ticket.active", true)
       .andWhere("ticket.closed", status);
+      return result[0].count
   }
 
   async getTicketByCustomerOrProtocol(id) {

@@ -208,27 +208,27 @@ class PhaseController {
             result[i] = await this._formatPhase(result[i], req.app.locals.db);
           }
         }
-      } else if (req.query.departments && req.query.status) {
+      } else if (req.query.department && req.query.status) {
         //departments = JSON.parse(departments)
-        if (req.query.departments.length > 0) {
-          for (const department of req.query.departments) {
+        if (req.query.department.length > 0) {
+          for (const department of req.query.department) {
             const department_id = await departmentModel.getByID(
               department,
-              authorization
+              req.headers.authorization
             );
             if (department_id && department_id.length <= 0) return false;
-  
-            const result = await phaseModel.getPhasesByDepartmentID(
+
+             result = await phaseModel.getAllPhasesByDepartmentID(
               department_id[0].id
             );
-            for (const phase of result) {
+            for (let phase of result) {
               const tickets = await ticketModel.getTicketByPhaseAndStatus(
                 phase.id,
                 req.query.status
               );
               phase.ticket = [];
-              phase.open = await ticketModel.countTicket(false);
-              phase.closed = await ticketModel.countTicket(true);
+              phase.open = await ticketModel.countTicket(phase.id, false);
+              phase.closed = await ticketModel.countTicket(phase.id, true);
               for await (let ticket of tickets) {
                 phase.ticket.push(
                   await formatTicketForPhase(phase, req.app.locals.db, ticket)
@@ -481,10 +481,11 @@ class PhaseController {
     department.length > 0
       ? (result.department = department[0].id_department)
       : 0;
-
+    console.log("ID UNIT OF TIME ==>", result.id_unit_of_time);
     const unit_of_time = await unitOfTimeModel.getUnitOfTime(
       result.id_unit_of_time
     );
+    console.log("unit_of_time",unit_of_time)
     result.unit_of_time = unit_of_time[0].name;
     const responsibles = await phaseModel.getResponsiblePhase(result.id);
     result.responsible = [];
