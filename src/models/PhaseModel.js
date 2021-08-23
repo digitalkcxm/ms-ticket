@@ -274,6 +274,7 @@ class PhaseModel {
         ])
         .leftJoin("phase", "phase.id", "department_phase.id_phase")
         .where("department_phase.id_department", id_department)
+        .andWhere("department_phase.active",true)
         .andWhere("phase.active", true);
     } catch (err) {
       console.log("Error when catch department id ==>", err);

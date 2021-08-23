@@ -209,7 +209,7 @@ class PhaseController {
           }
         }
       } else if (req.query.department && req.query.status) {
-        //departments = JSON.parse(departments)
+        // departments = JSON.parse(departments)
         if (req.query.department.length > 0) {
           for (const department of req.query.department) {
             const department_id = await departmentModel.getByID(
@@ -481,11 +481,9 @@ class PhaseController {
     department.length > 0
       ? (result.department = department[0].id_department)
       : 0;
-    console.log("ID UNIT OF TIME ==>", result.id_unit_of_time);
     const unit_of_time = await unitOfTimeModel.getUnitOfTime(
       result.id_unit_of_time
     );
-    console.log("unit_of_time",unit_of_time)
     result.unit_of_time = unit_of_time[0].name;
     const responsibles = await phaseModel.getResponsiblePhase(result.id);
     result.responsible = [];
