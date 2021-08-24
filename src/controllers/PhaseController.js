@@ -136,7 +136,6 @@ class PhaseController {
         const search = (req.query.search) ? req.query.search : ''
         let result
         try {
-
             if (search) {
                 result = await phaseModel.getAllPhase(req.headers.authorization)
 
@@ -367,35 +366,43 @@ class PhaseController {
 
     async _getByDepartment(departments, authorization, db) {
         try {
-            let phases = []
+            
             //departments = JSON.parse(departments)
-            if (departments.length > 0) {
+            if (departments.length > 0 && Array.isArray(departments)) {
+              let phases 
                 for (const department of departments) {
-
-                    const department_id = await departmentModel.getByID(department, authorization)
-                    if (department_id && department_id.length <= 0)
-                        return false
-
-                    const result = await phaseModel.getPhasesByDepartmentID(department_id[0].id)
-                    for (const phase of result) {
-                        if (phase.id_form_template && phase.form) {
-                            const register = await new FormTemplate(db).findRegistes(phase.id_form_template)
-                            if (register && register.column)
-                                phase.formTemplate = register.column
-
-                            delete phase.id_form_template
-                        }
-                        phase.department = department
-                        phases.push(phase)
-                    }
+                  phases.concat(await this._phaseForCache(department,authorization,db))
                 }
                 return phases
+            }else{
+              return await this._phaseForCache(departments,authorization,db)
             }
-
+            
         } catch (err) {
             console.log(err)
             return { error: "Houve algum erro ao captar o departamento pelo id" }
         }
+    }
+
+    async _phaseForCache(department,authorization,db){
+      const phases = []
+      const department_id = await departmentModel.getByID(departments, authorization)
+      if (department_id && department_id.length <= 0)
+          return false
+
+      const result = await phaseModel.getPhasesByDepartmentID(department_id[0].id)
+      for (const phase of result) {
+          if (phase.id_form_template && phase.form) {
+              const register = await new FormTemplate(db).findRegistes(phase.id_form_template)
+              if (register && register.column)
+                  phase.formTemplate = register.column
+
+              delete phase.id_form_template
+          }
+          phase.department = departments
+          phases.push(phase)
+      }
+      return phases
     }
 
     async disablePhase(req, res) {
