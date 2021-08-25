@@ -384,7 +384,7 @@ class PhaseController {
         }
     }
 
-    async _phaseForCache(department,authorization,db){
+    async _phaseForCache(departments,authorization,db){
       const phases = []
       const department_id = await departmentModel.getByID(departments, authorization)
       if (department_id && department_id.length <= 0)
