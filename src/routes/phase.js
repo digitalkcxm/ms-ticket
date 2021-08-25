@@ -8,6 +8,7 @@ const PhaseController = require("../controllers/PhaseController")
 const { body } = require("express-validator")
 const phaseController = new PhaseController()
 
+router.get("/cache/",(req,res)=> phaseController.getAllPhaseForCache(req,res))
 router.get("/:id", (req, res) => phaseController.getPhaseByID(req, res))
 router.get("/", (req, res) => phaseController.getAllPhase(req, res))
 
