@@ -288,6 +288,7 @@ class TicketModel {
   }
   async getTicketByPhaseAndStatus(id_phase, status) {
     try {
+      console.log("----->",status)
       return await database("phase_ticket")
         .select({
           id: "ticket.id",

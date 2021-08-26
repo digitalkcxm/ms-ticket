@@ -208,7 +208,7 @@ class PhaseController {
             result[i] = await this._formatPhase(result[i], req.app.locals.db);
           }
         }
-      } else if (req.query.department && req.query.status) {
+      } else if (req.query.department) {
         // departments = JSON.parse(departments)
         if (req.query.department.length > 0) {
           for (const department of req.query.department) {
