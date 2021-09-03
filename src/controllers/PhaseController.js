@@ -209,34 +209,27 @@ class PhaseController {
           }
         }
       } else if (req.query.department) {
-        // departments = JSON.parse(departments)
-        if (req.query.department.length > 0) {
+        if (
+          Array.isArray(req.query.department) &&
+          req.query.department.length > 0
+        ) {
           for (const department of req.query.department) {
-            const department_id = await departmentModel.getByID(
-              department,
-              req.headers.authorization
+            result.push(
+              await this._queryDepartment(
+                department,
+                req.headers.authorization,
+                req.query.status,
+                req.app.locals.db
+              )
             );
-            if (department_id && department_id.length <= 0) return false;
-
-             result = await phaseModel.getAllPhasesByDepartmentID(
-              department_id[0].id
-            );
-            for (let phase of result) {
-              const tickets = await ticketModel.getTicketByPhaseAndStatus(
-                phase.id,
-                req.query.status
-              );
-              phase.ticket = [];
-              phase.open = await ticketModel.countTicket(phase.id, false);
-              phase.closed = await ticketModel.countTicket(phase.id, true);
-              for await (let ticket of tickets) {
-                phase.ticket.push(
-                  await formatTicketForPhase(phase, req.app.locals.db, ticket)
-                );
-              }
-              phase = await this._formatPhase(phase, req.app.locals.db);
-            }
           }
+        } else {
+          result = await this._queryDepartment(
+            req.query.department,
+            req.headers.authorization,
+            req.query.status,
+            req.app.locals.db
+          );
         }
       } else {
         result = await phaseModel.getAllPhase(req.headers.authorization);
@@ -271,6 +264,34 @@ class PhaseController {
       console.log("Get all phase => ", err);
       return res.status(400).send({ error: "There was an error" });
     }
+  }
+
+  // departments = JSON.parse(departments)
+  async _queryDepartment(department, authorization, status, db) {
+    const department_id = await departmentModel.getByID(
+      department,
+      authorization
+    );
+    if (department_id && department_id.length <= 0) return false;
+
+    let result = await phaseModel.getAllPhasesByDepartmentID(
+      department_id[0].id
+    );
+    for (let phase of result) {
+      const tickets = await ticketModel.getTicketByPhaseAndStatus(
+        phase.id,
+        status
+      );
+      phase.ticket = [];
+      phase.open = await ticketModel.countTicket(phase.id, false);
+      phase.closed = await ticketModel.countTicket(phase.id, true);
+      for await (let ticket of tickets) {
+        phase.ticket.push(await formatTicketForPhase(phase, db, ticket));
+      }
+      phase = await this._formatPhase(phase, db);
+    }
+
+    return result;
   }
 
   async updatePhase(req, res) {
@@ -521,16 +542,17 @@ class PhaseController {
 
   async _getByDepartment(departments, authorization, db) {
     try {
-      
       //departments = JSON.parse(departments)
       if (departments.length > 0 && Array.isArray(departments)) {
-        let phases 
-          for (const department of departments) {
-            phases.concat(await this._phaseForCache(department,authorization,db))
-          }
-          return phases
-      }else{
-        return await this._phaseForCache(departments,authorization,db)
+        let phases;
+        for (const department of departments) {
+          phases.concat(
+            await this._phaseForCache(department, authorization, db)
+          );
+        }
+        return phases;
+      } else {
+        return await this._phaseForCache(departments, authorization, db);
       }
     } catch (err) {
       console.log(err);
@@ -538,37 +560,45 @@ class PhaseController {
     }
   }
 
-    async _phaseForCache(departments,authorization,db){
-      const phases = []
-      const department_id = await departmentModel.getByID(departments, authorization)
-      if (department_id && department_id.length <= 0)
-          return false
+  async _phaseForCache(departments, authorization, db) {
+    const phases = [];
+    const department_id = await departmentModel.getByID(
+      departments,
+      authorization
+    );
+    if (department_id && department_id.length <= 0) return false;
 
-      const result = await phaseModel.getPhasesByDepartmentID(department_id[0].id)
-      for (const phase of result) {
-          if (phase.id_form_template && phase.form) {
-              const register = await new FormTemplate(db).findRegistes(phase.id_form_template)
-              if (register && register.column)
-                  phase.formTemplate = register.column
+    const result = await phaseModel.getPhasesByDepartmentID(
+      department_id[0].id
+    );
+    for (const phase of result) {
+      if (phase.id_form_template && phase.form) {
+        const register = await new FormTemplate(db).findRegistes(
+          phase.id_form_template
+        );
+        if (register && register.column) phase.formTemplate = register.column;
 
-              delete phase.id_form_template
-          }
-          phase.department = departments
-          phases.push(phase)
+        delete phase.id_form_template;
       }
-      return phases
+      phase.department = departments;
+      phases.push(phase);
     }
+    return phases;
+  }
 
-    async disablePhase(req, res) {
-        try {
-            await phaseModel.updatePhase({ active: req.body.active }, req.params.id, req.headers.authorization)
-            return res.status(200).send({ status: "ok" })
-        } catch (err) {
-            console.log(err)
-            return res.status(400).send({ error: "Error when disable phase" })
-        }
+  async disablePhase(req, res) {
+    try {
+      await phaseModel.updatePhase(
+        { active: req.body.active },
+        req.params.id,
+        req.headers.authorization
+      );
+      return res.status(200).send({ status: "ok" });
+    } catch (err) {
+      console.log(err);
+      return res.status(400).send({ error: "Error when disable phase" });
     }
-  
+  }
 
   async closeMassive(req, res) {
     try {
