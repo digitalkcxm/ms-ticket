@@ -895,11 +895,11 @@ class TicketController {
       const form_template = await new FormTemplate(db).findRegistes(
         id_form_template
       );
-      for (let column of form_template.column) {
-        column.required && form[column.column]
-          ? ""
-          : errors.push(`O campo ${column.label} é obrigatório`);
-      }
+      // for (let column of form_template.column) {
+      //   column.required && form[column.column]
+      //     ? ""
+      //     : errors.push(`O campo ${column.label} é obrigatório`);
+      // }
       return errors;
     } catch (err) {
       console.log("Error when generate Doc =>", err);
