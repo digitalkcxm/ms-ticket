@@ -131,9 +131,9 @@ class TicketModel {
     }
   }
 
-  async getTypeAttachments(id) {
+  async getTypeAttachments(type) {
     try {
-      return await database("type_attachments").where("id", id);
+      return await database("type_attachments").where("name", type);
     } catch (err) {
       console.log("Error when get type attachments by id => ", err);
       return err;
