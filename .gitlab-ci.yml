@@ -87,7 +87,7 @@ check_homol:
   needs: ["deploy_homol"]
 
 create-release:
-  image: node:12
+  image: node
   stage: release
   before_script:
     - DATE=$(date +%d-%m-%YH%H:%M:%S)
