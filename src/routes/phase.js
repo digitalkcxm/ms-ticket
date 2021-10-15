@@ -23,7 +23,7 @@ router.put("/close_massive/:id", (req, res) =>
 router.put("/transfer_massive/:id", (req, res) =>
   phaseController.transferMassive(req, res)
 );
-router.put("/order/:id", (req, res) => phaseController.orderPhase(req, res));
+router.post("/order/:id", (req, res) => phaseController.orderPhase(req, res));
 
 router.use(
   body("name").notEmpty(),
