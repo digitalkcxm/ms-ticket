@@ -1,7 +1,7 @@
 
 exports.up = function (knex, Promise) {
     return knex.schema.alterTable('phase', (table) => {
-        table.integer('order').notNullable()
+        table.integer('order')
     })
 }
 
