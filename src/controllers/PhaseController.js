@@ -763,7 +763,7 @@ class PhaseController {
           .status(400)
           .send({ error: "Houve um erro ordenar as fases do workflow" });
 
-      req.body.map((value, index) => {
+      req.body.map( async (value, index) => {
         const obj = { order: index };
         await updatePhase(obj, value, req.heades.authorization);
         return true;
