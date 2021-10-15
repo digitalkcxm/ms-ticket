@@ -274,7 +274,7 @@ class PhaseModel {
         ])
         .leftJoin("phase", "phase.id", "department_phase.id_phase")
         .where("department_phase.id_department", id_department)
-        .andWhere("department_phase.active",true)
+        .andWhere("department_phase.active", true)
         .andWhere("phase.active", true);
     } catch (err) {
       console.log("Error when catch department id ==>", err);
@@ -310,6 +310,25 @@ class PhaseModel {
       return await database("notify_phase").where("id_phase", id_phase).del();
     } catch (err) {
       console.log("Error when get responsible Ticket =>", err);
+      return err;
+    }
+  }
+
+  async getPhasesIN(phases, department, company) {
+    try {
+      return await database(tableName)
+        .leftJoin("department_phase", "department_phase.id_phase", "phase.id")
+        .leftJoin(
+          "department",
+          "department.id",
+          "department_phase.id_department"
+        )
+        .whereIn("phase.id", phases)
+        .andWhere('department_phase.active',true)
+        .andWhere("department.id_department_core", department)
+        .andWhere("phase.id_company", company);
+    } catch (err) {
+      console.log("Erro ao captar as ordens dos tickets =>", err);
       return err;
     }
   }
