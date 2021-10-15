@@ -27,6 +27,7 @@ class PhaseModel {
           form: "phase.form",
           id_form_template: "phase.id_form_template",
           active: "phase.active",
+          order:"phase.order",
           created_at: "created_at",
           updated_at: "updated_at",
         })
@@ -247,10 +248,11 @@ class PhaseModel {
           "supervisor_notify_sla",
           "id_form_template",
           "active",
+          "order",
           "created_at",
           "updated_at",
         ])
-        .where("id_company", id_company);
+        .where("id_company", id_company).orderBy("order",'asc');
     } catch (err) {
       return res.status(400).send({ error: "There was an error " });
     }
@@ -269,13 +271,16 @@ class PhaseModel {
           "phase.supervisor_notify_sla",
           "phase.id_form_template",
           "phase.active",
+          "phase.order",
           "phase.created_at",
           "phase.updated_at",
         ])
         .leftJoin("phase", "phase.id", "department_phase.id_phase")
         .where("department_phase.id_department", id_department)
         .andWhere("department_phase.active", true)
-        .andWhere("phase.active", true);
+        .andWhere("phase.active", true)
+        .orderBy('phase.order','asc')
+
     } catch (err) {
       console.log("Error when catch department id ==>", err);
       return err;
