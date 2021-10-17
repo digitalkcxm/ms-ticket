@@ -197,7 +197,7 @@ class PhaseModel {
           "department.id",
           "department_phase.id_department"
         )
-        .where("department_phase.id_phase", id_phase);
+        .where("department_phase.id_phase", id_phase).andWhere('department_phase.active', true);
     } catch (err) {
       console.log("Error when catch department phase =>", err);
       return err;

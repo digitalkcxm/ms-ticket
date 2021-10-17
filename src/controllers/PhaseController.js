@@ -303,7 +303,7 @@ class PhaseController {
 
       const dpt = [];
 
-      let timeType = await unitOfTimeModel.getUnitOfTime(req.body.unit_of_time);
+      let timeType = await unitOfTimeModel.checkUnitOfTime(req.body.unit_of_time);
       if (!timeType || timeType.length <= 0)
         return res
           .status(400)
