@@ -303,7 +303,7 @@ class PhaseController {
 
       const dpt = [];
 
-      let timeType = await unitOfTimeModel.getUnitOfTime(req.body.unit_of_time);
+      let timeType = await unitOfTimeModel.checkUnitOfTime(req.body.unit_of_time);
       if (!timeType || timeType.length <= 0)
         return res
           .status(400)
@@ -734,6 +734,48 @@ class PhaseController {
       return res
         .status(500)
         .send({ error: "Houve um erro ao mover os tickets" });
+    }
+  }
+
+  async orderPhase(req, res) {
+    try {
+      if (!req.params.id)
+        return res
+          .status(400)
+          .send({ error: "É obrigatorio a informação do departamento" });
+
+      if (!Array.isArray(req.body) && req.body.length <= 0)
+        return res
+          .status(400)
+          .send({ error: "O array deve conter os ids das fases" });
+
+      const check = await phaseModel.getPhasesIN(
+        req.body,
+        req.params.id,
+        req.headers.authorization
+      );
+
+      if (
+        !Array.isArray(check) ||
+        (Array.isArray(check) && req.body.length != check.length)
+      )
+        return res
+          .status(400)
+          .send({ error: "Houve um erro ordenar as fases do workflow" });
+
+          console.log('check ==>',check)
+      req.body.map( async (value, index) => {
+        const obj = { order: index };
+        await phaseModel.updatePhase(obj, value, req.headers.authorization);
+        return true;
+      });
+
+      return res.status(200).send(req.body)
+    } catch (err) {
+      console.log("Erro ao ordenar as fases =>", err);
+      return res
+        .status(500)
+        .send({ error: "Houve um erro ordenar as fases do workflow" });
     }
   }
 }

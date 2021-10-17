@@ -27,6 +27,7 @@ class PhaseModel {
           form: "phase.form",
           id_form_template: "phase.id_form_template",
           active: "phase.active",
+          order:"phase.order",
           created_at: "created_at",
           updated_at: "updated_at",
         })
@@ -196,7 +197,7 @@ class PhaseModel {
           "department.id",
           "department_phase.id_department"
         )
-        .where("department_phase.id_phase", id_phase);
+        .where("department_phase.id_phase", id_phase).andWhere('department_phase.active', true);
     } catch (err) {
       console.log("Error when catch department phase =>", err);
       return err;
@@ -247,10 +248,11 @@ class PhaseModel {
           "supervisor_notify_sla",
           "id_form_template",
           "active",
+          "order",
           "created_at",
           "updated_at",
         ])
-        .where("id_company", id_company);
+        .where("id_company", id_company).orderBy("order",'asc');
     } catch (err) {
       return res.status(400).send({ error: "There was an error " });
     }
@@ -269,13 +271,16 @@ class PhaseModel {
           "phase.supervisor_notify_sla",
           "phase.id_form_template",
           "phase.active",
+          "phase.order",
           "phase.created_at",
           "phase.updated_at",
         ])
         .leftJoin("phase", "phase.id", "department_phase.id_phase")
         .where("department_phase.id_department", id_department)
-        .andWhere("department_phase.active",true)
-        .andWhere("phase.active", true);
+        .andWhere("department_phase.active", true)
+        .andWhere("phase.active", true)
+        .orderBy('phase.order','asc')
+
     } catch (err) {
       console.log("Error when catch department id ==>", err);
       return err;
@@ -310,6 +315,25 @@ class PhaseModel {
       return await database("notify_phase").where("id_phase", id_phase).del();
     } catch (err) {
       console.log("Error when get responsible Ticket =>", err);
+      return err;
+    }
+  }
+
+  async getPhasesIN(phases, department, company) {
+    try {
+      return await database(tableName)
+        .leftJoin("department_phase", "department_phase.id_phase", "phase.id")
+        .leftJoin(
+          "department",
+          "department.id",
+          "department_phase.id_department"
+        )
+        .whereIn("phase.id", phases)
+        .andWhere('department_phase.active',true)
+        .andWhere("department.id_department_core", department)
+        .andWhere("phase.id_company", company);
+    } catch (err) {
+      console.log("Erro ao captar as ordens dos tickets =>", err);
       return err;
     }
   }
