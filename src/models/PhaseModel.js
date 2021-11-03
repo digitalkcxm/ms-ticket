@@ -263,10 +263,8 @@ class PhaseModel {
       return await database("department_phase")
         .select([
           "phase.id",
-          "phase.id_unit_of_time",
           "phase.icon",
           "phase.name",
-          "phase.sla_time",
           "phase.responsible_notify_sla",
           "phase.supervisor_notify_sla",
           "phase.id_form_template",

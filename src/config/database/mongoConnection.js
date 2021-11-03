@@ -3,10 +3,10 @@ const MongoClient = require('mongodb').MongoClient
 
 module.exports = async (app, callback) => {
 
-    let connectionMongo = `mongodb://${process.env.MONGO_USERNAME}:${process.env.MONGO_PASSWORD}@${process.env.MONGO_HOST}:${process.env.MONGO_PORT}/`
-    // let connectionMongo = "mongodb://localhost:27017/";
+    // let connectionMongo = `mongodb://${process.env.MONGO_USERNAME}:${process.env.MONGO_PASSWORD}@${process.env.MONGO_HOST}:${process.env.MONGO_PORT}/`
+    let connectionMongo = "mongodb://localhost:27017/";
 
-    if (process.env.MONGO_STRINGCONNECTION_PARAMS) connectionMongo = `${connectionMongo}${process.env.MONGO_DATABASE}?${process.env.MONGO_STRINGCONNECTION_PARAMS}`
+    if (process.env.MONGO_STRINGCONNECTION_PARAMS) connectionMongo = `${connectionMongo}${process.env.MONGO_DATABASE}`
     console.log(connectionMongo)
     MongoClient.connect(connectionMongo, { useUnifiedTopology: true, promiseLibrary: Promise }, (err, conn) => {
         if (err) console.error(`#00000 - Falha ao conectar ao banco de dados. ${err.stack}`)

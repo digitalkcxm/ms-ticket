@@ -14,7 +14,6 @@ const redis = asyncRedis.createClient(
   process.env.REDIS_PORT,
   process.env.REDIS_HOST
 );
-const UnitOfTimeModel = require("../models/UnitOfTimeModel");
 const { formatTicketForPhase } = require("../helpers/FormatTicket");
 const AttachmentsModel = require("../models/AttachmentsModel");
 const { validationResult } = require("express-validator");
@@ -37,6 +36,15 @@ const departmentController = new DepartmentController();
 const ActivitiesModel = require("../models/ActivitiesModel");
 const activitiesModel = new ActivitiesModel();
 
+const SLAModel = require("../models/SLAModel");
+const slaModel = new SLAModel();
+
+const { createSLAControl, updateSLA } = require("../helpers/SLAFormat");
+const sla_status = {
+  emdia: 1,
+  atrasado: 2,
+  aberto: 3,
+};
 class TicketController {
   async create(req, res) {
     const errors = validationResult(req);
@@ -128,15 +136,14 @@ class TicketController {
       );
 
       if (result && result.length > 0 && result[0].id) {
-        ticket = await formatTicketForPhase(
-          ticket,
-          req.app.locals.db,
-          ticket[0]
-        );
+        await createSLAControl(phase[0].id, obj.id);
+
+        ticket = await formatTicketForPhase({ id: phase[0].id }, ticket[0]);
 
         // delete ticket[0].id_company
         return res.status(200).send(ticket);
       }
+
       await redis.del(`ticket:phase:${req.headers.authorization}`);
 
       return res.status(400).send({ error: "There was an error" });
@@ -505,6 +512,8 @@ class TicketController {
       let result = await activitiesModel.create(obj);
 
       if (result && result.length > 0) {
+        await updateSLA(req.body.id_ticket, ticket[0].phase_id);
+
         obj.id = result[0].id;
 
         return res.status(200).send(obj);
@@ -554,6 +563,8 @@ class TicketController {
 
       let result = await attachmentsModel.create(obj);
 
+      await updateSLA(req.body.id_ticket, ticket[0].phase_id);
+
       if (result && result.length > 0) {
         obj.id = result[0].id;
 
@@ -581,7 +592,7 @@ class TicketController {
           .status(400)
           .send({ error: "There is no ticket with this ID" });
 
-      result = await formatTicketForPhase(result, req.app.locals.db, result[0]);
+      result = await formatTicketForPhase(result, result[0]);
 
       if (result.id_form) {
         result.form_data = await new FormDocuments(
@@ -651,11 +662,7 @@ class TicketController {
       for (const ticket of result) {
         console.log;
         const t = [ticket];
-        const ticketFormated = await formatTicketForPhase(
-          t,
-          req.app.locals.db,
-          ticket
-        );
+        const ticketFormated = await formatTicketForPhase(t, ticket);
         tickets.push(ticketFormated);
       }
 
@@ -712,8 +719,11 @@ class TicketController {
       if (!phase || phase.length <= 0)
         return res.status(400).send({ error: "Invalid id_phase uuid" });
 
+      await updateSLA(ticket[0].id, ticket[0].phase_id);
+
       if (ticket[0].phase_id != phase[0].id) {
         await phaseModel.disablePhaseTicket(req.params.id);
+        await slaModel.disableSLA(req.params.id);
 
         let phase_id = await ticketModel.createPhaseTicket({
           id_phase: phase[0].id,
@@ -721,6 +731,8 @@ class TicketController {
         });
         if (!phase_id || phase_id.length <= 0)
           return res.status(500).send({ error: "There was an error" });
+
+        await createSLAControl(phase[0].id, req.params.id);
       }
 
       if (req.body.form && Object.keys(req.body.form).length > 0) {
@@ -742,7 +754,7 @@ class TicketController {
         }
       }
 
-      ticket = await formatTicketForPhase(ticket, req.app.locals.db, ticket[0]);
+      ticket = await formatTicketForPhase(ticket, ticket[0]);
       await redis.set(
         `msTicket:ticket:${req.params.id}`,
         JSON.stringify(ticket)
@@ -772,9 +784,47 @@ class TicketController {
           req.headers.authorization
         );
 
+        let slaTicket = await slaModel.getByPhaseTicket(
+          ticket[0].phase_id,
+          ticket[0].id,
+          3
+        );
+        let obj;
+        if (slaTicket && Array.isArray(slaTicket) && slaTicket.length > 0) {
+          if (slaTicket[0].limit_sla_time < moment()) {
+            obj = { id_sla_status: sla_status.atrasado, active: false };
+          } else if (slaTicket[0].limit_sla_time > moment()) {
+            obj = { id_sla_status: sla_status.emdia, active: false };
+          }
+          await slaModel.updateTicketSLA(
+            ticket.id_ticket,
+            obj,
+            slaTicket.id_sla_type
+          );
+        }
+
+        // Uma nova verificação para saber se o sla de resposta se manteve no tempo determinado.
+        slaTicket = await slaModel.getByPhaseTicket(
+          ticket[0].phase_id,
+          ticket[0].id,
+          2
+        );
+
+        if (slaTicket && Array.isArray(slaTicket) && slaTicket.length > 0) {
+          if (slaTicket[0].limit_sla_time < slaTicket[0].interaction_time) {
+            obj = { id_sla_status: sla_status.atrasado, active: false };
+          } else if (slaTicket[0].limit_sla_time > moment()) {
+            obj = { id_sla_status: sla_status.emdia, active: false };
+          }
+          await slaModel.updateTicketSLA(
+            ticket.id_ticket,
+            obj,
+            slaTicket.id_sla_type
+          );
+        }
+
         ticket[0] = await formatTicketForPhase(
-          ticket,
-          req.app.locals.db,
+          { id: ticket[0].phase_id },
           ticket[0]
         );
 
@@ -815,48 +865,50 @@ class TicketController {
     });
   }
 
-  async checkSLATicket() {
-    await redis.KEYS(`msTicket:ticket:*`, async (err, res) => {
-      if (res && res.length > 0) {
-        for (let ticket of res) {
-          let result = await redis.get(`${ticket}`);
-          result = JSON.parse(result);
-          let timeNow = await this.processCase(result);
-          if (timeNow >= result.sla_time) {
-            await ticketModel.updateSlaTicket(
-              { sla: true, updated_at: moment().format() },
-              result.id
-            );
-            const companyInfo = await companyModel.getById(result.id_company);
-            const allResponsibles = await ticketModel.getAllResponsibleTicket(
-              result.id
-            );
-            let userResponsibleTicket = [];
-            let emailResponsibleTicket = [];
-            await allResponsibles.map((value) => {
-              if (value.id_user) {
-                userResponsibleTicket.push(value.id_user);
-              } else if (value.id_email) {
-                emailResponsibleTicket.push(value.id_email);
-              }
-            });
-            await this._notify(
-              result.phase,
-              companyInfo[0].notify_token,
-              result.id,
-              userResponsibleTicket,
-              emailResponsibleTicket,
-              result.id_company,
-              3,
-              req.app.locals.db
-            );
+  async checkSLA(type) {
+    const tickets = await slaModel.checkSLA(type);
+    if (tickets && Array.isArray(tickets) && tickets.length > 0) {
+      switch (type) {
+        case 1:
+          for (const ticket of tickets) {
+            if (!ticket.interaction_time && ticket.limit_sla_time < moment()) {
+              slaModel.updateTicketSLA(
+                ticket.id_ticket,
+                { id_sla_status: sla_status.atrasado },
+                ticket.id_sla_type
+              );
+            }
           }
-        }
-        return true;
-      } else {
-        return true;
+          break;
+        case 2:
+          for (const ticket of tickets) {
+            if (
+              ticket.interaction_time < ticket.limit_sla_time &&
+              ticket.limit_sla_time < moment()
+            ) {
+              slaModel.updateTicketSLA(
+                ticket.id_ticket,
+                { id_sla_status: sla_status.atrasado },
+                ticket.id_sla_type
+              );
+            }
+          }
+          break;
+        case 3:
+          for (const ticket of tickets) {
+            if (ticket.limit_sla_time < moment()) {
+              slaModel.updateTicketSLA(
+                ticket.id_ticket,
+                { id_sla_status: sla_status.atrasado },
+                ticket.id_sla_type
+              );
+            }
+          }
+          break;
+        default:
+          break;
       }
-    });
+    }
   }
 
   async processCase(result) {
@@ -940,11 +992,7 @@ class TicketController {
       );
 
       for (let ticket of result) {
-        ticket = await formatTicketForPhase(
-          [ticket],
-          req.app.locals.db,
-          ticket
-        );
+        ticket = await formatTicketForPhase([ticket], ticket);
 
         ticket.attachments = await attachmentsModel.getAttachments(ticket.id);
         ticket.attachments.map((value) => {

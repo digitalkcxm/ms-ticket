@@ -288,7 +288,10 @@ class TicketModel {
   }
   async getTicketByPhaseAndStatus(id_phase, status) {
     try {
-      console.log("----->",status)
+
+      let newStatus 
+      typeof status ? newStatus = JSON.parse(status) : newStatus = status;
+
       return await database("phase_ticket")
         .select({
           id: "ticket.id",
@@ -298,7 +301,6 @@ class TicketModel {
           id_customer: "ticket.id_customer",
           id_protocol: "ticket.id_protocol",
           closed: "ticket.closed",
-          sla: "ticket.sla",
           id_form: `ticket.id_form`,
           department_origin: `ticket.department_origin`,
           created_at: "ticket.created_at",
@@ -306,16 +308,17 @@ class TicketModel {
         })
         .leftJoin("ticket", "ticket.id", "phase_ticket.id_ticket")
         .leftJoin("users", "users.id", "ticket.id_user")
-        .where("phase_ticket.id_phase", id_phase)
+        .whereIn("ticket.closed", newStatus)
+        .andWhere("phase_ticket.id_phase", id_phase)
         .andWhere("phase_ticket.active", true)
-        .andWhere("ticket.closed", status);
+        
     } catch (err) {
       console.log("Error when get Ticket by phase =>", err);
       return err;
     }
   }
 
-  async countTicket(id_phase,status) {
+  async countTicket(id_phase, status) {
     const result = await database("phase_ticket")
       .count("ticket.id")
       .leftJoin("ticket", "ticket.id", "phase_ticket.id_ticket")
@@ -323,7 +326,7 @@ class TicketModel {
       .where("phase_ticket.id_phase", id_phase)
       .andWhere("phase_ticket.active", true)
       .andWhere("ticket.closed", status);
-      return result[0].count
+    return result[0].count;
   }
 
   async getTicketByCustomerOrProtocol(id) {
