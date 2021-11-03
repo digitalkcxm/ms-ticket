@@ -2,6 +2,7 @@ exports.up = function (knex) {
     return knex.schema.createTable("customer", (table) => {
         table.increments()
         table.integer("id_core")
+        table.uuid("id_ticket")
         table.string("name")
         table.string("phone")
         table.string("email")
