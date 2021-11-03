@@ -1,10 +1,11 @@
 class CustomerModel {
-    async getAll() {
+    async getAll(ticketId) {
       try {
         return await database('customer')
           .select(
             'id',
             'id_core',
+            'id_ticket',
             'name',
             'email',
             'phone',
@@ -14,18 +15,20 @@ class CustomerModel {
             'created_at',
             'updated_at'
           )
+          .where({ id_ticket: ticketId })
           .orderBy('created_at', 'desc')
       } catch (err) {
         return err
       }
     }
   
-    async getByID(protocolId, id) {
+    async getByID(ticketId, id) {
       try {
         return await database('customer')
           .select(
             'id',
             'id_core',
+            'id_ticket',
             'name',
             'email',
             'phone',
@@ -36,7 +39,7 @@ class CustomerModel {
             'updated_at'
           )
           .where('id', id)
-          .andWhere('id_protocol', protocolId)
+          .andWhere('id_ticket', ticketId)
       } catch (err) {
         console.log('Error =<', err)
         return err
@@ -49,6 +52,7 @@ class CustomerModel {
           .select(
             'id',
             'id_core',
+            'id_ticket',
             'name',
             'email',
             'phone',
@@ -71,6 +75,7 @@ class CustomerModel {
           .returning([
             'id',
             'id_core',
+            'id_ticket',
             'name',
             'email',
             'phone',
@@ -92,6 +97,7 @@ class CustomerModel {
           .returning([
             'id',
             'id_core',
+            'id_ticket',
             'name',
             'email',
             'phone',
