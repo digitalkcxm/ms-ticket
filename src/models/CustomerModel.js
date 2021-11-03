@@ -1,7 +1,11 @@
+const database = require("../config/database/database");
+const tableName = "customer"
+const moment = require("moment");
+
 class CustomerModel {
     async getAll(ticketId) {
       try {
-        return await database('customer')
+        return await database(tableName)
           .select(
             'id',
             'id_core',
@@ -24,7 +28,7 @@ class CustomerModel {
   
     async getByID(ticketId, id) {
       try {
-        return await database('customer')
+        return await database(tableName)
           .select(
             'id',
             'id_core',
@@ -48,7 +52,7 @@ class CustomerModel {
   
     async getByIDCore(coreId) {
       try {
-        return await database('customer')
+        return await database(tableName)
           .select(
             'id',
             'id_core',
@@ -71,7 +75,7 @@ class CustomerModel {
   
     async insertCustomer(obj) {
       try {
-        return await database('customer')
+        return await database(tableName)
           .returning([
             'id',
             'id_core',
@@ -93,7 +97,7 @@ class CustomerModel {
   
     async updateCustomer(id, obj) {
       try {
-        return await database('customer')
+        return await database(tableName)
           .returning([
             'id',
             'id_core',
