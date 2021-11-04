@@ -14,7 +14,7 @@ const moment = require("moment");
 const { ticketSLA } = require("./SLAFormat");
 
 async function formatTicketForPhase(phase, ticket) {
-  ticket.countSLA = await ticketSLA(phase.id, ticket.id);
+  ticket.sla = await ticketSLA(phase.id, ticket.id);
   //   let first_interaction = await ticketModel.first_interaction(ticket.id);
   //   first_interaction.length
   //     ? (ticket.first_message = moment(first_interaction[0].created_at).format(
