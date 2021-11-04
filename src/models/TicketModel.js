@@ -344,14 +344,16 @@ class TicketModel {
           sla_time: "phase.sla_time",
           id_unit_of_time: "phase.id_unit_of_time",
           id_form: "ticket.id_form",
+          name: "phase.name",
           department_origin: `ticket.department_origin`,
-          created_at: "ticket.created_at",
+          created_at: "phase_ticket.created_at",
           updated_at: "ticket.updated_at",
         })
         .leftJoin("users", "users.id", "ticket.id_user")
         .leftJoin("phase_ticket", "phase_ticket.id_ticket", `${tableName}.id`)
         .leftJoin("phase", "phase.id", "phase_ticket.id_phase")
-        .where("ticket.id_customer", id)
+        .where("phase_ticket.active", true)
+        .andWhere("ticket.id_customer", id)
         .orWhere("ticket.id_protocol", id);
     } catch (err) {
       console.log("===>", err);

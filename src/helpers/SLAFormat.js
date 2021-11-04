@@ -182,7 +182,7 @@ const createSLAControl = async function (id_phase, id_ticket) {
           break;
         case 2:
           if (slaSettings.filter((x) => x.id_sla_type === 1)) {
-            const getSLA = await slaModel.getByPhaseTicket(
+            let getSLA = await slaModel.getByPhaseTicket(
               id_phase,
               id_ticket,
               1
@@ -260,6 +260,7 @@ const updateSLA = async function (id_ticket, id_phase) {
     slaTicket = await slaModel.getByPhaseTicket(id_phase, id_ticket, 2);
 
     if (
+      slaTicket[0].interaction_time &&
       slaTicket[0].interaction_time < slaTicket[0].limit_sla_time &&
       slaTicket[0].limit_sla_time < moment()
     ) {
@@ -278,6 +279,7 @@ const updateSLA = async function (id_ticket, id_phase) {
     await slaModel.updateTicketSLA(id_ticket, obj, 2);
   }
 };
+
 module.exports = {
   counter_sla,
   settingsSLA,
