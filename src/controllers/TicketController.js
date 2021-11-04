@@ -938,7 +938,7 @@ class TicketController {
       let result = await ticketModel.getTicketByCustomerOrProtocol(
         req.params.id
       );
-
+        console.log("result =====> ", result)
       for (let ticket of result) {
         ticket = await formatTicketForPhase(
           [ticket],
