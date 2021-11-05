@@ -3,24 +3,23 @@ const typeColumnModel = new TypeColumnModel();
 
 module.exports = async function (columns) {
   let errors = [];
-  for (let i = 0; i < columns.length; i++) {
-    typeof columns[i].editable === "boolean"
+  for (const column of columns) {
+    typeof column.editable === "boolean"
       ? ""
       : errors.push(`item ${i}: o campo editable é um campo booleano`);
-    columns[i].type || columns[i].type >= 0
+    column.type || column.type >= 0
       ? ""
       : errors.push(`item ${i}: type é um campo obrigatório`);
-    columns[i].column
+    column.column
       ? ""
       : errors.push(`item ${i}: column é um campo obrigatório`);
-    columns[i].label
-      ? ""
-      : errors.push(`item ${i}: label é um campo obrigatório`);
-    typeof columns[i].required === "boolean"
+    column.label ? "" : errors.push(`item ${i}: label é um campo obrigatório`);
+    typeof column.required === "boolean"
       ? ""
       : errors.push(`item ${i}: required é um campo booleano`);
 
-    let type = await typeColumnModel.getTypeByID(columns[i].type);
+    let type = await typeColumnModel.getTypeByName(column.type);
+    column.type = type[0].id;
     if (type.length <= 0) errors.push(`item ${i}: Invalid type`);
   }
   return errors;

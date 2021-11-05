@@ -39,6 +39,9 @@ const activitiesModel = new ActivitiesModel();
 const SLAModel = require("../models/SLAModel");
 const slaModel = new SLAModel();
 
+const TypeColumnModel = require("../models/TypeColumnModel");
+const typeColumnModel = new TypeColumnModel();
+
 const { counter_sla, settingsSLA } = require("../helpers/SLAFormat");
 class PhaseController {
   async create(req, res) {
@@ -62,6 +65,7 @@ class PhaseController {
         created_at: moment().format(),
         updated_at: moment().format(),
         active: req.body.active,
+        visible_new_ticket: req.body.visible_new_ticket,
       };
 
       // Executa uma validação no formulario passado pelo cliente.
@@ -71,7 +75,7 @@ class PhaseController {
           req.app.locals.db
         );
 
-        if (Array.isArray(templateValidate) && templateValidate.length > 0) {
+        if (!templateValidate) {
           return res.status(400).send({ errors: templateValidate });
         }
 
@@ -140,7 +144,7 @@ class PhaseController {
 
       // Formata o obj de retorno.
       delete obj.id_company;
-      obj.id_form_template;
+
       obj.column = req.body.column;
       obj.created_at = moment(obj.created_at).format("DD/MM/YYYY HH:mm:ss");
       obj.updated_at = moment(obj.updated_at).format("DD/MM/YYYY HH:mm:ss");
@@ -171,6 +175,14 @@ class PhaseController {
     if (errorsColumns.length > 0) return errorsColumns;
 
     const formTemplate = await new FormTemplate(db).createRegister(column);
+
+    if (!formTemplate) return false;
+
+    for (const formatcolumn of column) {
+      const type = await typeColumnModel.getTypeByID(formatcolumn.type);
+      formatcolumn.type = type[0].name;
+    }
+
     return formTemplate;
   }
 
@@ -224,10 +236,7 @@ class PhaseController {
       const tickets = await ticketModel.getTicketByPhase(result[0].id);
       result[0].ticket = [];
       for await (let ticket of tickets) {
-        const ticketFormated = await formatTicketForPhase(
-          result[0],
-          ticket
-        );
+        const ticketFormated = await formatTicketForPhase(result[0], ticket);
         result[0].ticket.push(ticketFormated);
       }
 
@@ -262,10 +271,7 @@ class PhaseController {
               );
               if (ticket)
                 result[i].ticket.push(
-                  await formatTicketForPhase(
-                    result[i],
-                    ticket
-                  )
+                  await formatTicketForPhase(result[i], ticket)
                 );
             }
             result[i] = await this._formatPhase(result[i], req.app.locals.db);
@@ -305,7 +311,7 @@ class PhaseController {
           result[i].closed = 0;
           for await (let ticket of tickets) {
             result[i].ticket.push(
-              await formatTicketForPhase(result[i],  ticket)
+              await formatTicketForPhase(result[i], ticket)
             );
             ticket.closed
               ? (result[i].closed = result[i].closed + 1)
@@ -377,6 +383,7 @@ class PhaseController {
         supervisor_notify_sla: req.body.notify_supervisor,
         updated_at: moment().format(),
         active: req.body.active,
+        visible_new_ticket: req.body.visible_new_ticket,
       };
 
       await phaseModel.updatePhase(
@@ -569,7 +576,18 @@ class PhaseController {
       const register = await new FormTemplate(mongodb).findRegistes(
         result.id_form_template
       );
-      result.formTemplate = register.column;
+
+      if (register && register.column) {
+        result.formTemplate = register.column;
+
+        for (const x of result.formTemplate) {
+          const type = await typeColumnModel.getTypeByID(x.type);
+
+          type && Array.isArray(type) && type.length > 0
+            ? (x.type = type[0].name)
+            : "";
+        }
+      }
     }
     result.created_at = moment(result.created_at).format("DD/MM/YYYY HH:mm:ss");
     result.updated_at = moment(result.updated_at).format("DD/MM/YYYY HH:mm:ss");

@@ -592,7 +592,10 @@ class TicketController {
           .status(400)
           .send({ error: "There is no ticket with this ID" });
 
-      result = await formatTicketForPhase(result, result[0]);
+      result = await formatTicketForPhase(
+        { id: result[0].phase_id },
+        result[0]
+      );
 
       if (result.id_form) {
         result.form_data = await new FormDocuments(
@@ -1103,6 +1106,61 @@ class TicketController {
       return res
         .status(400)
         .send({ error: "There was an error while trying to obtain status" });
+    }
+  }
+
+  async startTicket(req, res) {
+    try {
+      if (req.body.id_ticket && req.body.id_user) {
+        const result = await userController.checkUserCreated(
+          req.body.id_user,
+          req.headers.authorization
+        );
+        const time = moment();
+        const responsibleCheck =
+          await ticketModel.getResponsibleByTicketAndUser(
+            req.body.id_ticket,
+            result.id
+          );
+
+        if (
+          responsibleCheck &&
+          Array.isArray(responsibleCheck) &&
+          responsibleCheck.length > 0 &&
+          !responsibleCheck[0].start_ticket
+        ) {
+          await ticketModel.updateResponsible(req.body.id_ticket, result.id, {
+            start_ticket: time,
+          });
+          return res.status(200).send({ start_ticket: moment(time).format("DD/MM/YYYY HH:mm:ss") });
+        } else if (
+          responsibleCheck &&
+          Array.isArray(responsibleCheck) &&
+          responsibleCheck.length <= 0
+        ) {
+          await ticketModel.createResponsibleTicket({
+            id_ticket: req.body.id_ticket,
+            id_user: result.id,
+            id_type_of_responsible: 2,
+            start_ticket: time,
+          });
+          return res.status(200).send({ start_ticket: moment(time).format("DD/MM/YYYY HH:mm:ss")  });
+        } else if (
+          responsibleCheck &&
+          Array.isArray(responsibleCheck) &&
+          responsibleCheck.length > 0 &&
+          responsibleCheck[0].start_ticket
+        ) {
+          return res.status(400).send({
+            error: "Não é possivel iniciar um ticket já inicializado",
+          });
+        }
+      } else {
+        return res.status(400).send({ error: "Houve um erro! " });
+      }
+    } catch (err) {
+      console.log("err", err);
+      return res.status(500).send({ error: "Houve um erro! " });
     }
   }
 }

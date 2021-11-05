@@ -50,10 +50,16 @@ class TicketModel {
           department_origin: `${tableName}.department_origin`,
           created_at: `${tableName}.created_at`,
           updated_at: `${tableName}.updated_at`,
+          start_ticket: "responsible_ticket.start_ticket",
         })
         .leftJoin("users", "users.id", `${tableName}.id_user`)
         .leftJoin("phase_ticket", "phase_ticket.id_ticket", `${tableName}.id`)
         .leftJoin("phase", "phase.id", "phase_ticket.id_phase")
+        .leftJoin(
+          "responsible_ticket",
+          "responsible_ticket.id_ticket",
+          "ticket.id"
+        )
         .where(`${tableName}.id`, id)
         .andWhere(`${tableName}.id_company`, id_company)
         .orderBy("phase_ticket.id", "desc")
@@ -288,9 +294,8 @@ class TicketModel {
   }
   async getTicketByPhaseAndStatus(id_phase, status) {
     try {
-
-      let newStatus 
-      typeof status ? newStatus = JSON.parse(status) : newStatus = status;
+      let newStatus;
+      typeof status ? (newStatus = JSON.parse(status)) : (newStatus = status);
 
       return await database("phase_ticket")
         .select({
@@ -310,8 +315,7 @@ class TicketModel {
         .leftJoin("users", "users.id", "ticket.id_user")
         .whereIn("ticket.closed", newStatus)
         .andWhere("phase_ticket.id_phase", id_phase)
-        .andWhere("phase_ticket.active", true)
-        
+        .andWhere("phase_ticket.active", true);
     } catch (err) {
       console.log("Error when get Ticket by phase =>", err);
       return err;
@@ -476,6 +480,29 @@ class TicketModel {
         .orderBy("phase_ticket.created_at", "asc");
     } catch (err) {
       console.log("Error Get First Form Ticket ==>", err);
+      return err;
+    }
+  }
+
+  async getResponsibleByTicketAndUser(id_ticket, id_user) {
+    try {
+      return await database("responsible_ticket")
+        .where("id_ticket", id_ticket)
+        .andWhere("id_user", id_user);
+    } catch (err) {
+      console.log("Error get responsible by ticket and user => ", err);
+      return err;
+    }
+  }
+
+  async updateResponsible(id_ticket, id_user, obj) {
+    try {
+      return await database("responsible_ticket")
+        .update(obj)
+        .where("id_ticket", id_ticket)
+        .andWhere("id_user", id_user);
+    } catch (err) {
+      console.log("Error update responsible", err);
       return err;
     }
   }
