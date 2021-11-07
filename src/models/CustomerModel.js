@@ -49,6 +49,17 @@ class CustomerModel {
         return err
       }
     }
+
+    async delCustomerTicket(id_ticket) {
+      try {
+        return await database("customer")
+          .andWhere("id_ticket", id_ticket)
+          .del();
+      } catch (err) {
+        console.log("Error when get responsible Ticket =>", err);
+        return err;
+      }
+    }
   
     async getByIDCore(coreId) {
       try {

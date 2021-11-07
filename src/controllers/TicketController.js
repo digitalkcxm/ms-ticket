@@ -8,6 +8,7 @@ const CompanyModel = require("../models/CompanyModel");
 const EmailService = require("../services/EmailService");
 const EmailModel = require("../models/EmailModel");
 const FormTemplate = require("../documents/FormTemplate");
+const CustomerModel = require("../models/CustomerModel");
 const FormDocuments = require("../documents/FormDocuments");
 const asyncRedis = require("async-redis");
 const redis = asyncRedis.createClient(
@@ -28,6 +29,7 @@ const userController = new UserController();
 const phaseModel = new PhaseModel();
 const emailController = new EmailController();
 const userModel = new UserModel();
+const customerModel = new CustomerModel();
 const companyModel = new CompanyModel();
 const emailService = new EmailService();
 const emailModel = new EmailModel();
@@ -105,6 +107,10 @@ class TicketController {
       let result = await ticketModel.create(obj);
       await this._createResponsibles(userResponsible, obj.id);
 
+      if(req.body.customer){
+        await this._createCustomers(req.body.customer, obj.id);
+      }
+
       if (!phase || phase.length <= 0)
         return res.status(400).send({ error: "Invalid id_phase uuid" });
 
@@ -161,6 +167,32 @@ class TicketController {
         });
       }
 
+      return true;
+    } catch (err) {
+      console.log("Error when create responsibles ==> ", err);
+      return false;
+    }
+  }
+
+  async _createCustomers(customer = null, ticket_id){
+    try {
+      await customerModel.delCustomerTicket(ticket_id);
+      if (customer.length > 0) {
+        for (let c of customer){
+          await customerModel.create({
+            id_core: c.id_core,
+            id_ticket: ticket_id,
+            name: c.name,
+            email: c.email,
+            phone: c.phone,
+            identification_document: c.identification_document,
+            crm_ids: c.crm_ids,
+            crm_contact_id: c.crm_contact_id,
+            created_at: moment().format(),
+            updated_at: moment().format(),
+          })
+        }
+      }
       return true;
     } catch (err) {
       console.log("Error when create responsibles ==> ", err);
@@ -701,6 +733,10 @@ class TicketController {
         req.params.id,
         req.headers.authorization
       );
+
+      if(req.body.customer){
+        await this._createCustomers(req.body.customer, req.params.id);
+      }
 
       await this._createResponsibles(userResponsible, req.params.id);
 
