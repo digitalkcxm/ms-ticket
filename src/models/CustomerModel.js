@@ -29,7 +29,6 @@ class CustomerModel {
             'updated_at'
           )
           .where({ id_ticket: ticketId })
-          .orderBy('created_at', 'desc')
       } catch (err) {
         return err
       }
