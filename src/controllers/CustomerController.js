@@ -114,8 +114,6 @@ class CustomerController {
             if (result.name && result.name == 'error')
                 return res.status(500).send({ error: "Contact microservice responsible" })
 
-            result[0].created_at = moment(result[0].created_at).format("DD/MM/YYYY HH:mm:ss")
-            result[0].updated_at = moment(result[0].updated_at).format("DD/MM/YYYY HH:mm:ss")
             return res.status(200).send(result)
 
         } catch (err) {
