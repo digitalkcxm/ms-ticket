@@ -3,6 +3,15 @@ const tableName = "customer"
 const moment = require("moment");
 
 class CustomerModel {
+    async create(obj){
+      try {
+        return await database(tableName).returning(["id"]).insert(obj);
+      } catch (err) {
+        console.log("Error when create phase => ", err);
+        return err;
+      }
+    }
+
     async getAll(ticketId) {
       try {
         return await database(tableName)
