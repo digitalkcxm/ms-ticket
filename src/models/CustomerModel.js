@@ -114,7 +114,7 @@ class CustomerModel {
       }
     }
   
-    async updateCustomer(id, obj) {
+    async update(id, obj) {
       try {
         return await database(tableName)
           .returning([
