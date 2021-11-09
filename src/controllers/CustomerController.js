@@ -80,7 +80,7 @@ class CustomerController {
     async getByTicket(req, res) {
         try {
 
-            const result = await customerModel.getByTicket(req.body.id_ticket)
+            const result = await customerModel.getAll(req.body.id_ticket)
             if (result.length <= 0)
                 return res.status(400).send({ error: "Error when get company info" })
 
