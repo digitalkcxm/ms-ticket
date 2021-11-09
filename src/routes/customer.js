@@ -8,9 +8,9 @@ const router = express.Router()
 const companyController = new CompanyController()
 const customerController = new CustomerController()
 
-router.get("/:id", (req, res) => customerController.getByID(req, res))
 router.get("/core/:id_core", (req, res) => customerController.getByIDCore(req, res))
 router.get("/ticket", (req, res) => customerController.getByTicket(req, res))
+router.get("/:id", (req, res) => customerController.getByID(req, res))
 
 
 router.post("/", (req, res) => customerController.create(req, res))
