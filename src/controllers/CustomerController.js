@@ -46,8 +46,7 @@ class CustomerController {
 
     async getByID(req, res) {
         try {
-
-            const result = await customerModel.getByID(req.params.id)
+            const result = await customerModel.getByID(req.body.id_ticket, req.params.id)
             if (result.length <= 0)
                 return res.status(400).send({ error: "Error when get company info" })
 
