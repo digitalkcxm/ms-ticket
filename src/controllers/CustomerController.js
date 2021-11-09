@@ -82,7 +82,7 @@ class CustomerController {
 
             const result = await customerModel.getAll(req.body.id_ticket)
             if (result.length <= 0)
-                return res.status(400).send({ error: "Error when get company info" })
+                return res.status(400).send({ error: result })
 
             result[0].created_at = moment(result[0].created_at).format("DD/MM/YYYY HH:mm:ss")
             result[0].updated_at = moment(result[0].updated_at).format("DD/MM/YYYY HH:mm:ss")
