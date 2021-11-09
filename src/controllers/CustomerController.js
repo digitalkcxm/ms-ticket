@@ -29,7 +29,7 @@ class CustomerController {
 
             const result = await customerModel.create(obj)
             if (result.length <= 0)
-                return res.status(400).send({ error: "Error when manage customer info" })
+                return res.status(400).send({ error: "Error when manage customer info", result: result })
 
             if (result.code == "23502")
                 return res.status(400).send({ error: "Please check your body" })
