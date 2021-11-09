@@ -16,6 +16,7 @@ class CustomerController {
         try {
             let obj = {
                 id_core: req.body.id_core,
+                id_ticket: req.body.id_ticket,
                 name: req.body.name,
                 email: req.body.email,
                 phone: req.body.phone,
