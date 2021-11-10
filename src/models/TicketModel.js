@@ -394,7 +394,7 @@ class TicketModel {
   async last_interaction_ticket(id) {
     try {
       return await database("activities_ticket")
-        .select(["users.id_users_core", "activities_ticket.created_at"])
+        .select(["users.id_users_core", "users.name"])
         .leftJoin("users", "users.id", "activities_ticket.id_user")
         .where("id_ticket", id)
         .orderBy("activities_ticket.created_at", "desc")

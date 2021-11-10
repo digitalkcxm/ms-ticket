@@ -1,7 +1,7 @@
 const moment = require("moment");
 
-// const TicketModel = require("../models/TicketModel");
-// const ticketModel = new TicketModel();
+const TicketModel = require("../models/TicketModel");
+const ticketModel = new TicketModel();
 
 // const UnitOfTimeModel = require("../models/UnitOfTimeModel");
 
@@ -27,13 +27,16 @@ async function formatTicketForPhase(phase, ticket) {
   //   );
   //   ticket.count_activities = await activitiesModel.getCountActivities(ticket.id);
 
-  //   let last_interaction = await ticketModel.last_interaction_ticket(ticket.id);
+  ticket.last_interaction = await ticketModel.last_interaction_ticket(
+    ticket.id
+  );
   //   if (last_interaction && last_interaction.length) {
   //     ticket.last_message = last_interaction[0];
   //     ticket.last_message.created_at = moment(
   //       ticket.last_message.created_at
   //     ).format("DD/MM/YYYY HH:mm:ss");
   //   }
+
   ticket.created_at = moment(ticket.created_at).format("DD/MM/YYYY HH:mm:ss");
   ticket.updated_at = moment(ticket.updated_at).format("DD/MM/YYYY HH:mm:ss");
   delete ticket.id_company;
