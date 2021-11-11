@@ -14,7 +14,7 @@ router.get("/:id", (req, res) => ticketController.getTicketByID(req, res))
 router.get("/protocol/:id", (req, res) => ticketController.getTicketByCustomerOrProtocol(req, res))
 router.get("/", (req, res) => ticketController.getAllTicket(req, res))
 
-router.post("/activities", (req, res) => ticketController.createActivities(req, res))
+router.post("/activities", (req, res) => ticketController.queueCreateActivities(req, res))
 router.post("/attachments", (req, res) => ticketController.createAttachments(req, res))
 
 router.put("/close/:id", (req, res) => ticketController.closedTicket(req, res))
@@ -25,8 +25,8 @@ router.use(
     body("responsible").isArray(),
 )
 
-router.post("/", (req, res) => ticketController.create(req, res))
-router.put("/:id", (req, res) => ticketController.updateTicket(req, res))
+router.post("/", (req, res) => ticketController.queueCreate(req, res))
+router.put("/:id", (req, res) => ticketController.queueUpdateTicket(req, res))
 
 
 module.exports = router
