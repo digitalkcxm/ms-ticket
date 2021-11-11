@@ -148,6 +148,117 @@ class TicketController {
     }
   }
 
+  async queueCreate(data) {
+    /*const errors = validationResult(req);
+    if (!errors.isEmpty())
+      return res.status(400).json({ errors: errors.array() });
+  */
+
+    try {
+      let userResponsible = [];
+      let id_user = await userController.checkUserCreated(
+        data.id_user,
+        data.authorization
+      );
+
+      data.responsible.map(async (responsible) => {
+        let result;
+        result = await userController.checkUserCreated(
+          responsible,
+          data.headers.authorization,
+          responsible.name
+        );
+        userResponsible.push(result.id);
+      });
+
+      let obj = {
+        id: v1(),
+        id_company: data.authorization,
+        ids_crm: data.ids_crm,
+        id_customer: data.id_customer,
+        id_protocol: data.id_protocol,
+        id_user: id_user.id,
+        created_at: moment().format(),
+        updated_at: moment().format(),
+      };
+
+      if (data.department_origin) {
+        let department = await departmentController.checkDepartmentCreated(
+          data.department_origin,
+          data.authorization
+        );
+        obj.department_origin = department[0].id;
+      }
+
+      let phase = await phaseModel.getPhase(
+        data.id_phase,
+        data.authorization
+      );
+
+      if (data.form) {
+        if (Object.keys(data.form).length > 0) {
+          if (phase[0].form) {
+            let errors = await this._validateForm(
+              data.app.locals.db,
+              phase[0].id_form_template,
+              data.form
+            );
+            if (errors.length > 0)
+              return res.status(400).send({ errors: errors });
+
+            obj.id_form = await new FormDocuments(
+              data.app.locals.db
+            ).createRegister(data.form);
+          }
+        }
+      }
+
+      let result = await ticketModel.create(obj);
+      await this._createResponsibles(userResponsible, obj.id);
+
+      if (!phase || phase.length <= 0)
+        return res.status(400).send({ error: "Invalid id_phase uuid" });
+
+      let phase_id = await ticketModel.createPhaseTicket({
+        id_phase: phase[0].id,
+        id_ticket: obj.id,
+      });
+
+      if (!phase_id || phase_id.length <= 0)
+        return res.status(500).send({ error: "There was an error" });
+
+      // await this._notify(phase[0].id, req.company[0].notify_token, obj.id, userResponsible, emailResponsible, req.headers.authorization, 4, req.app.locals.db)
+
+      let ticket = await ticketModel.getTicketById(
+        obj.id,
+        data.authorization
+      );
+      await redis.set(
+        `msTicket:ticket:${ticket.id}`,
+        JSON.stringify(ticket[0])
+      );
+
+      if (result && result.length > 0 && result[0].id) {
+        ticket = await formatTicketForPhase(
+          ticket,
+          data.app.locals.db,
+          ticket[0]
+        );
+
+        // delete ticket[0].id_company
+        return res.status(200).send(ticket);
+      }
+      await redis.del(`ticket:phase:${data.authorization}`);
+
+      return res.status(400).send({ error: "There was an error" });
+    } catch (err) {
+      console.log("Error when generate object to save ticket => ", err);
+      return res
+        .status(400)
+        .send({ error: "Error when generate object to save ticket" });
+    }
+  }
+
   async _createResponsibles(userResponsible = null, ticket_id) {
     try {
       await ticketModel.delResponsibleTicket(ticket_id);
@@ -517,6 +628,49 @@ class TicketController {
     }
   }
 
+  async queueCreateActivities(data) {
+    try {
+      if (!data.id_user)
+        return res.status(400).send({ error: "Whitout id_user" });
+
+      let user = await userController.checkUserCreated(
+        data.id_user,
+        data.authorization
+      );
+
+      if (!user || !user.id)
+        return res.status(400).send({ error: "There was an error" });
+
+      let ticket = await ticketModel.getTicketById(
+        data.id_ticket,
+        data.authorization
+      );
+      if (!ticket || ticket.length <= 0)
+        return res.status(400).send({ error: "ID ticket is invalid" });
+
+      let obj = {
+        text: data.text,
+        id_ticket: data.id_ticket,
+        id_user: user.id,
+        created_at: moment().format(),
+        updated_at: moment().format(),
+      };
+
+      let result = await activitiesModel.create(obj);
+
+      if (result && result.length > 0) {
+        obj.id = result[0].id;
+
+        return res.status(200).send(obj);
+      }
+
+      return res.status(400).send({ error: "There was an error" });
+    } catch (err) {
+      console.log("Error manage object to create activities => ", err);
+      return res.status(400).send({ error: "There was an error" });
+    }
+  }
+
   async createAttachments(req, res) {
     try {
       if (!req.body.id_user)
@@ -749,6 +903,101 @@ class TicketController {
       );
 
       await redis.del(`ticket:phase:${req.headers.authorization}`);
+
+      if (result) return res.status(200).send(ticket);
+
+      return res.status(400).send({ error: "There was an error" });
+    } catch (err) {
+      console.log("Error when generate object to save ticket => ", err);
+      return res
+        .status(400)
+        .send({ error: "Error when generate object to save ticket" });
+    }
+  }
+
+  async queueUpdateTicket(data) {
+    try {
+      let userResponsible = [];
+
+      data.responsible.map(async (responsible) => {
+        let result;
+        result = await userController.checkUserCreated(
+          responsible,
+          data.authorization,
+          responsible.name
+        );
+        userResponsible.push(result.id);
+      });
+      let ticket = await ticketModel.getTicketById(
+        data.id,
+        data.authorization
+      );
+
+      if (!ticket || ticket.length <= 0)
+        return res
+          .status(400)
+          .send({ error: "There is no ticket with this ID " });
+
+      let obj = {
+        ids_crm: data.ids_crm,
+        id_customer: data.id_customer,
+        id_protocol: data.id_protocol,
+        updated_at: moment().format(),
+      };
+
+      let result = await ticketModel.updateTicket(
+        obj,
+        data.id,
+        data.authorization
+      );
+
+      await this._createResponsibles(userResponsible, data.id);
+
+      let phase = await phaseModel.getPhase(
+        data.id_phase,
+        data.authorization
+      );
+
+      if (!phase || phase.length <= 0)
+        return res.status(400).send({ error: "Invalid id_phase uuid" });
+
+      if (ticket[0].phase_id != phase[0].id) {
+        await phaseModel.disablePhaseTicket(data.id);
+
+        let phase_id = await ticketModel.createPhaseTicket({
+          id_phase: phase[0].id,
+          id_ticket: data.id,
+        });
+        if (!phase_id || phase_id.length <= 0)
+          return res.status(500).send({ error: "There was an error" });
+      }
+
+      if (data.form && Object.keys(data.form).length > 0) {
+        const firstPhase = await ticketModel.getFirstFormTicket(ticket[0].id);
+        if (firstPhase[0].form) {
+          let errors = await this._validateUpdate(
+            data.app.locals.db,
+            firstPhase[0].id_form_template,
+            data.form,
+            ticket[0].id_form
+          );
+          if (errors.length > 0)
+            return res.status(400).send({ errors: errors });
+
+          console.log("FORM ====>", data.form);
+          obj.id_form = await new FormDocuments(
+            data.app.locals.db
+          ).updateRegister(ticket[0].id_form, data.form);
+        }
+      }
+
+      ticket = await formatTicketForPhase(ticket, data.app.locals.db, ticket[0]);
+      await redis.set(
+        `msTicket:ticket:${data.id}`,
+        JSON.stringify(ticket)
+      );
+
+      await redis.del(`ticket:phase:${data.authorization}`);
 
       if (result) return res.status(200).send(ticket);
 
