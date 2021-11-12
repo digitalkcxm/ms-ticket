@@ -69,6 +69,47 @@ class TicketModel {
       return err;
     }
   }
+  async getTicketByIdSeq(id_seq, id_company) {
+    try {
+      return await database(tableName)
+        .select({
+          id: `${tableName}.id`,
+          id_seq: `${tableName}.id_seq`,
+          ids_crm: `${tableName}.ids_crm`,
+          id_customer: `${tableName}.id_customer`,
+          id_protocol: `${tableName}.id_protocol`,
+          id_company: `${tableName}.id_company`,
+          phase_id: "phase_ticket.id_phase",
+          phase: "phase.name",
+          id_user: "users.id_users_core",
+          name: "users.name",
+          sla_time: "phase.sla_time",
+          id_unit_of_time: "phase.id_unit_of_time",
+          form: "phase.form",
+          closed: `${tableName}.closed`,
+          id_form: `${tableName}.id_form`,
+          department_origin: `${tableName}.department_origin`,
+          created_at: `${tableName}.created_at`,
+          updated_at: `${tableName}.updated_at`,
+          start_ticket: "responsible_ticket.start_ticket",
+        })
+        .leftJoin("users", "users.id", `${tableName}.id_user`)
+        .leftJoin("phase_ticket", "phase_ticket.id_ticket", `${tableName}.id`)
+        .leftJoin("phase", "phase.id", "phase_ticket.id_phase")
+        .leftJoin(
+          "responsible_ticket",
+          "responsible_ticket.id_ticket",
+          "ticket.id"
+        )
+        .where(`${tableName}.id_seq`, id_seq)
+        .andWhere(`${tableName}.id_company`, id_company)
+        .orderBy("phase_ticket.id", "desc")
+        .limit(1);
+    } catch (err) {
+      console.log("Error when get ticket by id => ", err);
+      return err;
+    }
+  }
 
   async getAllTickets(id_company, obj) {
     console.log("TicketModel -> getAllTickets -> id_company", id_company);

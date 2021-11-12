@@ -580,7 +580,7 @@ class TicketController {
 
   async getTicketByID(req, res) {
     try {
-      let result = await ticketModel.getTicketById(
+      let result = await ticketModel.getTicketByIdSeq(
         req.params.id,
         req.headers.authorization
       );

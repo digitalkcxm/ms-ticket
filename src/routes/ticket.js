@@ -15,6 +15,7 @@ router.get("/count", (req, res) =>
   ticketController.ticketResponsibleCount(req, res)
 );
 router.get("/:id", (req, res) => ticketController.getTicketByID(req, res));
+
 router.get("/protocol/:id", (req, res) =>
   ticketController.getTicketByCustomerOrProtocol(req, res)
 );
