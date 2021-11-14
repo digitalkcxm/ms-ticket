@@ -115,7 +115,7 @@ class TicketController {
       let result = await ticketModel.create(obj);
       await this._createResponsibles(userResponsible, obj.id);
 
-      if(req.body.customer){
+      if (req.body.customer) {
         await this._createCustomers(req.body.customer, obj.id);
       }
 
@@ -125,6 +125,8 @@ class TicketController {
       let phase_id = await ticketModel.createPhaseTicket({
         id_phase: phase[0].id,
         id_ticket: obj.id,
+        id_user: id_user.id,
+        id_form: obj.id_form,
       });
 
       if (!phase_id || phase_id.length <= 0)
@@ -181,11 +183,11 @@ class TicketController {
     }
   }
 
-  async _createCustomers(customer = null, ticket_id){
+  async _createCustomers(customer = null, ticket_id) {
     try {
       await customerModel.delCustomerTicket(ticket_id);
       if (customer.length > 0) {
-        for (let c of customer){
+        for (let c of customer) {
           await customerModel.create({
             id_core: c.id_core,
             id_ticket: ticket_id,
@@ -197,7 +199,7 @@ class TicketController {
             crm_contact_id: c.crm_contact_id,
             created_at: moment().format(),
             updated_at: moment().format(),
-          })
+          });
         }
       }
       return true;
@@ -738,13 +740,7 @@ class TicketController {
         updated_at: moment().format(),
       };
 
-      let result = await ticketModel.updateTicket(
-        obj,
-        req.params.id,
-        req.headers.authorization
-      );
-
-      if(req.body.customer){
+      if (req.body.customer) {
         await this._createCustomers(req.body.customer, req.params.id);
       }
 
@@ -764,34 +760,85 @@ class TicketController {
         await phaseModel.disablePhaseTicket(req.params.id);
         await slaModel.disableSLA(req.params.id);
 
+        if (req.body.form) {
+          if (Object.keys(req.body.form).length > 0) {
+            if (phase[0].form) {
+              let errors = await this._validateForm(
+                req.app.locals.db,
+                phase[0].id_form_template,
+                req.body.form
+              );
+              if (errors.length > 0)
+                return res.status(400).send({ errors: errors });
+
+              obj.id_form = await new FormDocuments(
+                req.app.locals.db
+              ).createRegister(req.body.form);
+            }
+          }
+        }
+
         let phase_id = await ticketModel.createPhaseTicket({
           id_phase: phase[0].id,
           id_ticket: req.params.id,
+          id_user: id_user.id,
+          id_form: obj.id_form,
         });
+
+        const user = await userController.checkUserCreated(
+          req.body.id_user,
+          req.headers.authorization
+        );
+        await activitiesModel.create({
+          text: "Fase do ticket atualizada",
+          id_ticket: ticket[0].id,
+          id_user: user.id,
+          created_at: moment().format(),
+          updated_at: moment().format(),
+        });
+
         if (!phase_id || phase_id.length <= 0)
           return res.status(500).send({ error: "There was an error" });
 
         await createSLAControl(phase[0].id, req.params.id);
-      }
+      } else {
+        if (req.body.form && Object.keys(req.body.form).length > 0) {
+          const firstPhase = await ticketModel.getFirstFormTicket(ticket[0].id);
+          if (firstPhase[0].form) {
+            let errors = await this._validateUpdate(
+              req.app.locals.db,
+              firstPhase[0].id_form_template,
+              req.body.form,
+              ticket[0].id_form
+            );
+            if (errors.length > 0)
+              return res.status(400).send({ errors: errors });
 
-      if (req.body.form && Object.keys(req.body.form).length > 0) {
-        const firstPhase = await ticketModel.getFirstFormTicket(ticket[0].id);
-        if (firstPhase[0].form) {
-          let errors = await this._validateUpdate(
-            req.app.locals.db,
-            firstPhase[0].id_form_template,
-            req.body.form,
-            ticket[0].id_form
-          );
-          if (errors.length > 0)
-            return res.status(400).send({ errors: errors });
+            console.log("FORM ====>", req.body.form);
+            obj.id_form = await new FormDocuments(
+              req.app.locals.db
+            ).updateRegister(ticket[0].id_form, req.body.form);
 
-          console.log("FORM ====>", req.body.form);
-          obj.id_form = await new FormDocuments(
-            req.app.locals.db
-          ).updateRegister(ticket[0].id_form, req.body.form);
+            const user = await userController.checkUserCreated(
+              req.body.id_user,
+              req.headers.authorization
+            );
+            await activitiesModel.create({
+              text: "Formulario atualizado",
+              id_ticket: ticket[0].id,
+              id_user: user.id,
+              created_at: moment().format(),
+              updated_at: moment().format(),
+            });
+          }
         }
       }
+
+      let result = await ticketModel.updateTicket(
+        obj,
+        req.params.id,
+        req.headers.authorization
+      );
 
       ticket = await formatTicketForPhase(ticket, ticket[0]);
       await redis.set(
@@ -1168,7 +1215,9 @@ class TicketController {
           await ticketModel.updateResponsible(req.body.id_ticket, result.id, {
             start_ticket: time,
           });
-          return res.status(200).send({ start_ticket: moment(time).format("DD/MM/YYYY HH:mm:ss") });
+          return res
+            .status(200)
+            .send({ start_ticket: moment(time).format("DD/MM/YYYY HH:mm:ss") });
         } else if (
           responsibleCheck &&
           Array.isArray(responsibleCheck) &&
@@ -1180,7 +1229,9 @@ class TicketController {
             id_type_of_responsible: 2,
             start_ticket: time,
           });
-          return res.status(200).send({ start_ticket: moment(time).format("DD/MM/YYYY HH:mm:ss")  });
+          return res
+            .status(200)
+            .send({ start_ticket: moment(time).format("DD/MM/YYYY HH:mm:ss") });
         } else if (
           responsibleCheck &&
           Array.isArray(responsibleCheck) &&
