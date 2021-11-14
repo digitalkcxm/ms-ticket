@@ -116,6 +116,7 @@ class TicketController {
       await this._createResponsibles(userResponsible, obj.id);
 
       if (req.body.customer) {
+        console.log("customer ==> ",req.body.customer)
         await this._createCustomers(req.body.customer, obj.id);
       }
       if (!phase || phase.length <= 0)
@@ -631,8 +632,9 @@ class TicketController {
       );
       const customer = await customerModel.getAll(result.id)
       if(customer && Array.isArray(customer) && customer.length > 0) {
-        result.id_crm = customer.crm_ids
-        result.id_customer = customer.crm_contact_id
+        console.log(customer)
+        result.ids_crm = customer[0].crm_ids
+        result.id_customer = customer[0].crm_contact_id
         result.customers = customer
       }
         
