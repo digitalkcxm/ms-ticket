@@ -73,8 +73,8 @@ class TicketController {
       let obj = {
         id: v1(),
         id_company: req.headers.authorization,
-        ids_crm: req.body.ids_crm,
-        id_customer: req.body.id_customer,
+        // ids_crm: req.body.ids_crm,
+        // id_customer: req.body.id_customer,
         id_protocol: req.body.id_protocol,
         id_user: id_user.id,
         created_at: moment().format(),
@@ -118,7 +118,6 @@ class TicketController {
       if (req.body.customer) {
         await this._createCustomers(req.body.customer, obj.id);
       }
-
       if (!phase || phase.length <= 0)
         return res.status(400).send({ error: "Invalid id_phase uuid" });
 
@@ -185,7 +184,7 @@ class TicketController {
 
   async _createCustomers(customer = null, ticket_id) {
     try {
-      await customerModel.delCustomerTicket(ticket_id);
+      await customerModel.delCustomerTicket(ticket_id); 
       if (customer.length > 0) {
         for (let c of customer) {
           await customerModel.create({
@@ -630,7 +629,13 @@ class TicketController {
         { id: result[0].phase_id },
         result[0]
       );
-
+      const customer = await customerModel.getAll(result.id)
+      if(customer && Array.isArray(customer) && customer.length > 0) {
+        result.id_crm = customer.crm_ids
+        result.id_customer = customer.crm_contact_id
+        result.customers = customer
+      }
+        
       if (result.id_form) {
         result.form_data = await new FormDocuments(
           req.app.locals.db
@@ -734,8 +739,8 @@ class TicketController {
           .send({ error: "There is no ticket with this ID " });
 
       let obj = {
-        ids_crm: req.body.ids_crm,
-        id_customer: req.body.id_customer,
+        // ids_crm: req.body.ids_crm,
+        // id_customer: req.body.id_customer,
         id_protocol: req.body.id_protocol,
         updated_at: moment().format(),
       };
@@ -1076,7 +1081,7 @@ class TicketController {
       let result = await ticketModel.getTicketByCustomerOrProtocol(
         req.params.id
       );
-
+      console.log("result =====> ", result);
       for (let ticket of result) {
         ticket = await formatTicketForPhase([ticket], ticket);
 
