@@ -50,11 +50,58 @@ class TicketModel {
           department_origin: `${tableName}.department_origin`,
           created_at: `${tableName}.created_at`,
           updated_at: `${tableName}.updated_at`,
+          start_ticket: "responsible_ticket.start_ticket",
         })
         .leftJoin("users", "users.id", `${tableName}.id_user`)
         .leftJoin("phase_ticket", "phase_ticket.id_ticket", `${tableName}.id`)
         .leftJoin("phase", "phase.id", "phase_ticket.id_phase")
+        .leftJoin(
+          "responsible_ticket",
+          "responsible_ticket.id_ticket",
+          "ticket.id"
+        )
         .where(`${tableName}.id`, id)
+        .andWhere(`${tableName}.id_company`, id_company)
+        .orderBy("phase_ticket.id", "desc")
+        .limit(1);
+    } catch (err) {
+      console.log("Error when get ticket by id => ", err);
+      return err;
+    }
+  }
+  async getTicketByIdSeq(id_seq, id_company) {
+    try {
+      return await database(tableName)
+        .select({
+          id: `${tableName}.id`,
+          id_seq: `${tableName}.id_seq`,
+          ids_crm: `${tableName}.ids_crm`,
+          id_customer: `${tableName}.id_customer`,
+          id_protocol: `${tableName}.id_protocol`,
+          id_company: `${tableName}.id_company`,
+          phase_id: "phase_ticket.id_phase",
+          phase: "phase.name",
+          id_user: "users.id_users_core",
+          name: "users.name",
+          sla_time: "phase.sla_time",
+          id_unit_of_time: "phase.id_unit_of_time",
+          form: "phase.form",
+          closed: `${tableName}.closed`,
+          id_form: `${tableName}.id_form`,
+          department_origin: `${tableName}.department_origin`,
+          created_at: `${tableName}.created_at`,
+          updated_at: `${tableName}.updated_at`,
+          start_ticket: "responsible_ticket.start_ticket",
+        })
+        .leftJoin("users", "users.id", `${tableName}.id_user`)
+        .leftJoin("phase_ticket", "phase_ticket.id_ticket", `${tableName}.id`)
+        .leftJoin("phase", "phase.id", "phase_ticket.id_phase")
+        .leftJoin(
+          "responsible_ticket",
+          "responsible_ticket.id_ticket",
+          "ticket.id"
+        )
+        .where(`${tableName}.id_seq`, id_seq)
         .andWhere(`${tableName}.id_company`, id_company)
         .orderBy("phase_ticket.id", "desc")
         .limit(1);
@@ -288,7 +335,9 @@ class TicketModel {
   }
   async getTicketByPhaseAndStatus(id_phase, status) {
     try {
-      console.log("----->",status)
+      let newStatus;
+      typeof status ? (newStatus = JSON.parse(status)) : (newStatus = status);
+
       return await database("phase_ticket")
         .select({
           id: "ticket.id",
@@ -298,7 +347,6 @@ class TicketModel {
           id_customer: "ticket.id_customer",
           id_protocol: "ticket.id_protocol",
           closed: "ticket.closed",
-          sla: "ticket.sla",
           id_form: `ticket.id_form`,
           department_origin: `ticket.department_origin`,
           created_at: "ticket.created_at",
@@ -306,16 +354,16 @@ class TicketModel {
         })
         .leftJoin("ticket", "ticket.id", "phase_ticket.id_ticket")
         .leftJoin("users", "users.id", "ticket.id_user")
-        .where("phase_ticket.id_phase", id_phase)
-        .andWhere("phase_ticket.active", true)
-        .andWhere("ticket.closed", status);
+        .whereIn("ticket.closed", newStatus)
+        .andWhere("phase_ticket.id_phase", id_phase)
+        .andWhere("phase_ticket.active", true);
     } catch (err) {
       console.log("Error when get Ticket by phase =>", err);
       return err;
     }
   }
 
-  async countTicket(id_phase,status) {
+  async countTicket(id_phase, status) {
     const result = await database("phase_ticket")
       .count("ticket.id")
       .leftJoin("ticket", "ticket.id", "phase_ticket.id_ticket")
@@ -323,7 +371,7 @@ class TicketModel {
       .where("phase_ticket.id_phase", id_phase)
       .andWhere("phase_ticket.active", true)
       .andWhere("ticket.closed", status);
-      return result[0].count
+    return result[0].count;
   }
 
   async getTicketByCustomerOrProtocol(id) {
@@ -387,7 +435,7 @@ class TicketModel {
   async last_interaction_ticket(id) {
     try {
       return await database("activities_ticket")
-        .select(["users.id_users_core", "activities_ticket.created_at"])
+        .select(["users.id_users_core", "users.name"])
         .leftJoin("users", "users.id", "activities_ticket.id_user")
         .where("id_ticket", id)
         .orderBy("activities_ticket.created_at", "desc")
@@ -473,6 +521,29 @@ class TicketModel {
         .orderBy("phase_ticket.created_at", "asc");
     } catch (err) {
       console.log("Error Get First Form Ticket ==>", err);
+      return err;
+    }
+  }
+
+  async getResponsibleByTicketAndUser(id_ticket, id_user) {
+    try {
+      return await database("responsible_ticket")
+        .where("id_ticket", id_ticket)
+        .andWhere("id_user", id_user);
+    } catch (err) {
+      console.log("Error get responsible by ticket and user => ", err);
+      return err;
+    }
+  }
+
+  async updateResponsible(id_ticket, id_user, obj) {
+    try {
+      return await database("responsible_ticket")
+        .update(obj)
+        .where("id_ticket", id_ticket)
+        .andWhere("id_user", id_user);
+    } catch (err) {
+      console.log("Error update responsible", err);
       return err;
     }
   }

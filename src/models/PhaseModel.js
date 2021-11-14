@@ -263,10 +263,8 @@ class PhaseModel {
       return await database("department_phase")
         .select([
           "phase.id",
-          "phase.id_unit_of_time",
           "phase.icon",
           "phase.name",
-          "phase.sla_time",
           "phase.responsible_notify_sla",
           "phase.supervisor_notify_sla",
           "phase.id_form_template",
@@ -274,6 +272,7 @@ class PhaseModel {
           "phase.order",
           "phase.created_at",
           "phase.updated_at",
+          "phase.visible_new_ticket"
         ])
         .leftJoin("phase", "phase.id", "department_phase.id_phase")
         .where("department_phase.id_department", id_department)

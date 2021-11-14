@@ -28,8 +28,6 @@ router.put("/order/:id", (req, res) => phaseController.orderPhase(req, res));
 router.use(
   body("name").notEmpty(),
   body("department").isNumeric(),
-  body("unit_of_time").isNumeric(),
-  body("sla_time").isNumeric(),
   body("form").isBoolean(),
   body("notify").isArray(),
   body("notify").isArray(),

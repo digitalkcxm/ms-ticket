@@ -8,13 +8,13 @@ const CompanyModel = require("../models/CompanyModel");
 const EmailService = require("../services/EmailService");
 const EmailModel = require("../models/EmailModel");
 const FormTemplate = require("../documents/FormTemplate");
+const CustomerModel = require("../models/CustomerModel");
 const FormDocuments = require("../documents/FormDocuments");
 const asyncRedis = require("async-redis");
 const redis = asyncRedis.createClient(
   process.env.REDIS_PORT,
   process.env.REDIS_HOST
 );
-const UnitOfTimeModel = require("../models/UnitOfTimeModel");
 const { formatTicketForPhase } = require("../helpers/FormatTicket");
 const AttachmentsModel = require("../models/AttachmentsModel");
 const { validationResult } = require("express-validator");
@@ -28,6 +28,7 @@ const userController = new UserController();
 const phaseModel = new PhaseModel();
 const emailController = new EmailController();
 const userModel = new UserModel();
+const customerModel = new CustomerModel();
 const companyModel = new CompanyModel();
 const emailService = new EmailService();
 const emailModel = new EmailModel();
@@ -37,6 +38,15 @@ const departmentController = new DepartmentController();
 const ActivitiesModel = require("../models/ActivitiesModel");
 const activitiesModel = new ActivitiesModel();
 
+const SLAModel = require("../models/SLAModel");
+const slaModel = new SLAModel();
+
+const { createSLAControl, updateSLA } = require("../helpers/SLAFormat");
+const sla_status = {
+  emdia: 1,
+  atrasado: 2,
+  aberto: 3,
+};
 class TicketController {
   async create(req, res) {
     const errors = validationResult(req);
@@ -105,12 +115,18 @@ class TicketController {
       let result = await ticketModel.create(obj);
       await this._createResponsibles(userResponsible, obj.id);
 
+      if (req.body.customer) {
+        await this._createCustomers(req.body.customer, obj.id);
+      }
+
       if (!phase || phase.length <= 0)
         return res.status(400).send({ error: "Invalid id_phase uuid" });
 
       let phase_id = await ticketModel.createPhaseTicket({
         id_phase: phase[0].id,
         id_ticket: obj.id,
+        id_user: id_user.id,
+        id_form: obj.id_form,
       });
 
       if (!phase_id || phase_id.length <= 0)
@@ -128,15 +144,14 @@ class TicketController {
       );
 
       if (result && result.length > 0 && result[0].id) {
-        ticket = await formatTicketForPhase(
-          ticket,
-          req.app.locals.db,
-          ticket[0]
-        );
+        await createSLAControl(phase[0].id, obj.id);
+
+        ticket = await formatTicketForPhase({ id: phase[0].id }, ticket[0]);
 
         // delete ticket[0].id_company
         return res.status(200).send(ticket);
       }
+
       await redis.del(`ticket:phase:${req.headers.authorization}`);
 
       return res.status(400).send({ error: "There was an error" });
@@ -161,6 +176,32 @@ class TicketController {
         });
       }
 
+      return true;
+    } catch (err) {
+      console.log("Error when create responsibles ==> ", err);
+      return false;
+    }
+  }
+
+  async _createCustomers(customer = null, ticket_id) {
+    try {
+      await customerModel.delCustomerTicket(ticket_id);
+      if (customer.length > 0) {
+        for (let c of customer) {
+          await customerModel.create({
+            id_core: c.id_core,
+            id_ticket: ticket_id,
+            name: c.name,
+            email: c.email,
+            phone: c.phone,
+            identification_document: c.identification_document,
+            crm_ids: c.crm_ids,
+            crm_contact_id: c.crm_contact_id,
+            created_at: moment().format(),
+            updated_at: moment().format(),
+          });
+        }
+      }
       return true;
     } catch (err) {
       console.log("Error when create responsibles ==> ", err);
@@ -505,6 +546,8 @@ class TicketController {
       let result = await activitiesModel.create(obj);
 
       if (result && result.length > 0) {
+        await updateSLA(req.body.id_ticket, ticket[0].phase_id);
+
         obj.id = result[0].id;
 
         return res.status(200).send(obj);
@@ -554,6 +597,8 @@ class TicketController {
 
       let result = await attachmentsModel.create(obj);
 
+      await updateSLA(req.body.id_ticket, ticket[0].phase_id);
+
       if (result && result.length > 0) {
         obj.id = result[0].id;
 
@@ -569,7 +614,7 @@ class TicketController {
 
   async getTicketByID(req, res) {
     try {
-      let result = await ticketModel.getTicketById(
+      let result = await ticketModel.getTicketByIdSeq(
         req.params.id,
         req.headers.authorization
       );
@@ -581,7 +626,10 @@ class TicketController {
           .status(400)
           .send({ error: "There is no ticket with this ID" });
 
-      result = await formatTicketForPhase(result, req.app.locals.db, result[0]);
+      result = await formatTicketForPhase(
+        { id: result[0].phase_id },
+        result[0]
+      );
 
       if (result.id_form) {
         result.form_data = await new FormDocuments(
@@ -651,11 +699,7 @@ class TicketController {
       for (const ticket of result) {
         console.log;
         const t = [ticket];
-        const ticketFormated = await formatTicketForPhase(
-          t,
-          req.app.locals.db,
-          ticket
-        );
+        const ticketFormated = await formatTicketForPhase(t, ticket);
         tickets.push(ticketFormated);
       }
 
@@ -696,11 +740,9 @@ class TicketController {
         updated_at: moment().format(),
       };
 
-      let result = await ticketModel.updateTicket(
-        obj,
-        req.params.id,
-        req.headers.authorization
-      );
+      if (req.body.customer) {
+        await this._createCustomers(req.body.customer, req.params.id);
+      }
 
       await this._createResponsibles(userResponsible, req.params.id);
 
@@ -712,37 +754,93 @@ class TicketController {
       if (!phase || phase.length <= 0)
         return res.status(400).send({ error: "Invalid id_phase uuid" });
 
+      await updateSLA(ticket[0].id, ticket[0].phase_id);
+
       if (ticket[0].phase_id != phase[0].id) {
         await phaseModel.disablePhaseTicket(req.params.id);
+        await slaModel.disableSLA(req.params.id);
+
+        if (req.body.form) {
+          if (Object.keys(req.body.form).length > 0) {
+            if (phase[0].form) {
+              let errors = await this._validateForm(
+                req.app.locals.db,
+                phase[0].id_form_template,
+                req.body.form
+              );
+              if (errors.length > 0)
+                return res.status(400).send({ errors: errors });
+
+              obj.id_form = await new FormDocuments(
+                req.app.locals.db
+              ).createRegister(req.body.form);
+            }
+          }
+        }
 
         let phase_id = await ticketModel.createPhaseTicket({
           id_phase: phase[0].id,
           id_ticket: req.params.id,
+          id_user: id_user.id,
+          id_form: obj.id_form,
         });
+
+        const user = await userController.checkUserCreated(
+          req.body.id_user,
+          req.headers.authorization
+        );
+        await activitiesModel.create({
+          text: "Fase do ticket atualizada",
+          id_ticket: ticket[0].id,
+          id_user: user.id,
+          created_at: moment().format(),
+          updated_at: moment().format(),
+        });
+
         if (!phase_id || phase_id.length <= 0)
           return res.status(500).send({ error: "There was an error" });
-      }
 
-      if (req.body.form && Object.keys(req.body.form).length > 0) {
-        const firstPhase = await ticketModel.getFirstFormTicket(ticket[0].id);
-        if (firstPhase[0].form) {
-          let errors = await this._validateUpdate(
-            req.app.locals.db,
-            firstPhase[0].id_form_template,
-            req.body.form,
-            ticket[0].id_form
-          );
-          if (errors.length > 0)
-            return res.status(400).send({ errors: errors });
+        await createSLAControl(phase[0].id, req.params.id);
+      } else {
+        if (req.body.form && Object.keys(req.body.form).length > 0) {
+          const firstPhase = await ticketModel.getFirstFormTicket(ticket[0].id);
+          if (firstPhase[0].form) {
+            let errors = await this._validateUpdate(
+              req.app.locals.db,
+              firstPhase[0].id_form_template,
+              req.body.form,
+              ticket[0].id_form
+            );
+            if (errors.length > 0)
+              return res.status(400).send({ errors: errors });
 
-          console.log("FORM ====>", req.body.form);
-          obj.id_form = await new FormDocuments(
-            req.app.locals.db
-          ).updateRegister(ticket[0].id_form, req.body.form);
+            console.log("FORM ====>", req.body.form);
+            obj.id_form = await new FormDocuments(
+              req.app.locals.db
+            ).updateRegister(ticket[0].id_form, req.body.form);
+
+            const user = await userController.checkUserCreated(
+              req.body.id_user,
+              req.headers.authorization
+            );
+            await activitiesModel.create({
+              text: "Formulario atualizado",
+              id_ticket: ticket[0].id,
+              id_user: user.id,
+              created_at: moment().format(),
+              updated_at: moment().format(),
+            });
+          }
         }
       }
 
-      ticket = await formatTicketForPhase(ticket, req.app.locals.db, ticket[0]);
+      let result = await ticketModel.updateTicket(
+        obj,
+        req.params.id,
+        req.headers.authorization
+      );
+
+      ticket = await formatTicketForPhase(ticket, ticket[0]);
       await redis.set(
         `msTicket:ticket:${req.params.id}`,
         JSON.stringify(ticket)
@@ -772,9 +870,47 @@ class TicketController {
           req.headers.authorization
         );
 
+        let slaTicket = await slaModel.getByPhaseTicket(
+          ticket[0].phase_id,
+          ticket[0].id,
+          3
+        );
+        let obj;
+        if (slaTicket && Array.isArray(slaTicket) && slaTicket.length > 0) {
+          if (slaTicket[0].limit_sla_time < moment()) {
+            obj = { id_sla_status: sla_status.atrasado, active: false };
+          } else if (slaTicket[0].limit_sla_time > moment()) {
+            obj = { id_sla_status: sla_status.emdia, active: false };
+          }
+          await slaModel.updateTicketSLA(
+            ticket.id_ticket,
+            obj,
+            slaTicket.id_sla_type
+          );
+        }
+
+        // Uma nova verificação para saber se o sla de resposta se manteve no tempo determinado.
+        slaTicket = await slaModel.getByPhaseTicket(
+          ticket[0].phase_id,
+          ticket[0].id,
+          2
+        );
+
+        if (slaTicket && Array.isArray(slaTicket) && slaTicket.length > 0) {
+          if (slaTicket[0].limit_sla_time < slaTicket[0].interaction_time) {
+            obj = { id_sla_status: sla_status.atrasado, active: false };
+          } else if (slaTicket[0].limit_sla_time > moment()) {
+            obj = { id_sla_status: sla_status.emdia, active: false };
+          }
+          await slaModel.updateTicketSLA(
+            ticket.id_ticket,
+            obj,
+            slaTicket.id_sla_type
+          );
+        }
+
         ticket[0] = await formatTicketForPhase(
-          ticket,
-          req.app.locals.db,
+          { id: ticket[0].phase_id },
           ticket[0]
         );
 
@@ -815,48 +951,50 @@ class TicketController {
     });
   }
 
-  async checkSLATicket() {
-    await redis.KEYS(`msTicket:ticket:*`, async (err, res) => {
-      if (res && res.length > 0) {
-        for (let ticket of res) {
-          let result = await redis.get(`${ticket}`);
-          result = JSON.parse(result);
-          let timeNow = await this.processCase(result);
-          if (timeNow >= result.sla_time) {
-            await ticketModel.updateSlaTicket(
-              { sla: true, updated_at: moment().format() },
-              result.id
-            );
-            const companyInfo = await companyModel.getById(result.id_company);
-            const allResponsibles = await ticketModel.getAllResponsibleTicket(
-              result.id
-            );
-            let userResponsibleTicket = [];
-            let emailResponsibleTicket = [];
-            await allResponsibles.map((value) => {
-              if (value.id_user) {
-                userResponsibleTicket.push(value.id_user);
-              } else if (value.id_email) {
-                emailResponsibleTicket.push(value.id_email);
-              }
-            });
-            await this._notify(
-              result.phase,
-              companyInfo[0].notify_token,
-              result.id,
-              userResponsibleTicket,
-              emailResponsibleTicket,
-              result.id_company,
-              3,
-              req.app.locals.db
-            );
+  async checkSLA(type) {
+    const tickets = await slaModel.checkSLA(type);
+    if (tickets && Array.isArray(tickets) && tickets.length > 0) {
+      switch (type) {
+        case 1:
+          for (const ticket of tickets) {
+            if (!ticket.interaction_time && ticket.limit_sla_time < moment()) {
+              slaModel.updateTicketSLA(
+                ticket.id_ticket,
+                { id_sla_status: sla_status.atrasado },
+                ticket.id_sla_type
+              );
+            }
           }
-        }
-        return true;
-      } else {
-        return true;
+          break;
+        case 2:
+          for (const ticket of tickets) {
+            if (
+              ticket.interaction_time < ticket.limit_sla_time &&
+              ticket.limit_sla_time < moment()
+            ) {
+              slaModel.updateTicketSLA(
+                ticket.id_ticket,
+                { id_sla_status: sla_status.atrasado },
+                ticket.id_sla_type
+              );
+            }
+          }
+          break;
+        case 3:
+          for (const ticket of tickets) {
+            if (ticket.limit_sla_time < moment()) {
+              slaModel.updateTicketSLA(
+                ticket.id_ticket,
+                { id_sla_status: sla_status.atrasado },
+                ticket.id_sla_type
+              );
+            }
+          }
+          break;
+        default:
+          break;
       }
-    });
+    }
   }
 
   async processCase(result) {
@@ -940,11 +1078,7 @@ class TicketController {
       );
         console.log("result =====> ", result)
       for (let ticket of result) {
-        ticket = await formatTicketForPhase(
-          [ticket],
-          req.app.locals.db,
-          ticket
-        );
+        ticket = await formatTicketForPhase([ticket], ticket);
 
         ticket.attachments = await attachmentsModel.getAttachments(ticket.id);
         ticket.attachments.map((value) => {
@@ -1055,6 +1189,65 @@ class TicketController {
       return res
         .status(400)
         .send({ error: "There was an error while trying to obtain status" });
+    }
+  }
+
+  async startTicket(req, res) {
+    try {
+      if (req.body.id_ticket && req.body.id_user) {
+        const result = await userController.checkUserCreated(
+          req.body.id_user,
+          req.headers.authorization
+        );
+        const time = moment();
+        const responsibleCheck =
+          await ticketModel.getResponsibleByTicketAndUser(
+            req.body.id_ticket,
+            result.id
+          );
+
+        if (
+          responsibleCheck &&
+          Array.isArray(responsibleCheck) &&
+          responsibleCheck.length > 0 &&
+          !responsibleCheck[0].start_ticket
+        ) {
+          await ticketModel.updateResponsible(req.body.id_ticket, result.id, {
+            start_ticket: time,
+          });
+          return res
+            .status(200)
+            .send({ start_ticket: moment(time).format("DD/MM/YYYY HH:mm:ss") });
+        } else if (
+          responsibleCheck &&
+          Array.isArray(responsibleCheck) &&
+          responsibleCheck.length <= 0
+        ) {
+          await ticketModel.createResponsibleTicket({
+            id_ticket: req.body.id_ticket,
+            id_user: result.id,
+            id_type_of_responsible: 2,
+            start_ticket: time,
+          });
+          return res
+            .status(200)
+            .send({ start_ticket: moment(time).format("DD/MM/YYYY HH:mm:ss") });
+        } else if (
+          responsibleCheck &&
+          Array.isArray(responsibleCheck) &&
+          responsibleCheck.length > 0 &&
+          responsibleCheck[0].start_ticket
+        ) {
+          return res.status(400).send({
+            error: "Não é possivel iniciar um ticket já inicializado",
+          });
+        }
+      } else {
+        return res.status(400).send({ error: "Houve um erro! " });
+      }
+    } catch (err) {
+      console.log("err", err);
+      return res.status(500).send({ error: "Houve um erro! " });
     }
   }
 }
