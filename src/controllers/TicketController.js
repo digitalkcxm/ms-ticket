@@ -75,7 +75,7 @@ class TicketController {
         id_company: req.headers.authorization,
         // ids_crm: req.body.ids_crm,
         // id_customer: req.body.id_customer,
-        id_protocol: req.body.id_protocol,
+        // id_protocol: req.body.id_protocol,
         id_user: id_user.id,
         created_at: moment().format(),
         updated_at: moment().format(),
@@ -115,10 +115,10 @@ class TicketController {
       let result = await ticketModel.create(obj);
       await this._createResponsibles(userResponsible, obj.id);
 
-      if (req.body.customer) {
-        console.log("customer ==> ",req.body.customer)
-        await this._createCustomers(req.body.customer, obj.id);
-      }
+      // if (req.body.customer) {
+      //   console.log("customer ==> ",req.body.customer)
+      //   await this._createCustomers(req.body.customer, obj.id);
+      // }
       if (!phase || phase.length <= 0)
         return res.status(400).send({ error: "Invalid id_phase uuid" });
 
@@ -183,31 +183,31 @@ class TicketController {
     }
   }
 
-  async _createCustomers(customer = null, ticket_id) {
-    try {
-      await customerModel.delCustomerTicket(ticket_id); 
-      if (customer.length > 0) {
-        for (let c of customer) {
-          await customerModel.create({
-            id_core: c.id_core,
-            id_ticket: ticket_id,
-            name: c.name,
-            email: c.email,
-            phone: c.phone,
-            identification_document: c.identification_document,
-            crm_ids: c.crm_ids,
-            crm_contact_id: c.crm_contact_id,
-            created_at: moment().format(),
-            updated_at: moment().format(),
-          });
-        }
-      }
-      return true;
-    } catch (err) {
-      console.log("Error when create responsibles ==> ", err);
-      return false;
-    }
-  }
+  // async _createCustomers(customer = null, ticket_id) {
+  //   try {
+  //     await customerModel.delCustomerTicket(ticket_id); 
+  //     if (customer.length > 0) {
+  //       for (let c of customer) {
+  //         await customerModel.create({
+  //           id_core: c.id_core,
+  //           id_ticket: ticket_id,
+  //           name: c.name,
+  //           email: c.email,
+  //           phone: c.phone,
+  //           identification_document: c.identification_document,
+  //           crm_ids: c.crm_ids,
+  //           crm_contact_id: c.crm_contact_id,
+  //           created_at: moment().format(),
+  //           updated_at: moment().format(),
+  //         });
+  //       }
+  //     }
+  //     return true;
+  //   } catch (err) {
+  //     console.log("Error when create responsibles ==> ", err);
+  //     return false;
+  //   }
+  // }
 
   async _notify(
     phase_id,
@@ -630,13 +630,13 @@ class TicketController {
         { id: result[0].phase_id },
         result[0]
       );
-      const customer = await customerModel.getAll(result.id)
-      if(customer && Array.isArray(customer) && customer.length > 0) {
-        console.log(customer)
-        result.ids_crm = customer[0].crm_ids
-        result.id_customer = customer[0].crm_contact_id
-        result.customers = customer
-      }
+      // const customer = await customerModel.getAll(result.id)
+      // if(customer && Array.isArray(customer) && customer.length > 0) {
+      //   console.log(customer)
+      //   result.ids_crm = customer[0].crm_ids
+      //   result.id_customer = customer[0].crm_contact_id
+      //   result.customers = customer
+      // }
         
       if (result.id_form) {
         result.form_data = await new FormDocuments(
@@ -743,13 +743,13 @@ class TicketController {
       let obj = {
         // ids_crm: req.body.ids_crm,
         // id_customer: req.body.id_customer,
-        id_protocol: req.body.id_protocol,
+        // id_protocol: req.body.id_protocol,
         updated_at: moment().format(),
       };
 
-      if (req.body.customer) {
-        await this._createCustomers(req.body.customer, req.params.id);
-      }
+      // if (req.body.customer) {
+      //   await this._createCustomers(req.body.customer, req.params.id);
+      // }
 
       await this._createResponsibles(userResponsible, req.params.id);
 

@@ -233,6 +233,9 @@ class PhaseController {
       if (!result || result.length < 0)
         return res.status(400).send({ error: "Invalid id phase" });
 
+      const departments = await phaseModel.getDepartmentPhase(result[0].id);
+      result[0].department = departments[0].id_department;
+
       const tickets = await ticketModel.getTicketByPhase(result[0].id);
       result[0].ticket = [];
       for await (let ticket of tickets) {
