@@ -688,12 +688,12 @@ class TicketController {
     const history_phase = await ticketModel.getHistoryTicket(result.id);
     const obj = [];
     history_phase.map(async (value, index, array) => {
-      if (array[i + 1]) {
+      if (array[index + 1]) {
         const actual = await new FormDocuments(db).findRegister(value.id_form);
         const after = await new FormDocuments(db).findRegister(
-          array[i + 1].id_form
+          array[index + 1].id_form
         );
-        console.log("TESTE ===>",actual,after)
+        console.log("TESTE ===>", actual, after);
       }
       value.created_at = moment(value.created_at).format("DD/MM/YYYY HH:mm:ss");
     });
