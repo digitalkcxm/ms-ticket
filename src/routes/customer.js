@@ -1,4 +1,4 @@
-const express = require("express")
+    const express = require("express")
 const CompanyController = require("../controllers/CompanyController")
 const { body } = require('express-validator');
 const { verifyCompany } = require("../middlewares/VerifyCompany");
