@@ -75,9 +75,6 @@ class TicketModel {
         .select({
           id: `${tableName}.id`,
           id_seq: `${tableName}.id_seq`,
-          ids_crm: `${tableName}.ids_crm`,
-          id_customer: `${tableName}.id_customer`,
-          id_protocol: `${tableName}.id_protocol`,
           id_company: `${tableName}.id_company`,
           phase_id: "phase_ticket.id_phase",
           phase: "phase.name",
