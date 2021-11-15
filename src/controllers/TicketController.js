@@ -185,7 +185,7 @@ class TicketController {
 
   // async _createCustomers(customer = null, ticket_id) {
   //   try {
-  //     await customerModel.delCustomerTicket(ticket_id); 
+  //     await customerModel.delCustomerTicket(ticket_id);
   //     if (customer.length > 0) {
   //       for (let c of customer) {
   //         await customerModel.create({
@@ -637,7 +637,7 @@ class TicketController {
       //   result.id_customer = customer[0].crm_contact_id
       //   result.customers = customer
       // }
-        
+
       if (result.id_form) {
         result.form_data = await new FormDocuments(
           req.app.locals.db
@@ -1255,6 +1255,40 @@ class TicketController {
     } catch (err) {
       console.log("err", err);
       return res.status(500).send({ error: "Houve um erro! " });
+    }
+  }
+
+  async linkProtocolToTicket(req, res) {
+    try {
+      if (!req.body.id_ticket || !req.body.id_protocol)
+        return res.status(400).send({ error: "Houve algum problema" });
+
+      const ticket = await ticketModel.getTicketByIdSeq(
+        req.body.id_ticket,
+        req.headers.authorization
+      );
+
+      if (!ticket || ticket.length < 0)
+        return res.status(400).send({ error: "Houve algum problema" });
+
+      const obj = {
+        id_ticket: ticket[0].id,
+        id_protocol: req.body.id_protocol,
+        id_company: req.headers.authorization,
+        created_at: moment().format(),
+        updated_at: moment().format(),
+      };
+      const result = await ticketModel.linkProtocolToticket(obj);
+
+      if (result.length <= 0)
+        return res.status(400).send({ error: "Houve algum problema" });
+
+      obj.created_at = moment(obj.created_at).format("DD/MM/YYYY HH:mm:ss");
+      obj.updated_at = moment(obj.updated_at).format("DD/MM/YYYY HH:mm:ss");
+      return res.status(200).send(obj);
+    } catch (err) {
+      console.log("linkProtocolToTicket ====>", err);
+      return res.status(400).send({ error: "Houve algum problema" });
     }
   }
 }

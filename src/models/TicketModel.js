@@ -547,6 +547,15 @@ class TicketModel {
       return err;
     }
   }
+
+  async linkProtocolToticket(obj) {
+    try {
+      return await database("ticket_protocol").insert(obj)
+    } catch (err) {
+      console.log("Erro ao linkar o protocolo ao ticket", err);
+      return err;
+    }
+  }
 }
 
 module.exports = TicketModel;
