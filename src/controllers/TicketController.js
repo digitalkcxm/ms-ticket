@@ -644,6 +644,9 @@ class TicketController {
         result.protocols = protocols;
       }
 
+      const department = await phaseModel.getDepartmentPhase(result.phase_id);
+      result.actual_department = department[0].id_department;
+
       if (result.id_form) {
         result.form_data = await new FormDocuments(
           req.app.locals.db
@@ -661,28 +664,39 @@ class TicketController {
         );
       });
 
-      result.activities = await activitiesModel.getActivities(result.id);
-      result.activities.map((value) => {
-        value.created_at = moment(value.created_at).format(
-          "DD/MM/YYYY HH:mm:ss"
-        );
-        value.updated_at = moment(value.updated_at).format(
-          "DD/MM/YYYY HH:mm:ss"
-        );
-      });
-
-      result.history_phase = await ticketModel.getHistoryTicket(result.id);
-      result.history_phase.map((value) => {
-        value.created_at = moment(value.created_at).format(
-          "DD/MM/YYYY HH:mm:ss"
-        );
-      });
+      result.activities = await this._activities(result.id, req.app.locals.db);
 
       return res.status(200).send(result);
     } catch (err) {
       console.log("Error when select ticket by id =>", err);
       return res.status(400).send({ error: "There was an error" });
     }
+  }
+  async _activities(id_ticket, db) {
+    const activities = await activitiesModel.getActivities(id_ticket);
+    activities.map((value) => {
+      value.created_at = moment(value.created_at).format("DD/MM/YYYY HH:mm:ss");
+      value.updated_at = moment(value.updated_at).format("DD/MM/YYYY HH:mm:ss");
+    });
+
+    const attachments = await attachmentsModel.getAttachments(id_ticket);
+    attachments.map((value) => {
+      value.created_at = moment(value.created_at).format("DD/MM/YYYY HH:mm:ss");
+      value.updated_at = moment(value.updated_at).format("DD/MM/YYYY HH:mm:ss");
+    });
+
+    const history_phase = await ticketModel.getHistoryTicket(result.id);
+    const obj = [];
+    history_phase.map(async (value, index, array) => {
+      if (array[i + 1]) {
+        const actual = await new FormDocuments(db).findRegister(value.id_form);
+        const after = await new FormDocuments(db).findRegister(
+          array[i + 1].id_form
+        );
+        console.log("TESTE ===>",actual,after)
+      }
+      value.created_at = moment(value.created_at).format("DD/MM/YYYY HH:mm:ss");
+    });
   }
 
   async getAllTicket(req, res) {
