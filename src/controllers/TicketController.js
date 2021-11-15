@@ -630,13 +630,19 @@ class TicketController {
         { id: result[0].phase_id },
         result[0]
       );
-      // const customer = await customerModel.getAll(result.id)
-      // if(customer && Array.isArray(customer) && customer.length > 0) {
-      //   console.log(customer)
-      //   result.ids_crm = customer[0].crm_ids
-      //   result.id_customer = customer[0].crm_contact_id
-      //   result.customers = customer
-      // }
+      const customer = await customerModel.getAll(result.id);
+      if (customer && Array.isArray(customer) && customer.length > 0) {
+        result.customers = customer;
+      }
+
+      const protocols = await ticketModel.getProtocolTicket(
+        result.id,
+        result.id_company
+      );
+      
+      if (protocols && Array.isArray(protocols) && protocols.length > 0) {
+        result.protocol = protocols;
+      }
 
       if (result.id_form) {
         result.form_data = await new FormDocuments(
@@ -1274,7 +1280,7 @@ class TicketController {
       const obj = {
         id_ticket: ticket[0].id,
         id_protocol: req.body.id_protocol,
-        id_company: req.headers.authorization,  
+        id_company: req.headers.authorization,
         created_at: moment().format(),
         updated_at: moment().format(),
       };
@@ -1283,7 +1289,7 @@ class TicketController {
         req.body.id_user,
         req.headers.authorization
       );
-      
+
       await activitiesModel.create({
         text: `Protocolo ${obj.id_protocol} vinculado ao ticket`,
         id_ticket: ticket[0].id,

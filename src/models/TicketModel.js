@@ -547,7 +547,19 @@ class TicketModel {
 
   async linkProtocolToticket(obj) {
     try {
-      return await database("ticket_protocol").insert(obj)
+      return await database("ticket_protocol").insert(obj);
+    } catch (err) {
+      console.log("Erro ao linkar o protocolo ao ticket", err);
+      return err;
+    }
+  }
+
+  async getProtocolTicket(id_ticket, id_company) {
+    try {
+      return await database("ticket_protocol")
+        .select()
+        .where("id_ticket", id_ticket)
+        .andWhere("id_company", id_company);
     } catch (err) {
       console.log("Erro ao linkar o protocolo ao ticket", err);
       return err;
