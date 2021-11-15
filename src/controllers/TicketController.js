@@ -644,6 +644,21 @@ class TicketController {
         result.protocols = protocols;
       }
 
+      result.activities = await this._activities(result.id, req.app.locals.db);
+       result.activities.sort((a, b) => {
+        if (
+          moment(a.updated_at, "DD/MM/YYYY HH:mm:ss").format("X") ===
+          moment(b.updated_at, "DD/MM/YYYY HH:mm:ss").format("X")
+        ) {
+          return a.id
+        } else {
+          return (
+            moment(a.updated_at, "DD/MM/YYYY HH:mm:ss").format("X") -
+            moment(b.updated_at, "DD/MM/YYYY HH:mm:ss").format("X")
+          );
+        }
+      });
+
       const department = await phaseModel.getDepartmentPhase(result.phase_id);
       result.actual_department = department[0].id_department;
 
@@ -654,17 +669,6 @@ class TicketController {
         delete result.id_form;
       }
 
-      result.attachments = await attachmentsModel.getAttachments(result.id);
-      result.attachments.map((value) => {
-        value.created_at = moment(value.created_at).format(
-          "DD/MM/YYYY HH:mm:ss"
-        );
-        value.updated_at = moment(value.updated_at).format(
-          "DD/MM/YYYY HH:mm:ss"
-        );
-      });
-
-      result.activities = await this._activities(result.id, req.app.locals.db);
 
       return res.status(200).send(result);
     } catch (err) {
@@ -673,31 +677,66 @@ class TicketController {
     }
   }
   async _activities(id_ticket, db) {
+    const obj = [];
+
     const activities = await activitiesModel.getActivities(id_ticket);
     activities.map((value) => {
       value.created_at = moment(value.created_at).format("DD/MM/YYYY HH:mm:ss");
       value.updated_at = moment(value.updated_at).format("DD/MM/YYYY HH:mm:ss");
+      value.type = "text";
+      obj.push(value);
     });
 
     const attachments = await attachmentsModel.getAttachments(id_ticket);
     attachments.map((value) => {
       value.created_at = moment(value.created_at).format("DD/MM/YYYY HH:mm:ss");
       value.updated_at = moment(value.updated_at).format("DD/MM/YYYY HH:mm:ss");
+      value.type = "file";
+      obj.push(value);
     });
 
-    const history_phase = await ticketModel.getHistoryTicket(id_ticket);
-    const obj = [];
-    history_phase.map(async (value, index, array) => {
-      
-      // if (array[index + 1]) {
-        const actual = await new FormDocuments(db).findRegister(value.id_form);
-        // const after = await new FormDocuments(db).findRegister(
-        //   array[index + 1].id_form
-        // );
-        console.log("TESTE ===>", actual);
-      // }
-      value.created_at = moment(value.created_at).format("DD/MM/YYYY HH:mm:ss");
-    });
+    let history_phase = await ticketModel.getHistoryTicket(id_ticket);
+    for (let index in history_phase) {
+      index = parseInt(index);
+
+      if (history_phase[index + 1]) {
+        console.log("array[index + 1]", history_phase[index + 1]);
+        const before = await new FormDocuments(db).findRegister(
+          history_phase[index].id_form
+        );
+        const after = await new FormDocuments(db).findRegister(
+          history_phase[index + 1].id_form
+        );
+        obj.push({
+          after: after,
+          before: before,
+          type: "form",
+          id_user: history_phase[index + 1].id_user,
+          created_at: moment(history_phase[index + 1].created_at).format("DD/MM/YYYY HH:mm:ss"),
+          updated_at: moment(history_phase[index + 1].updated_at).format("DD/MM/YYYY HH:mm:ss"),
+        });
+        console.log("TESTE ===>", obj);
+      }
+    }
+
+    // await history_phase.map(async (value, index, array) => {
+    //   if (array[index + 1]) {
+    //     console.log("array[index + 1]", array[index + 1]);
+    //     const before = await new FormDocuments(db).findRegister(value.id_form);
+    //     const after = await new FormDocuments(db).findRegister(
+    //       array[index + 1].id_form
+    //     );
+    //     obj.push({
+    //       after: after,
+    //       before: before,
+    //       type: "form",
+    //       created_at: array[index + 1].created_at,
+    //     });
+    //     console.log("TESTE ===>", obj);
+    //   }
+    //   value.created_at = moment(value.created_at).format("DD/MM/YYYY HH:mm:ss");
+    // });
+    return obj;
   }
 
   async getAllTicket(req, res) {
@@ -817,7 +856,6 @@ class TicketController {
           id_form: obj.id_form,
         });
 
-
         await activitiesModel.create({
           text: "Fase do ticket atualizada",
           id_ticket: ticket[0].id,
@@ -876,7 +914,7 @@ class TicketController {
       );
 
       await redis.del(`ticket:phase:${req.headers.authorization}`);
-console.log("ticket update",ticket)
+      console.log("ticket update", ticket);
       if (result) return res.status(200).send(ticket);
 
       return res.status(400).send({ error: "There was an error" });
