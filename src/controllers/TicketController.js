@@ -1278,7 +1278,20 @@ class TicketController {
         created_at: moment().format(),
         updated_at: moment().format(),
       };
+
+      const user = await userController.checkUserCreated(
+        req.body.id_user,
+        req.headers.authorization
+      );
       
+      await activitiesModel.create({
+        text: `Protocolo ${obj.id_protocol} vinculado ao ticket`,
+        id_ticket: ticket[0].id,
+        id_user: user.id,
+        created_at: moment().format(),
+        updated_at: moment().format(),
+      });
+
       const result = await ticketModel.linkProtocolToticket(obj);
 
       if (result.length <= 0)

@@ -28,6 +28,20 @@ class CustomerController {
             }
 
             const result = await customerModel.create(obj)
+
+            const user = await userController.checkUserCreated(
+                req.body.id_user,
+                req.headers.authorization
+              );
+              
+              await activitiesModel.create({
+                text: `Cliente vinculado ao ticket`,
+                id_ticket: req.body.id_ticket,
+                id_user: user.id,
+                created_at: moment().format(),
+                updated_at: moment().format(),
+              });
+
             if (result.length <= 0)
                 return res.status(400).send({ error: "Error when manage customer info", result: result })
 
