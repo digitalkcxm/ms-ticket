@@ -1274,10 +1274,11 @@ class TicketController {
       const obj = {
         id_ticket: ticket[0].id,
         id_protocol: req.body.id_protocol,
-        id_company: req.headers.authorization,
+        id_company: req.headers.authorization,  
         created_at: moment().format(),
         updated_at: moment().format(),
       };
+      
       const result = await ticketModel.linkProtocolToticket(obj);
 
       if (result.length <= 0)
