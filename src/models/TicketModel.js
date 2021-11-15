@@ -34,9 +34,6 @@ class TicketModel {
         .select({
           id: `${tableName}.id`,
           id_seq: `${tableName}.id_seq`,
-          ids_crm: `${tableName}.ids_crm`,
-          id_customer: `${tableName}.id_customer`,
-          id_protocol: `${tableName}.id_protocol`,
           id_company: `${tableName}.id_company`,
           phase_id: "phase_ticket.id_phase",
           phase: "phase.name",
@@ -499,7 +496,7 @@ class TicketModel {
         })
         .leftJoin("users", "users.id", "phase_ticket.id_user")
         .where("phase_ticket.id_ticket", id_ticket)
-        .orderBy("phase_ticket.created_at", "desc");
+        .orderBy("phase_ticket.created_at", "asc");
     } catch (err) {
       console.log("Error when select history ticket ===>", err);
       return err;

@@ -685,16 +685,17 @@ class TicketController {
       value.updated_at = moment(value.updated_at).format("DD/MM/YYYY HH:mm:ss");
     });
 
-    const history_phase = await ticketModel.getHistoryTicket(result.id);
+    const history_phase = await ticketModel.getHistoryTicket(id_ticket);
     const obj = [];
     history_phase.map(async (value, index, array) => {
-      if (array[index + 1]) {
+      
+      // if (array[index + 1]) {
         const actual = await new FormDocuments(db).findRegister(value.id_form);
-        const after = await new FormDocuments(db).findRegister(
-          array[index + 1].id_form
-        );
-        console.log("TESTE ===>", actual, after);
-      }
+        // const after = await new FormDocuments(db).findRegister(
+        //   array[index + 1].id_form
+        // );
+        console.log("TESTE ===>", actual);
+      // }
       value.created_at = moment(value.created_at).format("DD/MM/YYYY HH:mm:ss");
     });
   }
@@ -805,17 +806,18 @@ class TicketController {
           }
         }
 
-        let phase_id = await ticketModel.createPhaseTicket({
-          id_phase: phase[0].id,
-          id_ticket: req.params.id,
-          id_user: id_user.id,
-          id_form: obj.id_form,
-        });
-
         const user = await userController.checkUserCreated(
           req.body.id_user,
           req.headers.authorization
         );
+        let phase_id = await ticketModel.createPhaseTicket({
+          id_phase: phase[0].id,
+          id_ticket: req.params.id,
+          id_user: user.id,
+          id_form: obj.id_form,
+        });
+
+
         await activitiesModel.create({
           text: "Fase do ticket atualizada",
           id_ticket: ticket[0].id,
@@ -874,7 +876,7 @@ class TicketController {
       );
 
       await redis.del(`ticket:phase:${req.headers.authorization}`);
-
+console.log("ticket update",ticket)
       if (result) return res.status(200).send(ticket);
 
       return res.status(400).send({ error: "There was an error" });
