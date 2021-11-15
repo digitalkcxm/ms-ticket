@@ -637,11 +637,11 @@ class TicketController {
 
       const protocols = await ticketModel.getProtocolTicket(
         result.id,
-        result.id_company
+        req.headers.authorization
       );
-      
+
       if (protocols && Array.isArray(protocols) && protocols.length > 0) {
-        result.protocol = protocols;
+        result.protocols = protocols;
       }
 
       if (result.id_form) {
