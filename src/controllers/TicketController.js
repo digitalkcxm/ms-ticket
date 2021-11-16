@@ -839,21 +839,21 @@ class TicketController {
       );
       obj.push({
         type: "start",
-        created_at: ticket[0].created_at,
+        created_at: moment(ticket[0].created_at).format("DD/MM/YYYY HH:mm:ss"),
         ticket: ticketFather[0].id_seq,
         id_user: ticket[0].id_user,
       });
     } else if (ticket[0].created_by_protocol) {
       obj.push({
         type: "start",
-        created_at: ticket[0].created_at,
+        created_at: moment(ticket[0].created_at).format("DD/MM/YYYY HH:mm:ss"),
         protocol: ticket[0].id_protocol,
         id_user: ticket[0].id_user,
       });
     } else {
       obj.push({
         type: "start",
-        created_at: ticket[0].created_at,
+        created_at: moment(ticket[0].created_at).format("DD/MM/YYYY HH:mm:ss"),
         id_user: ticket[0].id_user,
       });
     }
