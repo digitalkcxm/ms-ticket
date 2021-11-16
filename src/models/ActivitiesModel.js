@@ -17,10 +17,9 @@ class ActivitiesModel {
         try {
             return await database(tableName).select({
                 "id": `${tableName}.id`,
-                "text": `${tableName}.text`,
+                "message": `${tableName}.text`,
                 "id_user": "users.id_users_core",
                 "created_at": `${tableName}.created_at`,
-                "updated_at": `${tableName}.updated_at`
             })
                 .leftJoin("users", "users.id", `${tableName}.id_user`)
                 .where(`${tableName}.id_ticket`, id_ticket)

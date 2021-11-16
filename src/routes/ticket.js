@@ -30,6 +30,9 @@ router.post("/attachments", (req, res) =>
 router.post("/start_ticket", (req, res) =>
   ticketController.startTicket(req, res)
 );
+
+router.post("/view", (req, res) => ticketController.viewTicket(req, res));
+
 router.post("/protocol", (req, res) =>
   ticketController.linkProtocolToTicket(req, res)
 );

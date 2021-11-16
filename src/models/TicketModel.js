@@ -490,13 +490,16 @@ class TicketModel {
         .select({
           id: "phase_ticket.id",
           id_phase: "phase_ticket.id_phase",
+          name: "phase.name",
+          template: "phase.id_form_template",
           id_user: "users.id_users_core",
           id_form: "phase_ticket.id_form",
           created_at: "phase_ticket.created_at",
         })
         .leftJoin("users", "users.id", "phase_ticket.id_user")
+        .leftJoin("phase", "phase.id", "phase_ticket.id_phase")
         .where("phase_ticket.id_ticket", id_ticket)
-        .orderBy("phase_ticket.created_at", "asc");
+        .orderBy("phase_ticket.created_at", "desc");
     } catch (err) {
       console.log("Error when select history ticket ===>", err);
       return err;
@@ -561,6 +564,88 @@ class TicketModel {
         .andWhere("id_company", id_company);
     } catch (err) {
       console.log("Erro ao linkar o protocolo ao ticket", err);
+      return err;
+    }
+  }
+  async insertViewTicket(obj) {
+    try {
+      return await database("view_ticket").insert(obj);
+    } catch (err) {
+      console.log("error insert view ticket =>", err);
+      return false;
+    }
+  }
+
+  async getViewTicket(id_ticket) {
+    try {
+      console.log(id_ticket);
+      return await database("view_ticket")
+        .select({
+          id_ticket: "view_ticket.id_ticket",
+          start: "view_ticket.start",
+          end: "view_ticket.end",
+          id_user: "users.id_users_core",
+        })
+        .leftJoin("users", "users.id", `view_ticket.id_user`)
+        .where("id_ticket",id_ticket);
+    } catch (err) {
+      console.log("error get view ticket =>", err);
+      return false;
+    }
+  }
+
+  async getProtocolCreatedByTicket(id_ticket, id_company) {
+    try {
+      return await database("ticket_protocol")
+        .select({
+          id_protocol: "ticket_protocol.id_protocol",
+          created_at: "ticket_protocol.created_at",
+          id_user: "users.id_users_core",
+        })
+        .leftJoin("users", "users.id", `ticket_protocol.id_user`)
+        .where("id_ticket", id_ticket)
+        .andWhere("ticket_protocol.id_company", id_company)
+        .andWhere("created_by_ticket", true);
+    } catch (err) {
+      console.log("Erro ao linkar o protocolo ao ticket", err);
+      return err;
+    }
+  }
+
+  async getTicketCreatedByTicketFather(id_ticket, id_company) {
+    try {
+      return await database("ticket")
+        .select({
+          id_seq: "ticket.id_seq",
+          id_user: "users.id_users_core",
+          created_at: "ticket.created_at",
+        })
+        .leftJoin("users", "users.id", `ticket.id_user`)
+        .where("created_by_ticket", true)
+        .andWhere("id_ticket_father", id_ticket)
+        .andWhere("ticket.id_company", id_company);
+    } catch (err) {
+      console.log("error get ticket created by ticket =>", err);
+      return [];
+    }
+  }
+
+  async getStatusTicketById(id, id_company) {
+    try {
+      return await database("ticket")
+        .select({
+          created_by_ticket: "ticket.created_by_ticket",
+          id_ticket_father: "ticket.id_ticket_father",
+          created_by_protocol: "ticket.created_by_protocol",
+          id_protocol: "ticket.id_protocol",
+          id_user: "users.id_users_core",
+          created_at: "ticket.created_at",
+        })
+        .leftJoin("users", "users.id", `${tableName}.id_user`)
+        .where(`ticket.id`, id)
+        .andWhere(`ticket.id_company`, id_company);
+    } catch (err) {
+      console.log("Error when get ticket by id => ", err);
       return err;
     }
   }

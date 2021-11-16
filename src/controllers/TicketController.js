@@ -75,7 +75,7 @@ class TicketController {
         id_company: req.headers.authorization,
         // ids_crm: req.body.ids_crm,
         // id_customer: req.body.id_customer,
-        // id_protocol: req.body.id_protocol,
+        id_protocol: req.body.id_protocol,
         id_user: id_user.id,
         created_at: moment().format(),
         updated_at: moment().format(),
@@ -110,6 +110,25 @@ class TicketController {
             ).createRegister(req.body.form);
           }
         }
+      }
+
+      if (req.body.id_ticket_father) {
+        const ticketFather = await ticketModel.getTicketById(
+          req.body.id_ticket_father
+        );
+        if (
+          ticketFather &&
+          Array.isArray(ticketFather) &&
+          ticketFather.length > 0
+        ) {
+          obj.id_ticket_father = ticketFather[0].id;
+          obj.created_by_ticket = true;
+        }
+      }
+
+      if (req.body.id_protocol) {
+        obj.id_protocol = id_protocol;
+        obj.created_by_protocol = true;
       }
 
       let result = await ticketModel.create(obj);
@@ -644,17 +663,22 @@ class TicketController {
         result.protocols = protocols;
       }
 
-      result.activities = await this._activities(result.id, req.app.locals.db);
-       result.activities.sort((a, b) => {
+      result.activities = await this._activities(
+        result.id,
+        req.app.locals.db,
+        req.headers.authorization
+      );
+
+      result.activities.sort((a, b) => {
         if (
-          moment(a.updated_at, "DD/MM/YYYY HH:mm:ss").format("X") ===
-          moment(b.updated_at, "DD/MM/YYYY HH:mm:ss").format("X")
+          moment(a.created_at, "DD/MM/YYYY HH:mm:ss").format("X") ===
+          moment(b.created_at, "DD/MM/YYYY HH:mm:ss").format("X")
         ) {
-          return a.id
+          return a.id;
         } else {
           return (
-            moment(a.updated_at, "DD/MM/YYYY HH:mm:ss").format("X") -
-            moment(b.updated_at, "DD/MM/YYYY HH:mm:ss").format("X")
+            moment(a.created_at, "DD/MM/YYYY HH:mm:ss").format("X") -
+            moment(b.created_at, "DD/MM/YYYY HH:mm:ss").format("X")
           );
         }
       });
@@ -669,21 +693,20 @@ class TicketController {
         delete result.id_form;
       }
 
-
       return res.status(200).send(result);
     } catch (err) {
       console.log("Error when select ticket by id =>", err);
       return res.status(400).send({ error: "There was an error" });
     }
   }
-  async _activities(id_ticket, db) {
+  async _activities(id_ticket, db, id_company) {
     const obj = [];
 
     const activities = await activitiesModel.getActivities(id_ticket);
     activities.map((value) => {
       value.created_at = moment(value.created_at).format("DD/MM/YYYY HH:mm:ss");
       value.updated_at = moment(value.updated_at).format("DD/MM/YYYY HH:mm:ss");
-      value.type = "text";
+      value.type = "note";
       obj.push(value);
     });
 
@@ -704,21 +727,72 @@ class TicketController {
         const before = await new FormDocuments(db).findRegister(
           history_phase[index].id_form
         );
+
+        const templateBefore = await new FormTemplate(db).findRegistes(
+          history_phase[index].template
+        );
+
         const after = await new FormDocuments(db).findRegister(
           history_phase[index + 1].id_form
         );
+
+        const templateAfter = await new FormTemplate(db).findRegistes(
+          history_phase[index + 1].template
+        );
         obj.push({
-          after: after,
-          before: before,
-          type: "form",
+          after: {
+            phase: history_phase[index + 1].id_phase,
+            field: templateAfter.column,
+            value: after,
+          },
+          before: {
+            phase: history_phase[index].id_phase,
+            field: templateBefore.column,
+            value: before,
+          },
+          type: "change_form",
           id_user: history_phase[index + 1].id_user,
-          created_at: moment(history_phase[index + 1].created_at).format("DD/MM/YYYY HH:mm:ss"),
-          updated_at: moment(history_phase[index + 1].updated_at).format("DD/MM/YYYY HH:mm:ss"),
+          created_at: moment(history_phase[index + 1].created_at).format(
+            "DD/MM/YYYY HH:mm:ss"
+          ),
+          updated_at: moment(history_phase[index + 1].updated_at).format(
+            "DD/MM/YYYY HH:mm:ss"
+          ),
         });
         console.log("TESTE ===>", obj);
+
+        if (
+          history_phase[index].id_phase != history_phase[index + 1].id_phase
+        ) {
+          obj.push({
+            type: "move",
+            id_user: history_phase[index + 1].id_user,
+            phase_origin: {
+              id: history_phase[index].id_phase,
+              name: history_phase[index].name,
+            },
+            phase_dest: {
+              id: history_phase[index + 1].id_phase,
+              name: history_phase[index + 1].name,
+            },
+            created_at: moment(history_phase[index + 1].updated_at).format(
+              "DD/MM/YYYY HH:mm:ss"
+            ),
+          });
+        }
       }
     }
 
+    const view_ticket = await ticketModel.getViewTicket(id_ticket);
+    view_ticket.map((value) => {
+      value.start = moment(value.start).format("DD/MM/YYYY HH:mm:ss");
+      value.end
+        ? (value.end = moment(value.end).format("DD/MM/YYYY HH:mm:ss"))
+        : "";
+      value.created_at = value.start;
+      value.type = "view";
+      obj.push(value);
+    });
     // await history_phase.map(async (value, index, array) => {
     //   if (array[index + 1]) {
     //     console.log("array[index + 1]", array[index + 1]);
@@ -736,6 +810,53 @@ class TicketController {
     //   }
     //   value.created_at = moment(value.created_at).format("DD/MM/YYYY HH:mm:ss");
     // });
+
+    const create_protocol = await ticketModel.getProtocolCreatedByTicket(
+      id_ticket,
+      id_company
+    );
+    create_protocol.map((value) => {
+      value.created_at = moment(value.created_at).format("DD/MM/YYYY HH:mm:ss");
+      value.updated_at = moment(value.updated_at).format("DD/MM/YYYY HH:mm:ss");
+      value.type = "create_protocol";
+      obj.push(value);
+    });
+
+    const create_ticket = await ticketModel.getTicketCreatedByTicketFather(
+      id_ticket,
+      id_company
+    );
+    create_ticket.map((value) => {
+      value.created_at = moment(value.created_at).format("DD/MM/YYYY HH:mm:ss");
+      value.type = "create_ticket";
+      obj.push(value);
+    });
+
+    const ticket = await ticketModel.getStatusTicketById(id_ticket, id_company);
+    if (ticket[0].created_by_ticket) {
+      const ticketFather = await ticketModel.getTicketById(
+        ticket[0].id_ticket_father
+      );
+      obj.push({
+        type: "start",
+        created_at: ticket[0].created_at,
+        ticket: ticketFather[0].id_seq,
+        id_user: ticket[0].id_user,
+      });
+    } else if (ticket[0].created_by_protocol) {
+      obj.push({
+        type: "start",
+        created_at: ticket[0].created_at,
+        protocol: ticket[0].id_protocol,
+        id_user: ticket[0].id_user,
+      });
+    } else {
+      obj.push({
+        type: "start",
+        created_at: ticket[0].created_at,
+        id_user: ticket[0].id_user,
+      });
+    }
     return obj;
   }
 
@@ -856,14 +977,6 @@ class TicketController {
           id_form: obj.id_form,
         });
 
-        await activitiesModel.create({
-          text: "Fase do ticket atualizada",
-          id_ticket: ticket[0].id,
-          id_user: user.id,
-          created_at: moment().format(),
-          updated_at: moment().format(),
-        });
-
         if (!phase_id || phase_id.length <= 0)
           return res.status(500).send({ error: "There was an error" });
 
@@ -885,18 +998,6 @@ class TicketController {
             obj.id_form = await new FormDocuments(
               req.app.locals.db
             ).updateRegister(ticket[0].id_form, req.body.form);
-
-            const user = await userController.checkUserCreated(
-              req.body.id_user,
-              req.headers.authorization
-            );
-            await activitiesModel.create({
-              text: "Formulario atualizado",
-              id_ticket: ticket[0].id,
-              id_user: user.id,
-              created_at: moment().format(),
-              updated_at: moment().format(),
-            });
           }
         }
       }
@@ -1100,11 +1201,22 @@ class TicketController {
       const form_template = await new FormTemplate(db).findRegistes(
         id_form_template
       );
-      // for (let column of form_template.column) {
-      //   column.required && form[column.column]
-      //     ? ""
-      //     : errors.push(`O campo ${column.label} é obrigatório`);
-      // }
+      for (let column of form_template.column) {
+        column.required && form[column.column]
+          ? ""
+          : errors.push(`O campo ${column.column} é obrigatório`);
+      }
+
+      const formColumns = Object.keys(form);
+      for (const column of formColumns) {
+        console.log(
+          "==>",
+          form_template.column.filter((x) => x.column === column)
+        );
+        form_template.column.filter((x) => x.column === column).length > 0
+          ? ""
+          : errors.push(`O campo ${column} não faz parte desse template`);
+      }
       return errors;
     } catch (err) {
       console.log("Error when generate Doc =>", err);
@@ -1320,7 +1432,7 @@ class TicketController {
 
   async linkProtocolToTicket(req, res) {
     try {
-      if (!req.body.id_ticket || !req.body.id_protocol)
+      if (!req.body.id_ticket || !req.body.id_protocol || req.body.id_user)
         return res.status(400).send({ error: "Houve algum problema" });
 
       const ticket = await ticketModel.getTicketByIdSeq(
@@ -1331,26 +1443,22 @@ class TicketController {
       if (!ticket || ticket.length < 0)
         return res.status(400).send({ error: "Houve algum problema" });
 
+      const user = await userController.checkUserCreated(
+        req.body.id_user,
+        req.headers.authorization
+      );
+
+      if (!user) return res.status(400).send({ error: "Houve algum problema" });
+
       const obj = {
         id_ticket: ticket[0].id,
         id_protocol: req.body.id_protocol,
         id_company: req.headers.authorization,
         created_at: moment().format(),
         updated_at: moment().format(),
-      };
-
-      const user = await userController.checkUserCreated(
-        req.body.id_user,
-        req.headers.authorization
-      );
-
-      await activitiesModel.create({
-        text: `Protocolo ${obj.id_protocol} vinculado ao ticket`,
-        id_ticket: ticket[0].id,
         id_user: user.id,
-        created_at: moment().format(),
-        updated_at: moment().format(),
-      });
+        created_by_ticket: req.body.created_by_ticket,
+      };
 
       const result = await ticketModel.linkProtocolToticket(obj);
 
@@ -1362,6 +1470,55 @@ class TicketController {
       return res.status(200).send(obj);
     } catch (err) {
       console.log("linkProtocolToTicket ====>", err);
+      return res.status(400).send({ error: "Houve algum problema" });
+    }
+  }
+
+  async viewTicket(req, res) {
+    try {
+      if (!req.body.id_ticket || !req.body.id_user || !req.body.type)
+        return res.status(400).send({ error: "Houve algum problema" });
+
+      const user = await userController.checkUserCreated(
+        req.body.id_user,
+        req.headers.authorization
+      );
+
+      if (!user) return res.status(400).send({ error: "Houve algum problema" });
+
+      const ticket = await ticketModel.getTicketById(
+        req.body.id_ticket,
+        req.headers.authorization
+      );
+
+      if (!ticket || ticket.length < 0)
+        return res.status(400).send({ error: "Houve algum problema" });
+
+      const obj = {
+        id_ticket: ticket[0].id,
+        start: null,
+        end: null,
+        id_user: user.id,
+      };
+      switch (req.body.type) {
+        case "start":
+          obj.start = moment().format();
+          break;
+        case "end":
+          obj.end = moment().format();
+          break;
+        default:
+          console.log("tipo não mapeado");
+          break;
+      }
+
+      const result = await ticketModel.insertViewTicket(obj);
+      if (!result)
+        return res.status(400).send({ error: "Houve algum problema" });
+
+      return res.status(200).send(obj);
+    } catch (err) {
+      console.log("Error view ticket =>", err);
       return res.status(400).send({ error: "Houve algum problema" });
     }
   }

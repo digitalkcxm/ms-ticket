@@ -228,7 +228,7 @@ const updateSLA = async function (id_ticket, id_phase) {
   // Atualiza o status atual do sla
   let slaTicket = await slaModel.getByPhaseTicket(id_phase, id_ticket, 1);
   let obj;
-  if (!slaTicket[0].interaction_time) {
+  if (slaTicket[0] && !slaTicket[0].interaction_time) {
     if (slaTicket[0].limit_sla_time < moment()) {
       obj = {
         id_sla_status: sla_status.atrasado,
