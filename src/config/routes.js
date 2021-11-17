@@ -6,5 +6,6 @@ router.use("/api/v1/phase", require("../routes/phase"))
 router.use("/api/v1/ticket",require("../routes/ticket"))
 router.use("/api/v1/incoming",require("../routes/incoming"))
 router.use("/api/v1/customer", require("../routes/customer"))
+router.use("/api/v1/department",require("../routes/department"))
 
 module.exports = router

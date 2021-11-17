@@ -15,9 +15,9 @@ const sla_status = {
   aberto: 3,
 };
 
-const counter_sla = function (phase_id) {
+const counter_sla = async function (phase_id) {
   let obj = {};
-  sla_status_id.map(async (x) => {
+  for await (const x of sla_status_id) {
     switch (x) {
       case 1:
         obj.emdia = await slaModel.getTicketControl(phase_id, x);
@@ -32,7 +32,8 @@ const counter_sla = function (phase_id) {
         console.log("Unmapped status");
         break;
     }
-  });
+  }
+
   return obj;
 };
 
