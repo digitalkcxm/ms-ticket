@@ -691,7 +691,7 @@ class TicketController {
         result.form_data = await new FormDocuments(
           req.app.locals.db
         ).findRegister(form[0].id_form);
-        delete result.form_data._id
+        delete result.form_data._id;
       }
 
       return res.status(200).send(result);
@@ -901,17 +901,26 @@ class TicketController {
 
   async updateTicket(req, res) {
     try {
+      let obj = {
+        // ids_crm: req.body.ids_crm,
+        // id_customer: req.body.id_customer,
+        // id_protocol: req.body.id_protocol,
+        updated_at: moment().format(),
+      };
       let userResponsible = [];
+      if (req.body.responsible) {
+        req.body.responsible.map(async (responsible) => {
+          const result = await userController.checkUserCreated(
+            responsible,
+            req.headers.authorization,
+            responsible.name
+          );
+          userResponsible.push(result.id);
+        });
 
-      req.body.responsible.map(async (responsible) => {
-        let result;
-        result = await userController.checkUserCreated(
-          responsible,
-          req.headers.authorization,
-          responsible.name
-        );
-        userResponsible.push(result.id);
-      });
+        await this._createResponsibles(userResponsible, req.params.id);
+      }
+
       let ticket = await ticketModel.getTicketById(
         req.params.id,
         req.headers.authorization
@@ -922,18 +931,9 @@ class TicketController {
           .status(400)
           .send({ error: "There is no ticket with this ID " });
 
-      let obj = {
-        // ids_crm: req.body.ids_crm,
-        // id_customer: req.body.id_customer,
-        // id_protocol: req.body.id_protocol,
-        updated_at: moment().format(),
-      };
-
       // if (req.body.customer) {
       //   await this._createCustomers(req.body.customer, req.params.id);
       // }
-
-      await this._createResponsibles(userResponsible, req.params.id);
 
       let phase = await phaseModel.getPhase(
         req.body.id_phase,
