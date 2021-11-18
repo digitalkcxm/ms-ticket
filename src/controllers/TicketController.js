@@ -690,8 +690,7 @@ class TicketController {
       if (form[0].id_form) {
         result.form_data = await new FormDocuments(
           req.app.locals.db
-        ).findRegister(result.id_form);
-        delete result.id_form;
+        ).findRegister(form[0].id_form);
       }
 
       return res.status(200).send(result);
