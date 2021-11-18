@@ -43,7 +43,6 @@ class TicketModel {
           id_unit_of_time: "phase.id_unit_of_time",
           form: "phase.form",
           closed: `${tableName}.closed`,
-          id_form: `${tableName}.id_form`,
           department_origin: `${tableName}.department_origin`,
           created_at: `${tableName}.created_at`,
           updated_at: `${tableName}.updated_at`,
@@ -81,7 +80,7 @@ class TicketModel {
           id_unit_of_time: "phase.id_unit_of_time",
           form: "phase.form",
           closed: `${tableName}.closed`,
-          id_form: `${tableName}.id_form`,
+          id_form: `phase_ticket.id_form`,
           department_origin: `${tableName}.department_origin`,
           created_at: `${tableName}.created_at`,
           updated_at: `${tableName}.updated_at`,
@@ -500,6 +499,21 @@ class TicketModel {
         .leftJoin("phase", "phase.id", "phase_ticket.id_phase")
         .where("phase_ticket.id_ticket", id_ticket)
         .orderBy("phase_ticket.created_at", "desc");
+    } catch (err) {
+      console.log("Error when select history ticket ===>", err);
+      return err;
+    }
+  }
+
+  async getFormTicket(id_ticket) {
+    try {
+      return await database("phase_ticket")
+        .select({
+          id_form: "id_form",
+        })
+        .where("id_ticket", id_ticket)
+        .andWhere("active",true)
+        
     } catch (err) {
       console.log("Error when select history ticket ===>", err);
       return err;

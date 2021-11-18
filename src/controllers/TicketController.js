@@ -686,7 +686,8 @@ class TicketController {
       const department = await phaseModel.getDepartmentPhase(result.phase_id);
       result.actual_department = department[0].id_department;
 
-      if (result.id_form) {
+      const form = await ticketModel.getFormTicket(result.id);
+      if (form[0].id_form) {
         result.form_data = await new FormDocuments(
           req.app.locals.db
         ).findRegister(result.id_form);

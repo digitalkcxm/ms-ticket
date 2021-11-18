@@ -1,6 +1,5 @@
 const DepartmentModel = require("../models/DepartmentModel");
 const departmentModel = new DepartmentModel();
-const { validationResult } = require("express-validator");
 const { counter_sla } = require("../helpers/SLAFormat");
 
 class DepartmentController {
