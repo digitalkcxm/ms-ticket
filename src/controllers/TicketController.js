@@ -691,6 +691,7 @@ class TicketController {
         result.form_data = await new FormDocuments(
           req.app.locals.db
         ).findRegister(form[0].id_form);
+        delete result.form_data._id
       }
 
       return res.status(200).send(result);
