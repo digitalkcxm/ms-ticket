@@ -193,7 +193,7 @@ class PhaseController {
     if (!formTemplate) return false;
 
     for (const formatcolumn of column) {
-      const type = await typeColumnModel.getTypeByID(formatcolumn.type);
+      const type = await typeColumnModel.getTypeByName(formatcolumn.type);
       formatcolumn.type = type[0].name;
     }
 
