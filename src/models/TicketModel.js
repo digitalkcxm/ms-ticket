@@ -669,7 +669,7 @@ class TicketModel {
       const default_where = `ticket.id_company = '${id_company}' AND phase.id = '${id_phase}' AND`;
       let query;
       if (isNaN(search)) {
-        search = search.replace('"','').replace('"','')
+        search = search.replace('"', "").replace('"', "");
         query = `
         ${default_where} users.name ILIKE '%${search}%' OR 
         ${default_where} customer.name ILIKE '%${search}%' OR 
@@ -684,7 +684,7 @@ class TicketModel {
         ${default_where} customer.phone ILIKE '%${search}%' OR
         ${default_where} customer.identification_document ILIKE '%${search}%'`;
       }
-      
+
       const result = await database.raw(`
       select 
         ticket.id,
