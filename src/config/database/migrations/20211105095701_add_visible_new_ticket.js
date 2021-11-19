@@ -1,7 +1,7 @@
 
 exports.up = function (knex, Promise) {
     return knex.schema.alterTable('phase', (table) => {
-        table.boolean('visible_new_ticket')
+        table.boolean('visible_new_ticket').default(false)
     })
 }
 
