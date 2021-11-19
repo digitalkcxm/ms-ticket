@@ -36,6 +36,8 @@ class PhaseModel {
           department_can_create_protocol:
             "phase.department_can_create_protocol",
           department_can_create_ticket: "phase.department_can_create_ticket",
+          create_protocol: "phase.create_protocol",
+          create_ticket: "phase.create_ticket",
         })
         .leftJoin("unit_of_time", "unit_of_time.id", "phase.id_unit_of_time")
         .where("phase.id", id_phase)
@@ -262,6 +264,8 @@ class PhaseModel {
           "phase.notification_separate as separate",
           "phase.department_can_create_protocol",
           "phase.department_can_create_ticket",
+          "phase.create_protocol",
+          "phase.create_ticket"
         ])
         .where("id_company", id_company)
         .orderBy("order", "asc");

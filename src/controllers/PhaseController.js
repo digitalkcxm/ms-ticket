@@ -73,6 +73,8 @@ class PhaseController {
         department_can_create_ticket: {
           department: req.body.department_can_create_ticket,
         },
+        create_protocol: req.body.create_protocol,
+        create_ticket: req.body.create_ticket
       };
       // Executa uma validação no formulario passado pelo cliente.
       if (req.body.form) {
@@ -445,6 +447,17 @@ class PhaseController {
         updated_at: moment().format(),
         active: req.body.active,
         visible_new_ticket: req.body.visible_new_ticket,
+        notification_customer: req.body.customer,
+        notification_admin: req.body.admin,
+        notification_separate: { separate: req.body.separate },
+        department_can_create_protocol: {
+          department: req.body.department_can_create_protocol,
+        },
+        department_can_create_ticket: {
+          department: req.body.department_can_create_ticket,
+        },
+        create_protocol: req.body.create_protocol,
+        create_ticket: req.body.create_ticket
       };
 
       await phaseModel.updatePhase(

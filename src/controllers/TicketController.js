@@ -228,311 +228,311 @@ class TicketController {
   //   }
   // }
 
-  async _notify(
-    phase_id,
-    notify_token,
-    ticket_id,
-    userResponsibleTicket,
-    emailResponsibleTicket,
-    id_company,
-    type,
-    db
-  ) {
-    try {
-      let texto = "";
-      let register;
-      let responsiblePhase = await phaseModel.getResponsiblePhase(phase_id);
-      let notifyPhase = await phaseModel.getNotifiedPhase(phase_id);
+  // async _notify(
+  //   phase_id,
+  //   notify_token,
+  //   ticket_id,
+  //   userResponsibleTicket,
+  //   emailResponsibleTicket,
+  //   id_company,
+  //   type,
+  //   db
+  // ) {
+  //   try {
+  //     let texto = "";
+  //     let register;
+  //     let responsiblePhase = await phaseModel.getResponsiblePhase(phase_id);
+  //     let notifyPhase = await phaseModel.getNotifiedPhase(phase_id);
 
-      const resultPhase = await phaseModel.getPhaseById(phase_id, id_company);
-      // if (resultPhase[0].id_form_template) {
+  //     const resultPhase = await phaseModel.getPhaseById(phase_id, id_company);
+  //     // if (resultPhase[0].id_form_template) {
 
-      // }
+  //     // }
 
-      const result = await ticketModel.getTicketById(ticket_id, id_company);
-      if (result[0].form) {
-        result[0].form_data = await new FormDocuments(db).findRegister(
-          result[0].id_form
-        );
-        delete result[0].form;
-        delete result[0].id_form;
+  //     const result = await ticketModel.getTicketById(ticket_id, id_company);
+  //     if (result[0].form) {
+  //       result[0].form_data = await new FormDocuments(db).findRegister(
+  //         result[0].id_form
+  //       );
+  //       delete result[0].form;
+  //       delete result[0].id_form;
 
-        register = await new FormTemplate(db).findRegistes(
-          resultPhase[0].id_form_template
-        );
-        for (let column of register.column) {
-          texto =
-            texto +
-            `<p><strong>${column.label} : </strong>${
-              result[0].form_data[column.column]
-                ? result[0].form_data[column.column]
-                : ""
-            }</p>`;
-        }
-      }
+  //       register = await new FormTemplate(db).findRegistes(
+  //         resultPhase[0].id_form_template
+  //       );
+  //       for (let column of register.column) {
+  //         texto =
+  //           texto +
+  //           `<p><strong>${column.label} : </strong>${
+  //             result[0].form_data[column.column]
+  //               ? result[0].form_data[column.column]
+  //               : ""
+  //           }</p>`;
+  //       }
+  //     }
 
-      switch (type) {
-        case 3:
-          const phaseInfo = await phaseModel.getPhase(phase_id, id_company);
+  //     switch (type) {
+  //       case 3:
+  //         const phaseInfo = await phaseModel.getPhase(phase_id, id_company);
 
-          if (phaseInfo[0] && phaseInfo[0].responsible_notify_sla) {
-            if (responsiblePhase && responsiblePhase.length > 0) {
-              responsiblePhase.map(async (contact) => {
-                if (contact.id_user) {
-                  await notify(notify_token, {
-                    id_user: contact.id_user_core,
-                    type: type,
-                    id_ticket: ticket_id,
-                    id_seq: result[0].id_seq,
-                    id_phase: phase_id,
-                  });
-                } else if (contact.email) {
-                  await emailService.sendActiveMenssage(
-                    `DIGITALK INFORMA: TICKET #${result[0].id_ticket} EXPIROU`,
-                    contact.email,
-                    `Um ticket expirou em uma fase de sua responsabilidade <br><br> Fase: ${contact.phase_description}  <br><br>  ${texto}`
-                  );
-                }
-              });
-            }
-          }
-          if (userResponsibleTicket && userResponsibleTicket.length > 0) {
-            await this._notifyUser(
-              type,
-              userResponsibleTicket,
-              id_company,
-              ticket_id,
-              phase_id,
-              notify_token,
-              result[0].id_seq,
-              responsiblePhase,
-              notifyPhase
-            );
-          }
+  //         if (phaseInfo[0] && phaseInfo[0].responsible_notify_sla) {
+  //           if (responsiblePhase && responsiblePhase.length > 0) {
+  //             responsiblePhase.map(async (contact) => {
+  //               if (contact.id_user) {
+  //                 await notify(notify_token, {
+  //                   id_user: contact.id_user_core,
+  //                   type: type,
+  //                   id_ticket: ticket_id,
+  //                   id_seq: result[0].id_seq,
+  //                   id_phase: phase_id,
+  //                 });
+  //               } else if (contact.email) {
+  //                 await emailService.sendActiveMenssage(
+  //                   `DIGITALK INFORMA: TICKET #${result[0].id_ticket} EXPIROU`,
+  //                   contact.email,
+  //                   `Um ticket expirou em uma fase de sua responsabilidade <br><br> Fase: ${contact.phase_description}  <br><br>  ${texto}`
+  //                 );
+  //               }
+  //             });
+  //           }
+  //         }
+  //         if (userResponsibleTicket && userResponsibleTicket.length > 0) {
+  //           await this._notifyUser(
+  //             type,
+  //             userResponsibleTicket,
+  //             id_company,
+  //             ticket_id,
+  //             phase_id,
+  //             notify_token,
+  //             result[0].id_seq,
+  //             responsiblePhase,
+  //             notifyPhase
+  //           );
+  //         }
 
-          if (emailResponsibleTicket && emailResponsibleTicket.length > 0) {
-            for (let i = 0; i < emailResponsibleTicket.length; i++) {
-              await responsiblePhase.map((userPhase) => {
-                if (userPhase.id_user == emailResponsibleTicket[i]) {
-                  delete emailResponsibleTicket[i];
-                }
-              });
+  //         if (emailResponsibleTicket && emailResponsibleTicket.length > 0) {
+  //           for (let i = 0; i < emailResponsibleTicket.length; i++) {
+  //             await responsiblePhase.map((userPhase) => {
+  //               if (userPhase.id_user == emailResponsibleTicket[i]) {
+  //                 delete emailResponsibleTicket[i];
+  //               }
+  //             });
 
-              if (emailResponsibleTicket[i]) {
-                await notifyPhase.map((userPhase) => {
-                  if (userPhase.id_user == emailResponsibleTicket[i] > 0) {
-                    delete emailResponsibleTicket[i];
-                  }
-                });
-              }
-              if (emailResponsibleTicket[i]) {
-                let infoUser = await emailModel.getEmailById(
-                  emailResponsibleTicket[i],
-                  id_company
-                );
-                await emailService.sendActiveMenssage(
-                  `DIGITALK INFORMA: TICKET #${result[0].id_ticket} `,
-                  infoUser[0].email,
-                  `Você foi alertado em um dos seus tickets <br><br>  ${texto}`
-                );
-              }
-            }
-          }
-          break;
-        case 4:
-          let body = await emailController.formatEmail(
-            result[0].created_at,
-            result[0].sla_time,
-            result[0].id_seq,
-            result[0].name,
-            resultPhase[0].name,
-            texto,
-            result[0].unit_of_time
-          );
-          let email;
-          if (responsiblePhase && responsiblePhase.length > 0) {
-            responsiblePhase.map(async (contact) => {
-              if (contact.id_user) {
-                let resultNotify = await notify(notify_token, {
-                  id_user: contact.id_user_core,
-                  type: type,
-                  id_ticket: ticket_id,
-                  id_seq: result[0].id_seq,
-                  id_phase: phase_id,
-                });
-              } else if (contact.email) {
-                email = await emailService.sendActiveMenssage(
-                  `Ticket ID:${result[0].id_seq}`,
-                  contact.email,
-                  body
-                );
-                await emailModel.createLinkedEmailWithChatId(
-                  email.data.chatId,
-                  contact.id_email,
-                  ticket_id
-                );
-              }
-            });
-          }
-          if (notifyPhase && notifyPhase.length > 0) {
-            notifyPhase.map(async (contact) => {
-              if (contact.id_user) {
-                let resultNotify = await notify(notify_token, {
-                  id_user: contact.id_user_core,
-                  type: type,
-                  id_ticket: ticket_id,
-                  id_seq: result[0].id_seq,
-                  id_phase: phase_id,
-                });
-              } else if (contact.email) {
-                email = await emailService.sendActiveMenssage(
-                  `Ticket ID:${result[0].id_seq}`,
-                  contact.email,
-                  body
-                );
-                await emailModel.createLinkedEmailWithChatId(
-                  email.data.chatId,
-                  contact.id_email,
-                  ticket_id
-                );
-              }
-            });
-          }
+  //             if (emailResponsibleTicket[i]) {
+  //               await notifyPhase.map((userPhase) => {
+  //                 if (userPhase.id_user == emailResponsibleTicket[i] > 0) {
+  //                   delete emailResponsibleTicket[i];
+  //                 }
+  //               });
+  //             }
+  //             if (emailResponsibleTicket[i]) {
+  //               let infoUser = await emailModel.getEmailById(
+  //                 emailResponsibleTicket[i],
+  //                 id_company
+  //               );
+  //               await emailService.sendActiveMenssage(
+  //                 `DIGITALK INFORMA: TICKET #${result[0].id_ticket} `,
+  //                 infoUser[0].email,
+  //                 `Você foi alertado em um dos seus tickets <br><br>  ${texto}`
+  //               );
+  //             }
+  //           }
+  //         }
+  //         break;
+  //       case 4:
+  //         let body = await emailController.formatEmail(
+  //           result[0].created_at,
+  //           result[0].sla_time,
+  //           result[0].id_seq,
+  //           result[0].name,
+  //           resultPhase[0].name,
+  //           texto,
+  //           result[0].unit_of_time
+  //         );
+  //         let email;
+  //         if (responsiblePhase && responsiblePhase.length > 0) {
+  //           responsiblePhase.map(async (contact) => {
+  //             if (contact.id_user) {
+  //               let resultNotify = await notify(notify_token, {
+  //                 id_user: contact.id_user_core,
+  //                 type: type,
+  //                 id_ticket: ticket_id,
+  //                 id_seq: result[0].id_seq,
+  //                 id_phase: phase_id,
+  //               });
+  //             } else if (contact.email) {
+  //               email = await emailService.sendActiveMenssage(
+  //                 `Ticket ID:${result[0].id_seq}`,
+  //                 contact.email,
+  //                 body
+  //               );
+  //               await emailModel.createLinkedEmailWithChatId(
+  //                 email.data.chatId,
+  //                 contact.id_email,
+  //                 ticket_id
+  //               );
+  //             }
+  //           });
+  //         }
+  //         if (notifyPhase && notifyPhase.length > 0) {
+  //           notifyPhase.map(async (contact) => {
+  //             if (contact.id_user) {
+  //               let resultNotify = await notify(notify_token, {
+  //                 id_user: contact.id_user_core,
+  //                 type: type,
+  //                 id_ticket: ticket_id,
+  //                 id_seq: result[0].id_seq,
+  //                 id_phase: phase_id,
+  //               });
+  //             } else if (contact.email) {
+  //               email = await emailService.sendActiveMenssage(
+  //                 `Ticket ID:${result[0].id_seq}`,
+  //                 contact.email,
+  //                 body
+  //               );
+  //               await emailModel.createLinkedEmailWithChatId(
+  //                 email.data.chatId,
+  //                 contact.id_email,
+  //                 ticket_id
+  //               );
+  //             }
+  //           });
+  //         }
 
-          if (userResponsibleTicket && userResponsibleTicket.length > 0) {
-            await this._notifyUser(
-              type,
-              userResponsibleTicket,
-              id_company,
-              ticket_id,
-              phase_id,
-              notify_token,
-              result[0].id_seq,
-              responsiblePhase,
-              notifyPhase
-            );
-          }
-          if (emailResponsibleTicket && emailResponsibleTicket.length > 0) {
-            for (let i = 0; i < emailResponsibleTicket.length; i++) {
-              await responsiblePhase.map((userPhase) => {
-                if (userPhase.id_user == emailResponsibleTicket[i]) {
-                  delete emailResponsibleTicket[i];
-                }
-              });
+  //         if (userResponsibleTicket && userResponsibleTicket.length > 0) {
+  //           await this._notifyUser(
+  //             type,
+  //             userResponsibleTicket,
+  //             id_company,
+  //             ticket_id,
+  //             phase_id,
+  //             notify_token,
+  //             result[0].id_seq,
+  //             responsiblePhase,
+  //             notifyPhase
+  //           );
+  //         }
+  //         if (emailResponsibleTicket && emailResponsibleTicket.length > 0) {
+  //           for (let i = 0; i < emailResponsibleTicket.length; i++) {
+  //             await responsiblePhase.map((userPhase) => {
+  //               if (userPhase.id_user == emailResponsibleTicket[i]) {
+  //                 delete emailResponsibleTicket[i];
+  //               }
+  //             });
 
-              if (emailResponsibleTicket[i]) {
-                await notifyPhase.map((userPhase) => {
-                  if (userPhase.id_user == emailResponsibleTicket[i] > 0) {
-                    delete emailResponsibleTicket[i];
-                  }
-                });
-              }
+  //             if (emailResponsibleTicket[i]) {
+  //               await notifyPhase.map((userPhase) => {
+  //                 if (userPhase.id_user == emailResponsibleTicket[i] > 0) {
+  //                   delete emailResponsibleTicket[i];
+  //                 }
+  //               });
+  //             }
 
-              if (emailResponsibleTicket[i]) {
-                let infoUser = await emailModel.getEmailById(
-                  emailResponsibleTicket[i],
-                  id_company
-                );
-                email = await emailService.sendActiveMenssage(
-                  `Ticket ID:${result[0].id_seq}`,
-                  infoUser[0].email,
-                  body
-                );
-                await emailModel.createLinkedEmailWithChatId(
-                  email.data.chatId,
-                  emailResponsibleTicket[i],
-                  ticket_id
-                );
-              }
-            }
-          }
-          break;
-        case 5:
-          if (userResponsibleTicket && userResponsibleTicket.length > 0) {
-            await this._notifyUser(
-              type,
-              userResponsibleTicket,
-              id_company,
-              ticket_id,
-              phase_id,
-              notify_token,
-              result[0].id_seq
-            );
-          }
+  //             if (emailResponsibleTicket[i]) {
+  //               let infoUser = await emailModel.getEmailById(
+  //                 emailResponsibleTicket[i],
+  //                 id_company
+  //               );
+  //               email = await emailService.sendActiveMenssage(
+  //                 `Ticket ID:${result[0].id_seq}`,
+  //                 infoUser[0].email,
+  //                 body
+  //               );
+  //               await emailModel.createLinkedEmailWithChatId(
+  //                 email.data.chatId,
+  //                 emailResponsibleTicket[i],
+  //                 ticket_id
+  //               );
+  //             }
+  //           }
+  //         }
+  //         break;
+  //       case 5:
+  //         if (userResponsibleTicket && userResponsibleTicket.length > 0) {
+  //           await this._notifyUser(
+  //             type,
+  //             userResponsibleTicket,
+  //             id_company,
+  //             ticket_id,
+  //             phase_id,
+  //             notify_token,
+  //             result[0].id_seq
+  //           );
+  //         }
 
-          if (emailResponsibleTicket && emailResponsibleTicket.length > 0) {
-            for (let i = 0; i < emailResponsibleTicket.length; i++) {
-              if (emailResponsibleTicket[i]) {
-                let infoUser = await emailModel.getEmailById(
-                  emailResponsibleTicket[i],
-                  id_company
-                );
-                await emailService.sendActiveMenssage(
-                  `Ticket ID:${result[0].id_seq}`,
-                  infoUser[0].email,
-                  `Você foi alertado em um dos seus tickets  <br><br> ${texto}`
-                );
-              }
-            }
-          }
-          break;
-        default:
-          console.log("Default");
-          break;
-      }
-      return true;
-    } catch (err) {
-      console.log("Error when notify responsibles ==> ", err);
-      return false;
-    }
-  }
+  //         if (emailResponsibleTicket && emailResponsibleTicket.length > 0) {
+  //           for (let i = 0; i < emailResponsibleTicket.length; i++) {
+  //             if (emailResponsibleTicket[i]) {
+  //               let infoUser = await emailModel.getEmailById(
+  //                 emailResponsibleTicket[i],
+  //                 id_company
+  //               );
+  //               await emailService.sendActiveMenssage(
+  //                 `Ticket ID:${result[0].id_seq}`,
+  //                 infoUser[0].email,
+  //                 `Você foi alertado em um dos seus tickets  <br><br> ${texto}`
+  //               );
+  //             }
+  //           }
+  //         }
+  //         break;
+  //       default:
+  //         console.log("Default");
+  //         break;
+  //     }
+  //     return true;
+  //   } catch (err) {
+  //     console.log("Error when notify responsibles ==> ", err);
+  //     return false;
+  //   }
+  // }
 
-  async _notifyUser(
-    type,
-    user,
-    id_company,
-    id_ticket,
-    id_phase,
-    notify_token,
-    id_seq,
-    responsiblePhase = null,
-    notifyPhase = null
-  ) {
-    try {
-      for (let i = 0; i < user.length; i++) {
-        if (user[i] && responsiblePhase) {
-          await responsiblePhase.map((userPhase) => {
-            if (userPhase.id_user == user[i]) {
-              delete user[i];
-            }
-          });
-        }
+  // async _notifyUser(
+  //   type,
+  //   user,
+  //   id_company,
+  //   id_ticket,
+  //   id_phase,
+  //   notify_token,
+  //   id_seq,
+  //   responsiblePhase = null,
+  //   notifyPhase = null
+  // ) {
+  //   try {
+  //     for (let i = 0; i < user.length; i++) {
+  //       if (user[i] && responsiblePhase) {
+  //         await responsiblePhase.map((userPhase) => {
+  //           if (userPhase.id_user == user[i]) {
+  //             delete user[i];
+  //           }
+  //         });
+  //       }
 
-        if (user[i] && notifyPhase) {
-          await notifyPhase.map((userPhase) => {
-            if (userPhase.id_user == user[i] > 0) {
-              delete user[i];
-            }
-          });
-        }
-        if (user[i]) {
-          let infoUser = await userModel.getById(user[i], id_company);
-          let resultNotify = await notify(notify_token, {
-            id_user: infoUser[0].id_users_core,
-            type: type,
-            id_ticket: id_ticket,
-            id_seq: id_seq,
-            id_phase: id_phase,
-          });
-        }
-      }
+  //       if (user[i] && notifyPhase) {
+  //         await notifyPhase.map((userPhase) => {
+  //           if (userPhase.id_user == user[i] > 0) {
+  //             delete user[i];
+  //           }
+  //         });
+  //       }
+  //       if (user[i]) {
+  //         let infoUser = await userModel.getById(user[i], id_company);
+  //         let resultNotify = await notify(notify_token, {
+  //           id_user: infoUser[0].id_users_core,
+  //           type: type,
+  //           id_ticket: id_ticket,
+  //           id_seq: id_seq,
+  //           id_phase: id_phase,
+  //         });
+  //       }
+  //     }
 
-      return true;
-    } catch (err) {
-      console.log("Error notify user => ", err);
-      return err;
-    }
-  }
+  //     return true;
+  //   } catch (err) {
+  //     console.log("Error notify user => ", err);
+  //     return err;
+  //   }
+  // }
 
   async createActivities(req, res) {
     try {
