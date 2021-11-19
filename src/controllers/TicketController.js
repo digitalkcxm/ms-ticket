@@ -54,21 +54,21 @@ class TicketController {
       return res.status(400).json({ errors: errors.array() });
 
     try {
-      let userResponsible = [];
+      // let userResponsible = [];
       let id_user = await userController.checkUserCreated(
         req.body.id_user,
         req.headers.authorization
       );
 
-      req.body.responsible.map(async (responsible) => {
-        let result;
-        result = await userController.checkUserCreated(
-          responsible,
-          req.headers.authorization,
-          responsible.name
-        );
-        userResponsible.push(result.id);
-      });
+      // req.body.responsible.map(async (responsible) => {
+      //   let result;
+      //   result = await userController.checkUserCreated(
+      //     responsible,
+      //     req.headers.authorization,
+      //     responsible.name
+      //   );
+      //   userResponsible.push(result.id);
+      // });
 
       let obj = {
         id: v1(),
@@ -132,7 +132,7 @@ class TicketController {
       }
 
       let result = await ticketModel.create(obj);
-      await this._createResponsibles(userResponsible, obj.id);
+      // await this._createResponsibles(userResponsible, obj.id);
 
       // if (req.body.customer) {
       //   console.log("customer ==> ",req.body.customer)
@@ -908,19 +908,19 @@ class TicketController {
         // id_protocol: req.body.id_protocol,
         updated_at: moment().format(),
       };
-      let userResponsible = [];
-      if (req.body.responsible) {
-        req.body.responsible.map(async (responsible) => {
-          const result = await userController.checkUserCreated(
-            responsible,
-            req.headers.authorization,
-            responsible.name
-          );
-          userResponsible.push(result.id);
-        });
+      // let userResponsible = [];
+      // if (req.body.responsible) {
+      //   req.body.responsible.map(async (responsible) => {
+      //     const result = await userController.checkUserCreated(
+      //       responsible,
+      //       req.headers.authorization,
+      //       responsible.name
+      //     );
+      //     userResponsible.push(result.id);
+      //   });
 
-        await this._createResponsibles(userResponsible, req.params.id);
-      }
+      //   await this._createResponsibles(userResponsible, req.params.id);
+      // }
 
       let ticket = await ticketModel.getTicketById(
         req.params.id,

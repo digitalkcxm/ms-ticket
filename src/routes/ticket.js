@@ -41,7 +41,7 @@ router.put("/close/:id", (req, res) => ticketController.closedTicket(req, res));
 router.use(
   body("id_user").isNumeric(),
   body("id_phase").isUUID(),
-  body("responsible").isArray()
+  // body("responsible").isArray()
 );
 
 router.post("/", (req, res) => ticketController.create(req, res));
