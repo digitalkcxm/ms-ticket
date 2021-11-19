@@ -19,7 +19,8 @@ module.exports = async function (columns) {
       : errors.push(`item ${i}: required é um campo booleano`);
 
     let type = await typeColumnModel.getTypeByName(column.type);
-    column.type = type[0].id;
+    console.log("type ===>",type)
+    column.type = type.rows[0].id;
     if (type.length <= 0) errors.push(`item ${i}: Invalid type`);
   }
   return errors;

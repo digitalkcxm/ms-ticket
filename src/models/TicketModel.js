@@ -335,9 +335,7 @@ class TicketModel {
         .select({
           id: "ticket.id",
           id_seq: "ticket.id_seq",
-          ids_crm: "ticket.ids_crm",
           id_user: "users.id_users_core",
-          id_customer: "ticket.id_customer",
           id_protocol: "ticket.id_protocol",
           closed: "ticket.closed",
           id_form: `ticket.id_form`,
@@ -446,7 +444,7 @@ class TicketModel {
         .where({ id_company });
     } catch (err) {
       console.log("status ====>", err);
-      return err
+      return err;
     }
   }
 
