@@ -29,9 +29,9 @@ router.use(
   body("name").notEmpty(),
   body("department").isNumeric(),
   body("form").isBoolean(),
-  body("notify").isArray(),
-  body("notify").isArray(),
-  body("active").isBoolean()
+  // body("notify").isArray(),
+  // body("notify").isArray(),
+  // body("active").isBoolean()
 );
 
 router.post("/", (req, res) => phaseController.create(req, res));

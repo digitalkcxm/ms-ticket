@@ -59,15 +59,21 @@ class PhaseController {
         id_company: req.headers.authorization,
         icon: req.body.icon,
         name: req.body.name,
-        responsible_notify_sla: req.body.notify_responsible,
-        supervisor_notify_sla: req.body.notify_supervisor,
         form: req.body.form,
         created_at: moment().format(),
         updated_at: moment().format(),
         active: req.body.active,
         visible_new_ticket: req.body.visible_new_ticket,
+        notification_customer: req.body.customer,
+        notification_admin: req.body.admin,
+        notification_separate: { separate: req.body.separate },
+        department_can_create_protocol: {
+          department: req.body.department_can_create_protocol,
+        },
+        department_can_create_ticket: {
+          department: req.body.department_can_create_ticket,
+        },
       };
-
       // Executa uma validação no formulario passado pelo cliente.
       if (req.body.form) {
         const templateValidate = await this._formPhase(
@@ -99,43 +105,49 @@ class PhaseController {
       );
 
       // Realiza uma verificação com o id do usuario responsavel pela fase, e depois vincula os dois.
-      if (
-        req.body.responsible &&
-        Array.isArray(req.body.responsible) &&
-        req.body.responsible.length > 0
-      ) {
-        for await (const responsible of req.body.responsible) {
-          let result;
-          result = await userController.checkUserCreated(
-            responsible,
-            req.headers.authorization,
-            responsible.name
-          );
-          usersResponsible.push(result.id);
-        }
-        await this._responsiblePhase(obj.id, usersResponsible);
-        obj.responsible = req.body.responsible;
-      }
+      // if (
+      //   req.body.separate &&
+      //   Array.isArray(req.body.separate) &&
+      //   req.body.separate.length > 0
+      // ) {
+      //   for await (const contact of req.body.separate) {
+      //     let result;
+
+      //     if(contact.id){
+      //       result = await userController.checkUserCreated(
+      //         contact.id,
+      //         req.headers.authorization,
+      //         contact.name
+      //       );
+      //     }else if(contact.email){
+      //      result =  checkEmailCreated(contact.email,   req.headers.authorization)
+      //     }
+
+      //     usersResponsible.push(result.id);
+      //   }
+      //   await this._responsiblePhase(obj.id, usersResponsible);
+      //   obj.responsible = req.body.responsible;
+      // }
 
       // Realiza uma verificação com o id do usuario pela fase, e depois vincula os dois.
-      if (
-        req.body.notify &&
-        Array.isArray(req.body.notify) &&
-        req.body.notify.length > 0
-      ) {
-        for await (const notify of req.body.notify) {
-          let result;
-          result = await userController.checkUserCreated(
-            notify,
-            req.headers.authorization,
-            notify.name
-          );
-          usersNotify.push(result.id);
-        }
-        obj.notify = req.body.notify;
+      // if (
+      //   req.body.notify &&
+      //   Array.isArray(req.body.notify) &&
+      //   req.body.notify.length > 0
+      // ) {
+      //   for await (const notify of req.body.notify) {
+      //     let result;
+      //     result = await userController.checkUserCreated(
+      //       notify,
+      //       req.headers.authorization,
+      //       notify.name
+      //     );
+      //     usersNotify.push(result.id);
+      //   }
+      //   obj.notify = req.body.notify;
 
-        await this._notifyPhase(obj.id, usersNotify, usersResponsible);
-      }
+      //   await this._notifyPhase(obj.id, usersNotify, usersResponsible);
+      // }
 
       // Registra a configuração de SLA da fase.
       if (req.body.sla) {
@@ -233,6 +245,21 @@ class PhaseController {
       if (!result || result.length < 0)
         return res.status(400).send({ error: "Invalid id phase" });
 
+        result[0].department_can_create_protocol =
+        result[0].department_can_create_protocol &&
+        result[0].department_can_create_protocol.department
+          ? result[0].department_can_create_protocol.department
+          : [];
+      result[0].department_can_create_ticket =
+        result[0].department_can_create_ticket &&
+        result[0].department_can_create_ticket.department
+          ? result[0].department_can_create_ticket.department
+          : [];
+      result[0].separate =
+        result[0].separate && result[0].separate.separate
+          ? result[0].separate.separate
+          : null;
+
       const departments = await phaseModel.getDepartmentPhase(result[0].id);
       result[0].department = departments[0].id_department;
 
@@ -305,6 +332,23 @@ class PhaseController {
         result = await phaseModel.getAllPhase(req.headers.authorization);
 
         for (let i in result) {
+
+          result[i].department_can_create_protocol =
+          result[i].department_can_create_protocol &&
+          result[i].department_can_create_protocol.department
+            ? result[i].department_can_create_protocol.department
+            : [];
+        result[i].department_can_create_ticket =
+          result[i].department_can_create_ticket &&
+          result[i].department_can_create_ticket.department
+            ? result[i].department_can_create_ticket.department
+            : [];
+        result[i].separate =
+          result[i].separate && result[i].separate.separate
+            ? result[i].separate.separate
+            : null;
+
+            
           const tickets = await ticketModel.getTicketByPhase(
             result[i].id,
             search
@@ -348,6 +392,21 @@ class PhaseController {
       department_id[0].id
     );
     for (let phase of result) {
+      phase.department_can_create_protocol =
+        phase.department_can_create_protocol &&
+        phase.department_can_create_protocol.department
+          ? phase.department_can_create_protocol.department
+          : [];
+      phase.department_can_create_ticket =
+        phase.department_can_create_ticket &&
+        phase.department_can_create_ticket.department
+          ? phase.department_can_create_ticket.department
+          : [];
+      phase.separate =
+        phase.separate && phase.separate.separate
+          ? phase.separate.separate
+          : null;
+
       const tickets = await ticketModel.getTicketByPhaseAndStatus(
         phase.id,
         status

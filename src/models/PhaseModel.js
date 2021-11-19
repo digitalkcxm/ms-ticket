@@ -27,9 +27,15 @@ class PhaseModel {
           form: "phase.form",
           id_form_template: "phase.id_form_template",
           active: "phase.active",
-          order:"phase.order",
+          order: "phase.order",
           created_at: "created_at",
           updated_at: "updated_at",
+          customer: "phase.notification_customer",
+          admin: "phase.notification_admin",
+          separate: "phase.notification_separate",
+          department_can_create_protocol:
+            "phase.department_can_create_protocol",
+          department_can_create_ticket: "phase.department_can_create_ticket",
         })
         .leftJoin("unit_of_time", "unit_of_time.id", "phase.id_unit_of_time")
         .where("phase.id", id_phase)
@@ -197,7 +203,8 @@ class PhaseModel {
           "department.id",
           "department_phase.id_department"
         )
-        .where("department_phase.id_phase", id_phase).andWhere('department_phase.active', true);
+        .where("department_phase.id_phase", id_phase)
+        .andWhere("department_phase.active", true);
     } catch (err) {
       console.log("Error when catch department phase =>", err);
       return err;
@@ -244,15 +251,20 @@ class PhaseModel {
           "icon",
           "name",
           "sla_time",
-          "responsible_notify_sla",
-          "supervisor_notify_sla",
           "id_form_template",
           "active",
           "order",
           "created_at",
           "updated_at",
+          "phase.visible_new_ticket",
+          "phase.notification_customer as customer",
+          "phase.notification_admin as admin",
+          "phase.notification_separate as separate",
+          "phase.department_can_create_protocol",
+          "phase.department_can_create_ticket",
         ])
-        .where("id_company", id_company).orderBy("order",'asc');
+        .where("id_company", id_company)
+        .orderBy("order", "asc");
     } catch (err) {
       return res.status(400).send({ error: "There was an error " });
     }
@@ -265,21 +277,23 @@ class PhaseModel {
           "phase.id",
           "phase.icon",
           "phase.name",
-          "phase.responsible_notify_sla",
-          "phase.supervisor_notify_sla",
           "phase.id_form_template",
           "phase.active",
           "phase.order",
           "phase.created_at",
           "phase.updated_at",
-          "phase.visible_new_ticket"
+          "phase.visible_new_ticket",
+          "phase.notification_customer as customer",
+          "phase.notification_admin as admin",
+          "phase.notification_separate as separate",
+          "phase.department_can_create_protocol",
+          "phase.department_can_create_ticket",
         ])
         .leftJoin("phase", "phase.id", "department_phase.id_phase")
         .where("department_phase.id_department", id_department)
         .andWhere("department_phase.active", true)
         .andWhere("phase.active", true)
-        .orderBy('phase.order','asc')
-
+        .orderBy("phase.order", "asc");
     } catch (err) {
       console.log("Error when catch department id ==>", err);
       return err;
@@ -328,7 +342,7 @@ class PhaseModel {
           "department_phase.id_department"
         )
         .whereIn("phase.id", phases)
-        .andWhere('department_phase.active',true)
+        .andWhere("department_phase.active", true)
         .andWhere("department.id_department_core", department)
         .andWhere("phase.id_company", company);
     } catch (err) {
