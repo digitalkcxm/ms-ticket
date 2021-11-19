@@ -24,6 +24,8 @@ app.use(bodyParser.urlencoded({ extended: true, limit: "256mb" }))
 // app.use(expressValidator())
 
 app.use(routes)
+queue()
+
 connect(app, () => {
     server.listen(process.env.PORT, () => console.log(`Server running in port ${process.env.PORT}`))
 })

@@ -25,8 +25,8 @@ router.use(
     body("responsible").isArray(),
 )
 
-router.post("/", (req, res) => ticketController.queueCreate(req, res))
-router.put("/:id", (req, res) => ticketController.queueUpdateTicket(req, res))
+//router.post("/", (req, res) => ticketController.queueCreate(req, res))
+//router.put("/:id", (req, res) => ticketController.queueUpdateTicket(req, res))
 
 
 module.exports = router
