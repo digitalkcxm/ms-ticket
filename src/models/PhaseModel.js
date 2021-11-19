@@ -265,12 +265,12 @@ class PhaseModel {
           "phase.department_can_create_protocol",
           "phase.department_can_create_ticket",
           "phase.create_protocol",
-          "phase.create_ticket"
+          "phase.create_ticket",
         ])
         .where("id_company", id_company)
         .orderBy("order", "asc");
     } catch (err) {
-      return res.status(400).send({ error: "There was an error " });
+      return err;
     }
   }
 
@@ -292,6 +292,8 @@ class PhaseModel {
           "phase.notification_separate as separate",
           "phase.department_can_create_protocol",
           "phase.department_can_create_ticket",
+          "phase.create_protocol",
+          "phase.create_ticket"
         ])
         .leftJoin("phase", "phase.id", "department_phase.id_phase")
         .where("department_phase.id_department", id_department)

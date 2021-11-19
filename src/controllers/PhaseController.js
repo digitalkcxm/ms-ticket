@@ -639,14 +639,6 @@ class PhaseController {
       ? (result.department = department[0].id_department)
       : 0;
 
-    const responsibles = await phaseModel.getResponsiblePhase(result.id);
-    result.responsible = [];
-    responsibles.map((value) => result.responsible.push(value.id_user_core));
-
-    const notify = await phaseModel.getNotifiedPhase(result.id);
-    result.notify = [];
-    notify.map((value) => result.notify.push(value.id_user_core));
-
     if (result.id_form_template) {
       const register = await new FormTemplate(mongodb).findRegistes(
         result.id_form_template
