@@ -8,13 +8,13 @@ const CompanyModel = require("../models/CompanyModel");
 const EmailService = require("../services/EmailService");
 const EmailModel = require("../models/EmailModel");
 const FormTemplate = require("../documents/FormTemplate");
+const CustomerModel = require("../models/CustomerModel");
 const FormDocuments = require("../documents/FormDocuments");
 const asyncRedis = require("async-redis");
 const redis = asyncRedis.createClient(
   process.env.REDIS_PORT,
   process.env.REDIS_HOST
 );
-const UnitOfTimeModel = require("../models/UnitOfTimeModel");
 const { formatTicketForPhase } = require("../helpers/FormatTicket");
 const AttachmentsModel = require("../models/AttachmentsModel");
 const { validationResult } = require("express-validator");
@@ -28,6 +28,7 @@ const userController = new UserController();
 const phaseModel = new PhaseModel();
 const emailController = new EmailController();
 const userModel = new UserModel();
+const customerModel = new CustomerModel();
 const companyModel = new CompanyModel();
 const emailService = new EmailService();
 const emailModel = new EmailModel();
@@ -37,6 +38,15 @@ const departmentController = new DepartmentController();
 const ActivitiesModel = require("../models/ActivitiesModel");
 const activitiesModel = new ActivitiesModel();
 
+const SLAModel = require("../models/SLAModel");
+const slaModel = new SLAModel();
+
+const { createSLAControl, updateSLA } = require("../helpers/SLAFormat");
+const sla_status = {
+  emdia: 1,
+  atrasado: 2,
+  aberto: 3,
+};
 class TicketController {
   async create(req, res) {
     const errors = validationResult(req);
@@ -63,8 +73,8 @@ class TicketController {
       let obj = {
         id: v1(),
         id_company: req.headers.authorization,
-        ids_crm: req.body.ids_crm,
-        id_customer: req.body.id_customer,
+        // ids_crm: req.body.ids_crm,
+        // id_customer: req.body.id_customer,
         id_protocol: req.body.id_protocol,
         id_user: id_user.id,
         created_at: moment().format(),
@@ -102,15 +112,40 @@ class TicketController {
         }
       }
 
+      if (req.body.id_ticket_father) {
+        const ticketFather = await ticketModel.getTicketById(
+          req.body.id_ticket_father
+        );
+        if (
+          ticketFather &&
+          Array.isArray(ticketFather) &&
+          ticketFather.length > 0
+        ) {
+          obj.id_ticket_father = ticketFather[0].id;
+          obj.created_by_ticket = true;
+        }
+      }
+
+      if (req.body.id_protocol) {
+        obj.id_protocol = id_protocol;
+        obj.created_by_protocol = true;
+      }
+
       let result = await ticketModel.create(obj);
       await this._createResponsibles(userResponsible, obj.id);
 
+      // if (req.body.customer) {
+      //   console.log("customer ==> ",req.body.customer)
+      //   await this._createCustomers(req.body.customer, obj.id);
+      // }
       if (!phase || phase.length <= 0)
         return res.status(400).send({ error: "Invalid id_phase uuid" });
 
       let phase_id = await ticketModel.createPhaseTicket({
         id_phase: phase[0].id,
         id_ticket: obj.id,
+        id_user: id_user.id,
+        id_form: obj.id_form,
       });
 
       if (!phase_id || phase_id.length <= 0)
@@ -128,15 +163,14 @@ class TicketController {
       );
 
       if (result && result.length > 0 && result[0].id) {
-        ticket = await formatTicketForPhase(
-          ticket,
-          req.app.locals.db,
-          ticket[0]
-        );
+        await createSLAControl(phase[0].id, obj.id);
+
+        ticket = await formatTicketForPhase({ id: phase[0].id }, ticket[0]);
 
         // delete ticket[0].id_company
         return res.status(200).send(ticket);
       }
+
       await redis.del(`ticket:phase:${req.headers.authorization}`);
 
       return res.status(400).send({ error: "There was an error" });
@@ -168,311 +202,337 @@ class TicketController {
     }
   }
 
-  async _notify(
-    phase_id,
-    notify_token,
-    ticket_id,
-    userResponsibleTicket,
-    emailResponsibleTicket,
-    id_company,
-    type,
-    db
-  ) {
-    try {
-      let texto = "";
-      let register;
-      let responsiblePhase = await phaseModel.getResponsiblePhase(phase_id);
-      let notifyPhase = await phaseModel.getNotifiedPhase(phase_id);
+  // async _createCustomers(customer = null, ticket_id) {
+  //   try {
+  //     await customerModel.delCustomerTicket(ticket_id);
+  //     if (customer.length > 0) {
+  //       for (let c of customer) {
+  //         await customerModel.create({
+  //           id_core: c.id_core,
+  //           id_ticket: ticket_id,
+  //           name: c.name,
+  //           email: c.email,
+  //           phone: c.phone,
+  //           identification_document: c.identification_document,
+  //           crm_ids: c.crm_ids,
+  //           crm_contact_id: c.crm_contact_id,
+  //           created_at: moment().format(),
+  //           updated_at: moment().format(),
+  //         });
+  //       }
+  //     }
+  //     return true;
+  //   } catch (err) {
+  //     console.log("Error when create responsibles ==> ", err);
+  //     return false;
+  //   }
+  // }
 
-      const resultPhase = await phaseModel.getPhaseById(phase_id, id_company);
-      // if (resultPhase[0].id_form_template) {
+  // async _notify(
+  //   phase_id,
+  //   notify_token,
+  //   ticket_id,
+  //   userResponsibleTicket,
+  //   emailResponsibleTicket,
+  //   id_company,
+  //   type,
+  //   db
+  // ) {
+  //   try {
+  //     let texto = "";
+  //     let register;
+  //     let responsiblePhase = await phaseModel.getResponsiblePhase(phase_id);
+  //     let notifyPhase = await phaseModel.getNotifiedPhase(phase_id);
 
-      // }
+  //     const resultPhase = await phaseModel.getPhaseById(phase_id, id_company);
+  //     // if (resultPhase[0].id_form_template) {
 
-      const result = await ticketModel.getTicketById(ticket_id, id_company);
-      if (result[0].form) {
-        result[0].form_data = await new FormDocuments(db).findRegister(
-          result[0].id_form
-        );
-        delete result[0].form;
-        delete result[0].id_form;
+  //     // }
 
-        register = await new FormTemplate(db).findRegistes(
-          resultPhase[0].id_form_template
-        );
-        for (let column of register.column) {
-          texto =
-            texto +
-            `<p><strong>${column.label} : </strong>${
-              result[0].form_data[column.column]
-                ? result[0].form_data[column.column]
-                : ""
-            }</p>`;
-        }
-      }
+  //     const result = await ticketModel.getTicketById(ticket_id, id_company);
+  //     if (result[0].form) {
+  //       result[0].form_data = await new FormDocuments(db).findRegister(
+  //         result[0].id_form
+  //       );
+  //       delete result[0].form;
+  //       delete result[0].id_form;
 
-      switch (type) {
-        case 3:
-          const phaseInfo = await phaseModel.getPhase(phase_id, id_company);
+  //       register = await new FormTemplate(db).findRegistes(
+  //         resultPhase[0].id_form_template
+  //       );
+  //       for (let column of register.column) {
+  //         texto =
+  //           texto +
+  //           `<p><strong>${column.label} : </strong>${
+  //             result[0].form_data[column.column]
+  //               ? result[0].form_data[column.column]
+  //               : ""
+  //           }</p>`;
+  //       }
+  //     }
 
-          if (phaseInfo[0] && phaseInfo[0].responsible_notify_sla) {
-            if (responsiblePhase && responsiblePhase.length > 0) {
-              responsiblePhase.map(async (contact) => {
-                if (contact.id_user) {
-                  await notify(notify_token, {
-                    id_user: contact.id_user_core,
-                    type: type,
-                    id_ticket: ticket_id,
-                    id_seq: result[0].id_seq,
-                    id_phase: phase_id,
-                  });
-                } else if (contact.email) {
-                  await emailService.sendActiveMenssage(
-                    `DIGITALK INFORMA: TICKET #${result[0].id_ticket} EXPIROU`,
-                    contact.email,
-                    `Um ticket expirou em uma fase de sua responsabilidade <br><br> Fase: ${contact.phase_description}  <br><br>  ${texto}`
-                  );
-                }
-              });
-            }
-          }
-          if (userResponsibleTicket && userResponsibleTicket.length > 0) {
-            await this._notifyUser(
-              type,
-              userResponsibleTicket,
-              id_company,
-              ticket_id,
-              phase_id,
-              notify_token,
-              result[0].id_seq,
-              responsiblePhase,
-              notifyPhase
-            );
-          }
+  //     switch (type) {
+  //       case 3:
+  //         const phaseInfo = await phaseModel.getPhase(phase_id, id_company);
 
-          if (emailResponsibleTicket && emailResponsibleTicket.length > 0) {
-            for (let i = 0; i < emailResponsibleTicket.length; i++) {
-              await responsiblePhase.map((userPhase) => {
-                if (userPhase.id_user == emailResponsibleTicket[i]) {
-                  delete emailResponsibleTicket[i];
-                }
-              });
+  //         if (phaseInfo[0] && phaseInfo[0].responsible_notify_sla) {
+  //           if (responsiblePhase && responsiblePhase.length > 0) {
+  //             responsiblePhase.map(async (contact) => {
+  //               if (contact.id_user) {
+  //                 await notify(notify_token, {
+  //                   id_user: contact.id_user_core,
+  //                   type: type,
+  //                   id_ticket: ticket_id,
+  //                   id_seq: result[0].id_seq,
+  //                   id_phase: phase_id,
+  //                 });
+  //               } else if (contact.email) {
+  //                 await emailService.sendActiveMenssage(
+  //                   `DIGITALK INFORMA: TICKET #${result[0].id_ticket} EXPIROU`,
+  //                   contact.email,
+  //                   `Um ticket expirou em uma fase de sua responsabilidade <br><br> Fase: ${contact.phase_description}  <br><br>  ${texto}`
+  //                 );
+  //               }
+  //             });
+  //           }
+  //         }
+  //         if (userResponsibleTicket && userResponsibleTicket.length > 0) {
+  //           await this._notifyUser(
+  //             type,
+  //             userResponsibleTicket,
+  //             id_company,
+  //             ticket_id,
+  //             phase_id,
+  //             notify_token,
+  //             result[0].id_seq,
+  //             responsiblePhase,
+  //             notifyPhase
+  //           );
+  //         }
 
-              if (emailResponsibleTicket[i]) {
-                await notifyPhase.map((userPhase) => {
-                  if (userPhase.id_user == emailResponsibleTicket[i] > 0) {
-                    delete emailResponsibleTicket[i];
-                  }
-                });
-              }
-              if (emailResponsibleTicket[i]) {
-                let infoUser = await emailModel.getEmailById(
-                  emailResponsibleTicket[i],
-                  id_company
-                );
-                await emailService.sendActiveMenssage(
-                  `DIGITALK INFORMA: TICKET #${result[0].id_ticket} `,
-                  infoUser[0].email,
-                  `Você foi alertado em um dos seus tickets <br><br>  ${texto}`
-                );
-              }
-            }
-          }
-          break;
-        case 4:
-          let body = await emailController.formatEmail(
-            result[0].created_at,
-            result[0].sla_time,
-            result[0].id_seq,
-            result[0].name,
-            resultPhase[0].name,
-            texto,
-            result[0].unit_of_time
-          );
-          let email;
-          if (responsiblePhase && responsiblePhase.length > 0) {
-            responsiblePhase.map(async (contact) => {
-              if (contact.id_user) {
-                let resultNotify = await notify(notify_token, {
-                  id_user: contact.id_user_core,
-                  type: type,
-                  id_ticket: ticket_id,
-                  id_seq: result[0].id_seq,
-                  id_phase: phase_id,
-                });
-              } else if (contact.email) {
-                email = await emailService.sendActiveMenssage(
-                  `Ticket ID:${result[0].id_seq}`,
-                  contact.email,
-                  body
-                );
-                await emailModel.createLinkedEmailWithChatId(
-                  email.data.chatId,
-                  contact.id_email,
-                  ticket_id
-                );
-              }
-            });
-          }
-          if (notifyPhase && notifyPhase.length > 0) {
-            notifyPhase.map(async (contact) => {
-              if (contact.id_user) {
-                let resultNotify = await notify(notify_token, {
-                  id_user: contact.id_user_core,
-                  type: type,
-                  id_ticket: ticket_id,
-                  id_seq: result[0].id_seq,
-                  id_phase: phase_id,
-                });
-              } else if (contact.email) {
-                email = await emailService.sendActiveMenssage(
-                  `Ticket ID:${result[0].id_seq}`,
-                  contact.email,
-                  body
-                );
-                await emailModel.createLinkedEmailWithChatId(
-                  email.data.chatId,
-                  contact.id_email,
-                  ticket_id
-                );
-              }
-            });
-          }
+  //         if (emailResponsibleTicket && emailResponsibleTicket.length > 0) {
+  //           for (let i = 0; i < emailResponsibleTicket.length; i++) {
+  //             await responsiblePhase.map((userPhase) => {
+  //               if (userPhase.id_user == emailResponsibleTicket[i]) {
+  //                 delete emailResponsibleTicket[i];
+  //               }
+  //             });
 
-          if (userResponsibleTicket && userResponsibleTicket.length > 0) {
-            await this._notifyUser(
-              type,
-              userResponsibleTicket,
-              id_company,
-              ticket_id,
-              phase_id,
-              notify_token,
-              result[0].id_seq,
-              responsiblePhase,
-              notifyPhase
-            );
-          }
-          if (emailResponsibleTicket && emailResponsibleTicket.length > 0) {
-            for (let i = 0; i < emailResponsibleTicket.length; i++) {
-              await responsiblePhase.map((userPhase) => {
-                if (userPhase.id_user == emailResponsibleTicket[i]) {
-                  delete emailResponsibleTicket[i];
-                }
-              });
+  //             if (emailResponsibleTicket[i]) {
+  //               await notifyPhase.map((userPhase) => {
+  //                 if (userPhase.id_user == emailResponsibleTicket[i] > 0) {
+  //                   delete emailResponsibleTicket[i];
+  //                 }
+  //               });
+  //             }
+  //             if (emailResponsibleTicket[i]) {
+  //               let infoUser = await emailModel.getEmailById(
+  //                 emailResponsibleTicket[i],
+  //                 id_company
+  //               );
+  //               await emailService.sendActiveMenssage(
+  //                 `DIGITALK INFORMA: TICKET #${result[0].id_ticket} `,
+  //                 infoUser[0].email,
+  //                 `Você foi alertado em um dos seus tickets <br><br>  ${texto}`
+  //               );
+  //             }
+  //           }
+  //         }
+  //         break;
+  //       case 4:
+  //         let body = await emailController.formatEmail(
+  //           result[0].created_at,
+  //           result[0].sla_time,
+  //           result[0].id_seq,
+  //           result[0].name,
+  //           resultPhase[0].name,
+  //           texto,
+  //           result[0].unit_of_time
+  //         );
+  //         let email;
+  //         if (responsiblePhase && responsiblePhase.length > 0) {
+  //           responsiblePhase.map(async (contact) => {
+  //             if (contact.id_user) {
+  //               let resultNotify = await notify(notify_token, {
+  //                 id_user: contact.id_user_core,
+  //                 type: type,
+  //                 id_ticket: ticket_id,
+  //                 id_seq: result[0].id_seq,
+  //                 id_phase: phase_id,
+  //               });
+  //             } else if (contact.email) {
+  //               email = await emailService.sendActiveMenssage(
+  //                 `Ticket ID:${result[0].id_seq}`,
+  //                 contact.email,
+  //                 body
+  //               );
+  //               await emailModel.createLinkedEmailWithChatId(
+  //                 email.data.chatId,
+  //                 contact.id_email,
+  //                 ticket_id
+  //               );
+  //             }
+  //           });
+  //         }
+  //         if (notifyPhase && notifyPhase.length > 0) {
+  //           notifyPhase.map(async (contact) => {
+  //             if (contact.id_user) {
+  //               let resultNotify = await notify(notify_token, {
+  //                 id_user: contact.id_user_core,
+  //                 type: type,
+  //                 id_ticket: ticket_id,
+  //                 id_seq: result[0].id_seq,
+  //                 id_phase: phase_id,
+  //               });
+  //             } else if (contact.email) {
+  //               email = await emailService.sendActiveMenssage(
+  //                 `Ticket ID:${result[0].id_seq}`,
+  //                 contact.email,
+  //                 body
+  //               );
+  //               await emailModel.createLinkedEmailWithChatId(
+  //                 email.data.chatId,
+  //                 contact.id_email,
+  //                 ticket_id
+  //               );
+  //             }
+  //           });
+  //         }
 
-              if (emailResponsibleTicket[i]) {
-                await notifyPhase.map((userPhase) => {
-                  if (userPhase.id_user == emailResponsibleTicket[i] > 0) {
-                    delete emailResponsibleTicket[i];
-                  }
-                });
-              }
+  //         if (userResponsibleTicket && userResponsibleTicket.length > 0) {
+  //           await this._notifyUser(
+  //             type,
+  //             userResponsibleTicket,
+  //             id_company,
+  //             ticket_id,
+  //             phase_id,
+  //             notify_token,
+  //             result[0].id_seq,
+  //             responsiblePhase,
+  //             notifyPhase
+  //           );
+  //         }
+  //         if (emailResponsibleTicket && emailResponsibleTicket.length > 0) {
+  //           for (let i = 0; i < emailResponsibleTicket.length; i++) {
+  //             await responsiblePhase.map((userPhase) => {
+  //               if (userPhase.id_user == emailResponsibleTicket[i]) {
+  //                 delete emailResponsibleTicket[i];
+  //               }
+  //             });
 
-              if (emailResponsibleTicket[i]) {
-                let infoUser = await emailModel.getEmailById(
-                  emailResponsibleTicket[i],
-                  id_company
-                );
-                email = await emailService.sendActiveMenssage(
-                  `Ticket ID:${result[0].id_seq}`,
-                  infoUser[0].email,
-                  body
-                );
-                await emailModel.createLinkedEmailWithChatId(
-                  email.data.chatId,
-                  emailResponsibleTicket[i],
-                  ticket_id
-                );
-              }
-            }
-          }
-          break;
-        case 5:
-          if (userResponsibleTicket && userResponsibleTicket.length > 0) {
-            await this._notifyUser(
-              type,
-              userResponsibleTicket,
-              id_company,
-              ticket_id,
-              phase_id,
-              notify_token,
-              result[0].id_seq
-            );
-          }
+  //             if (emailResponsibleTicket[i]) {
+  //               await notifyPhase.map((userPhase) => {
+  //                 if (userPhase.id_user == emailResponsibleTicket[i] > 0) {
+  //                   delete emailResponsibleTicket[i];
+  //                 }
+  //               });
+  //             }
 
-          if (emailResponsibleTicket && emailResponsibleTicket.length > 0) {
-            for (let i = 0; i < emailResponsibleTicket.length; i++) {
-              if (emailResponsibleTicket[i]) {
-                let infoUser = await emailModel.getEmailById(
-                  emailResponsibleTicket[i],
-                  id_company
-                );
-                await emailService.sendActiveMenssage(
-                  `Ticket ID:${result[0].id_seq}`,
-                  infoUser[0].email,
-                  `Você foi alertado em um dos seus tickets  <br><br> ${texto}`
-                );
-              }
-            }
-          }
-          break;
-        default:
-          console.log("Default");
-          break;
-      }
-      return true;
-    } catch (err) {
-      console.log("Error when notify responsibles ==> ", err);
-      return false;
-    }
-  }
+  //             if (emailResponsibleTicket[i]) {
+  //               let infoUser = await emailModel.getEmailById(
+  //                 emailResponsibleTicket[i],
+  //                 id_company
+  //               );
+  //               email = await emailService.sendActiveMenssage(
+  //                 `Ticket ID:${result[0].id_seq}`,
+  //                 infoUser[0].email,
+  //                 body
+  //               );
+  //               await emailModel.createLinkedEmailWithChatId(
+  //                 email.data.chatId,
+  //                 emailResponsibleTicket[i],
+  //                 ticket_id
+  //               );
+  //             }
+  //           }
+  //         }
+  //         break;
+  //       case 5:
+  //         if (userResponsibleTicket && userResponsibleTicket.length > 0) {
+  //           await this._notifyUser(
+  //             type,
+  //             userResponsibleTicket,
+  //             id_company,
+  //             ticket_id,
+  //             phase_id,
+  //             notify_token,
+  //             result[0].id_seq
+  //           );
+  //         }
 
-  async _notifyUser(
-    type,
-    user,
-    id_company,
-    id_ticket,
-    id_phase,
-    notify_token,
-    id_seq,
-    responsiblePhase = null,
-    notifyPhase = null
-  ) {
-    try {
-      for (let i = 0; i < user.length; i++) {
-        if (user[i] && responsiblePhase) {
-          await responsiblePhase.map((userPhase) => {
-            if (userPhase.id_user == user[i]) {
-              delete user[i];
-            }
-          });
-        }
+  //         if (emailResponsibleTicket && emailResponsibleTicket.length > 0) {
+  //           for (let i = 0; i < emailResponsibleTicket.length; i++) {
+  //             if (emailResponsibleTicket[i]) {
+  //               let infoUser = await emailModel.getEmailById(
+  //                 emailResponsibleTicket[i],
+  //                 id_company
+  //               );
+  //               await emailService.sendActiveMenssage(
+  //                 `Ticket ID:${result[0].id_seq}`,
+  //                 infoUser[0].email,
+  //                 `Você foi alertado em um dos seus tickets  <br><br> ${texto}`
+  //               );
+  //             }
+  //           }
+  //         }
+  //         break;
+  //       default:
+  //         console.log("Default");
+  //         break;
+  //     }
+  //     return true;
+  //   } catch (err) {
+  //     console.log("Error when notify responsibles ==> ", err);
+  //     return false;
+  //   }
+  // }
 
-        if (user[i] && notifyPhase) {
-          await notifyPhase.map((userPhase) => {
-            if (userPhase.id_user == user[i] > 0) {
-              delete user[i];
-            }
-          });
-        }
-        if (user[i]) {
-          let infoUser = await userModel.getById(user[i], id_company);
-          let resultNotify = await notify(notify_token, {
-            id_user: infoUser[0].id_users_core,
-            type: type,
-            id_ticket: id_ticket,
-            id_seq: id_seq,
-            id_phase: id_phase,
-          });
-        }
-      }
+  // async _notifyUser(
+  //   type,
+  //   user,
+  //   id_company,
+  //   id_ticket,
+  //   id_phase,
+  //   notify_token,
+  //   id_seq,
+  //   responsiblePhase = null,
+  //   notifyPhase = null
+  // ) {
+  //   try {
+  //     for (let i = 0; i < user.length; i++) {
+  //       if (user[i] && responsiblePhase) {
+  //         await responsiblePhase.map((userPhase) => {
+  //           if (userPhase.id_user == user[i]) {
+  //             delete user[i];
+  //           }
+  //         });
+  //       }
 
-      return true;
-    } catch (err) {
-      console.log("Error notify user => ", err);
-      return err;
-    }
-  }
+  //       if (user[i] && notifyPhase) {
+  //         await notifyPhase.map((userPhase) => {
+  //           if (userPhase.id_user == user[i] > 0) {
+  //             delete user[i];
+  //           }
+  //         });
+  //       }
+  //       if (user[i]) {
+  //         let infoUser = await userModel.getById(user[i], id_company);
+  //         let resultNotify = await notify(notify_token, {
+  //           id_user: infoUser[0].id_users_core,
+  //           type: type,
+  //           id_ticket: id_ticket,
+  //           id_seq: id_seq,
+  //           id_phase: id_phase,
+  //         });
+  //       }
+  //     }
+
+  //     return true;
+  //   } catch (err) {
+  //     console.log("Error notify user => ", err);
+  //     return err;
+  //   }
+  // }
 
   async createActivities(req, res) {
     try {
@@ -505,6 +565,8 @@ class TicketController {
       let result = await activitiesModel.create(obj);
 
       if (result && result.length > 0) {
+        await updateSLA(req.body.id_ticket, ticket[0].phase_id);
+
         obj.id = result[0].id;
 
         return res.status(200).send(obj);
@@ -554,6 +616,8 @@ class TicketController {
 
       let result = await attachmentsModel.create(obj);
 
+      await updateSLA(req.body.id_ticket, ticket[0].phase_id);
+
       if (result && result.length > 0) {
         obj.id = result[0].id;
 
@@ -569,7 +633,7 @@ class TicketController {
 
   async getTicketByID(req, res) {
     try {
-      let result = await ticketModel.getTicketById(
+      let result = await ticketModel.getTicketByIdSeq(
         req.params.id,
         req.headers.authorization
       );
@@ -581,47 +645,221 @@ class TicketController {
           .status(400)
           .send({ error: "There is no ticket with this ID" });
 
-      result = await formatTicketForPhase(result, req.app.locals.db, result[0]);
-
-      if (result.id_form) {
-        result.form_data = await new FormDocuments(
-          req.app.locals.db
-        ).findRegister(result.id_form);
-        delete result.id_form;
+      result = await formatTicketForPhase(
+        { id: result[0].phase_id },
+        result[0]
+      );
+      const customer = await customerModel.getAll(result.id);
+      if (customer && Array.isArray(customer) && customer.length > 0) {
+        result.customers = customer;
       }
 
-      result.attachments = await attachmentsModel.getAttachments(result.id);
-      result.attachments.map((value) => {
-        value.created_at = moment(value.created_at).format(
-          "DD/MM/YYYY HH:mm:ss"
-        );
-        value.updated_at = moment(value.updated_at).format(
-          "DD/MM/YYYY HH:mm:ss"
-        );
+      const protocols = await ticketModel.getProtocolTicket(
+        result.id,
+        req.headers.authorization
+      );
+
+      if (protocols && Array.isArray(protocols) && protocols.length > 0) {
+        result.protocols = protocols;
+      }
+
+      result.activities = await this._activities(
+        result.id,
+        req.app.locals.db,
+        req.headers.authorization
+      );
+
+      result.activities.sort((a, b) => {
+        if (
+          moment(a.created_at, "DD/MM/YYYY HH:mm:ss").format("X") ===
+          moment(b.created_at, "DD/MM/YYYY HH:mm:ss").format("X")
+        ) {
+          return a.id;
+        } else {
+          return (
+            moment(a.created_at, "DD/MM/YYYY HH:mm:ss").format("X") -
+            moment(b.created_at, "DD/MM/YYYY HH:mm:ss").format("X")
+          );
+        }
       });
 
-      result.activities = await activitiesModel.getActivities(result.id);
-      result.activities.map((value) => {
-        value.created_at = moment(value.created_at).format(
-          "DD/MM/YYYY HH:mm:ss"
-        );
-        value.updated_at = moment(value.updated_at).format(
-          "DD/MM/YYYY HH:mm:ss"
-        );
-      });
+      const department = await phaseModel.getDepartmentPhase(result.phase_id);
+      result.actual_department = department[0].id_department;
 
-      result.history_phase = await ticketModel.getHistoryTicket(result.id);
-      result.history_phase.map((value) => {
-        value.created_at = moment(value.created_at).format(
-          "DD/MM/YYYY HH:mm:ss"
-        );
-      });
+      const form = await ticketModel.getFormTicket(result.id);
+
+      if (form[0].id_form) {
+        result.form_data = await new FormDocuments(
+          req.app.locals.db
+        ).findRegister(form[0].id_form);
+        delete result.form_data._id;
+      }
 
       return res.status(200).send(result);
     } catch (err) {
       console.log("Error when select ticket by id =>", err);
       return res.status(400).send({ error: "There was an error" });
     }
+  }
+  async _activities(id_ticket, db, id_company) {
+    const obj = [];
+
+    const activities = await activitiesModel.getActivities(id_ticket);
+    activities.map((value) => {
+      value.created_at = moment(value.created_at).format("DD/MM/YYYY HH:mm:ss");
+      value.updated_at = moment(value.updated_at).format("DD/MM/YYYY HH:mm:ss");
+      value.type = "note";
+      obj.push(value);
+    });
+
+    const attachments = await attachmentsModel.getAttachments(id_ticket);
+    attachments.map((value) => {
+      value.created_at = moment(value.created_at).format("DD/MM/YYYY HH:mm:ss");
+      value.updated_at = moment(value.updated_at).format("DD/MM/YYYY HH:mm:ss");
+      value.type = "file";
+      obj.push(value);
+    });
+
+    let history_phase = await ticketModel.getHistoryTicket(id_ticket);
+    for (let index in history_phase) {
+      index = parseInt(index);
+
+      if (history_phase[index + 1]) {
+        console.log("array[index + 1]", history_phase[index + 1]);
+        const before = await new FormDocuments(db).findRegister(
+          history_phase[index].id_form
+        );
+
+        const templateBefore = await new FormTemplate(db).findRegistes(
+          history_phase[index].template
+        );
+
+        const after = await new FormDocuments(db).findRegister(
+          history_phase[index + 1].id_form
+        );
+
+        const templateAfter = await new FormTemplate(db).findRegistes(
+          history_phase[index + 1].template
+        );
+        obj.push({
+          after: {
+            phase: history_phase[index + 1].id_phase,
+            field: templateAfter.column,
+            value: after,
+          },
+          before: {
+            phase: history_phase[index].id_phase,
+            field: templateBefore.column,
+            value: before,
+          },
+          type: "change_form",
+          id_user: history_phase[index + 1].id_user,
+          created_at: moment(history_phase[index + 1].created_at).format(
+            "DD/MM/YYYY HH:mm:ss"
+          ),
+          updated_at: moment(history_phase[index + 1].updated_at).format(
+            "DD/MM/YYYY HH:mm:ss"
+          ),
+        });
+        console.log("TESTE ===>", obj);
+
+        if (
+          history_phase[index].id_phase != history_phase[index + 1].id_phase
+        ) {
+          obj.push({
+            type: "move",
+            id_user: history_phase[index + 1].id_user,
+            phase_origin: {
+              id: history_phase[index].id_phase,
+              name: history_phase[index].name,
+            },
+            phase_dest: {
+              id: history_phase[index + 1].id_phase,
+              name: history_phase[index + 1].name,
+            },
+            created_at: moment(history_phase[index + 1].updated_at).format(
+              "DD/MM/YYYY HH:mm:ss"
+            ),
+          });
+        }
+      }
+    }
+
+    const view_ticket = await ticketModel.getViewTicket(id_ticket);
+    view_ticket.map((value) => {
+      value.start = moment(value.start).format("DD/MM/YYYY HH:mm:ss");
+      value.end
+        ? (value.end = moment(value.end).format("DD/MM/YYYY HH:mm:ss"))
+        : "";
+      value.created_at = value.start;
+      value.type = "view";
+      obj.push(value);
+    });
+    // await history_phase.map(async (value, index, array) => {
+    //   if (array[index + 1]) {
+    //     console.log("array[index + 1]", array[index + 1]);
+    //     const before = await new FormDocuments(db).findRegister(value.id_form);
+    //     const after = await new FormDocuments(db).findRegister(
+    //       array[index + 1].id_form
+    //     );
+    //     obj.push({
+    //       after: after,
+    //       before: before,
+    //       type: "form",
+    //       created_at: array[index + 1].created_at,
+    //     });
+    //     console.log("TESTE ===>", obj);
+    //   }
+    //   value.created_at = moment(value.created_at).format("DD/MM/YYYY HH:mm:ss");
+    // });
+
+    const create_protocol = await ticketModel.getProtocolCreatedByTicket(
+      id_ticket,
+      id_company
+    );
+    create_protocol.map((value) => {
+      value.created_at = moment(value.created_at).format("DD/MM/YYYY HH:mm:ss");
+      value.updated_at = moment(value.updated_at).format("DD/MM/YYYY HH:mm:ss");
+      value.type = "create_protocol";
+      obj.push(value);
+    });
+
+    const create_ticket = await ticketModel.getTicketCreatedByTicketFather(
+      id_ticket,
+      id_company
+    );
+    create_ticket.map((value) => {
+      value.created_at = moment(value.created_at).format("DD/MM/YYYY HH:mm:ss");
+      value.type = "create_ticket";
+      obj.push(value);
+    });
+
+    const ticket = await ticketModel.getStatusTicketById(id_ticket, id_company);
+    if (ticket[0].created_by_ticket) {
+      const ticketFather = await ticketModel.getTicketById(
+        ticket[0].id_ticket_father
+      );
+      obj.push({
+        type: "start",
+        created_at: moment(ticket[0].created_at).format("DD/MM/YYYY HH:mm:ss"),
+        ticket: ticketFather[0].id_seq,
+        id_user: ticket[0].id_user,
+      });
+    } else if (ticket[0].created_by_protocol) {
+      obj.push({
+        type: "start",
+        created_at: moment(ticket[0].created_at).format("DD/MM/YYYY HH:mm:ss"),
+        protocol: ticket[0].id_protocol,
+        id_user: ticket[0].id_user,
+      });
+    } else {
+      obj.push({
+        type: "start",
+        created_at: moment(ticket[0].created_at).format("DD/MM/YYYY HH:mm:ss"),
+        id_user: ticket[0].id_user,
+      });
+    }
+    return obj;
   }
 
   async getAllTicket(req, res) {
@@ -651,11 +889,7 @@ class TicketController {
       for (const ticket of result) {
         console.log;
         const t = [ticket];
-        const ticketFormated = await formatTicketForPhase(
-          t,
-          req.app.locals.db,
-          ticket
-        );
+        const ticketFormated = await formatTicketForPhase(t, ticket);
         tickets.push(ticketFormated);
       }
 
@@ -668,17 +902,26 @@ class TicketController {
 
   async updateTicket(req, res) {
     try {
+      let obj = {
+        // ids_crm: req.body.ids_crm,
+        // id_customer: req.body.id_customer,
+        // id_protocol: req.body.id_protocol,
+        updated_at: moment().format(),
+      };
       let userResponsible = [];
+      if (req.body.responsible) {
+        req.body.responsible.map(async (responsible) => {
+          const result = await userController.checkUserCreated(
+            responsible,
+            req.headers.authorization,
+            responsible.name
+          );
+          userResponsible.push(result.id);
+        });
 
-      req.body.responsible.map(async (responsible) => {
-        let result;
-        result = await userController.checkUserCreated(
-          responsible,
-          req.headers.authorization,
-          responsible.name
-        );
-        userResponsible.push(result.id);
-      });
+        await this._createResponsibles(userResponsible, req.params.id);
+      }
+
       let ticket = await ticketModel.getTicketById(
         req.params.id,
         req.headers.authorization
@@ -689,20 +932,9 @@ class TicketController {
           .status(400)
           .send({ error: "There is no ticket with this ID " });
 
-      let obj = {
-        ids_crm: req.body.ids_crm,
-        id_customer: req.body.id_customer,
-        id_protocol: req.body.id_protocol,
-        updated_at: moment().format(),
-      };
-
-      let result = await ticketModel.updateTicket(
-        obj,
-        req.params.id,
-        req.headers.authorization
-      );
-
-      await this._createResponsibles(userResponsible, req.params.id);
+      // if (req.body.customer) {
+      //   await this._createCustomers(req.body.customer, req.params.id);
+      // }
 
       let phase = await phaseModel.getPhase(
         req.body.id_phase,
@@ -712,44 +944,80 @@ class TicketController {
       if (!phase || phase.length <= 0)
         return res.status(400).send({ error: "Invalid id_phase uuid" });
 
+      await updateSLA(ticket[0].id, ticket[0].phase_id);
+
       if (ticket[0].phase_id != phase[0].id) {
         await phaseModel.disablePhaseTicket(req.params.id);
+        await slaModel.disableSLA(req.params.id);
 
+        if (req.body.form) {
+          if (Object.keys(req.body.form).length > 0) {
+            if (phase[0].form) {
+              let errors = await this._validateForm(
+                req.app.locals.db,
+                phase[0].id_form_template,
+                req.body.form
+              );
+              if (errors.length > 0)
+                return res.status(400).send({ errors: errors });
+
+              obj.id_form = await new FormDocuments(
+                req.app.locals.db
+              ).createRegister(req.body.form);
+            }
+          }
+        }
+
+        const user = await userController.checkUserCreated(
+          req.body.id_user,
+          req.headers.authorization
+        );
         let phase_id = await ticketModel.createPhaseTicket({
           id_phase: phase[0].id,
           id_ticket: req.params.id,
+          id_user: user.id,
+          id_form: obj.id_form,
         });
+
         if (!phase_id || phase_id.length <= 0)
           return res.status(500).send({ error: "There was an error" });
-      }
 
-      if (req.body.form && Object.keys(req.body.form).length > 0) {
-        const firstPhase = await ticketModel.getFirstFormTicket(ticket[0].id);
-        if (firstPhase[0].form) {
-          let errors = await this._validateUpdate(
-            req.app.locals.db,
-            firstPhase[0].id_form_template,
-            req.body.form,
-            ticket[0].id_form
-          );
-          if (errors.length > 0)
-            return res.status(400).send({ errors: errors });
+        await createSLAControl(phase[0].id, req.params.id);
+      } else {
+        if (req.body.form && Object.keys(req.body.form).length > 0) {
+          const firstPhase = await ticketModel.getFirstFormTicket(ticket[0].id);
+          if (firstPhase[0].form) {
+            let errors = await this._validateUpdate(
+              req.app.locals.db,
+              firstPhase[0].id_form_template,
+              req.body.form,
+              ticket[0].id_form
+            );
+            if (errors.length > 0)
+              return res.status(400).send({ errors: errors });
 
-          console.log("FORM ====>", req.body.form);
-          obj.id_form = await new FormDocuments(
-            req.app.locals.db
-          ).updateRegister(ticket[0].id_form, req.body.form);
+            console.log("FORM ====>", req.body.form);
+            obj.id_form = await new FormDocuments(
+              req.app.locals.db
+            ).updateRegister(ticket[0].id_form, req.body.form);
+          }
         }
       }
 
-      ticket = await formatTicketForPhase(ticket, req.app.locals.db, ticket[0]);
+      let result = await ticketModel.updateTicket(
+        obj,
+        req.params.id,
+        req.headers.authorization
+      );
+
+      ticket = await formatTicketForPhase(ticket, ticket[0]);
       await redis.set(
         `msTicket:ticket:${req.params.id}`,
         JSON.stringify(ticket)
       );
 
       await redis.del(`ticket:phase:${req.headers.authorization}`);
-
+      console.log("ticket update", ticket);
       if (result) return res.status(200).send(ticket);
 
       return res.status(400).send({ error: "There was an error" });
@@ -772,9 +1040,47 @@ class TicketController {
           req.headers.authorization
         );
 
+        let slaTicket = await slaModel.getByPhaseTicket(
+          ticket[0].phase_id,
+          ticket[0].id,
+          3
+        );
+        let obj;
+        if (slaTicket && Array.isArray(slaTicket) && slaTicket.length > 0) {
+          if (slaTicket[0].limit_sla_time < moment()) {
+            obj = { id_sla_status: sla_status.atrasado, active: false };
+          } else if (slaTicket[0].limit_sla_time > moment()) {
+            obj = { id_sla_status: sla_status.emdia, active: false };
+          }
+          await slaModel.updateTicketSLA(
+            ticket.id_ticket,
+            obj,
+            slaTicket.id_sla_type
+          );
+        }
+
+        // Uma nova verificação para saber se o sla de resposta se manteve no tempo determinado.
+        slaTicket = await slaModel.getByPhaseTicket(
+          ticket[0].phase_id,
+          ticket[0].id,
+          2
+        );
+
+        if (slaTicket && Array.isArray(slaTicket) && slaTicket.length > 0) {
+          if (slaTicket[0].limit_sla_time < slaTicket[0].interaction_time) {
+            obj = { id_sla_status: sla_status.atrasado, active: false };
+          } else if (slaTicket[0].limit_sla_time > moment()) {
+            obj = { id_sla_status: sla_status.emdia, active: false };
+          }
+          await slaModel.updateTicketSLA(
+            ticket.id_ticket,
+            obj,
+            slaTicket.id_sla_type
+          );
+        }
+
         ticket[0] = await formatTicketForPhase(
-          ticket,
-          req.app.locals.db,
+          { id: ticket[0].phase_id },
           ticket[0]
         );
 
@@ -815,48 +1121,50 @@ class TicketController {
     });
   }
 
-  async checkSLATicket() {
-    await redis.KEYS(`msTicket:ticket:*`, async (err, res) => {
-      if (res && res.length > 0) {
-        for (let ticket of res) {
-          let result = await redis.get(`${ticket}`);
-          result = JSON.parse(result);
-          let timeNow = await this.processCase(result);
-          if (timeNow >= result.sla_time) {
-            await ticketModel.updateSlaTicket(
-              { sla: true, updated_at: moment().format() },
-              result.id
-            );
-            const companyInfo = await companyModel.getById(result.id_company);
-            const allResponsibles = await ticketModel.getAllResponsibleTicket(
-              result.id
-            );
-            let userResponsibleTicket = [];
-            let emailResponsibleTicket = [];
-            await allResponsibles.map((value) => {
-              if (value.id_user) {
-                userResponsibleTicket.push(value.id_user);
-              } else if (value.id_email) {
-                emailResponsibleTicket.push(value.id_email);
-              }
-            });
-            await this._notify(
-              result.phase,
-              companyInfo[0].notify_token,
-              result.id,
-              userResponsibleTicket,
-              emailResponsibleTicket,
-              result.id_company,
-              3,
-              req.app.locals.db
-            );
+  async checkSLA(type) {
+    const tickets = await slaModel.checkSLA(type);
+    if (tickets && Array.isArray(tickets) && tickets.length > 0) {
+      switch (type) {
+        case 1:
+          for (const ticket of tickets) {
+            if (!ticket.interaction_time && ticket.limit_sla_time < moment()) {
+              slaModel.updateTicketSLA(
+                ticket.id_ticket,
+                { id_sla_status: sla_status.atrasado },
+                ticket.id_sla_type
+              );
+            }
           }
-        }
-        return true;
-      } else {
-        return true;
+          break;
+        case 2:
+          for (const ticket of tickets) {
+            if (
+              ticket.interaction_time < ticket.limit_sla_time &&
+              ticket.limit_sla_time < moment()
+            ) {
+              slaModel.updateTicketSLA(
+                ticket.id_ticket,
+                { id_sla_status: sla_status.atrasado },
+                ticket.id_sla_type
+              );
+            }
+          }
+          break;
+        case 3:
+          for (const ticket of tickets) {
+            if (ticket.limit_sla_time < moment()) {
+              slaModel.updateTicketSLA(
+                ticket.id_ticket,
+                { id_sla_status: sla_status.atrasado },
+                ticket.id_sla_type
+              );
+            }
+          }
+          break;
+        default:
+          break;
       }
-    });
+    }
   }
 
   async processCase(result) {
@@ -895,11 +1203,22 @@ class TicketController {
       const form_template = await new FormTemplate(db).findRegistes(
         id_form_template
       );
-      // for (let column of form_template.column) {
-      //   column.required && form[column.column]
-      //     ? ""
-      //     : errors.push(`O campo ${column.label} é obrigatório`);
-      // }
+      for (let column of form_template.column) {
+        column.required && form[column.column]
+          ? ""
+          : errors.push(`O campo ${column.column} é obrigatório`);
+      }
+
+      const formColumns = Object.keys(form);
+      for (const column of formColumns) {
+        console.log(
+          "==>",
+          form_template.column.filter((x) => x.column === column)
+        );
+        form_template.column.filter((x) => x.column === column).length > 0
+          ? ""
+          : errors.push(`O campo ${column} não faz parte desse template`);
+      }
       return errors;
     } catch (err) {
       console.log("Error when generate Doc =>", err);
@@ -938,13 +1257,9 @@ class TicketController {
       let result = await ticketModel.getTicketByCustomerOrProtocol(
         req.params.id
       );
-        console.log("result =====> ", result)
+      console.log("result =====> ", result);
       for (let ticket of result) {
-        ticket = await formatTicketForPhase(
-          [ticket],
-          req.app.locals.db,
-          ticket
-        );
+        ticket = await formatTicketForPhase([ticket], ticket);
 
         ticket.attachments = await attachmentsModel.getAttachments(ticket.id);
         ticket.attachments.map((value) => {
@@ -1055,6 +1370,158 @@ class TicketController {
       return res
         .status(400)
         .send({ error: "There was an error while trying to obtain status" });
+    }
+  }
+
+  async startTicket(req, res) {
+    try {
+      if (req.body.id_ticket && req.body.id_user) {
+        const result = await userController.checkUserCreated(
+          req.body.id_user,
+          req.headers.authorization
+        );
+        const time = moment();
+        const responsibleCheck =
+          await ticketModel.getResponsibleByTicketAndUser(
+            req.body.id_ticket,
+            result.id
+          );
+
+        if (
+          responsibleCheck &&
+          Array.isArray(responsibleCheck) &&
+          responsibleCheck.length > 0 &&
+          !responsibleCheck[0].start_ticket
+        ) {
+          await ticketModel.updateResponsible(req.body.id_ticket, result.id, {
+            start_ticket: time,
+          });
+          return res
+            .status(200)
+            .send({ start_ticket: moment(time).format("DD/MM/YYYY HH:mm:ss") });
+        } else if (
+          responsibleCheck &&
+          Array.isArray(responsibleCheck) &&
+          responsibleCheck.length <= 0
+        ) {
+          await ticketModel.createResponsibleTicket({
+            id_ticket: req.body.id_ticket,
+            id_user: result.id,
+            id_type_of_responsible: 2,
+            start_ticket: time,
+          });
+          return res
+            .status(200)
+            .send({ start_ticket: moment(time).format("DD/MM/YYYY HH:mm:ss") });
+        } else if (
+          responsibleCheck &&
+          Array.isArray(responsibleCheck) &&
+          responsibleCheck.length > 0 &&
+          responsibleCheck[0].start_ticket
+        ) {
+          return res.status(400).send({
+            error: "Não é possivel iniciar um ticket já inicializado",
+          });
+        }
+      } else {
+        return res.status(400).send({ error: "Houve um erro! " });
+      }
+    } catch (err) {
+      console.log("err", err);
+      return res.status(500).send({ error: "Houve um erro! " });
+    }
+  }
+
+  async linkProtocolToTicket(req, res) {
+    try {
+      if (!req.body.id_ticket || !req.body.id_protocol || req.body.id_user)
+        return res.status(400).send({ error: "Houve algum problema" });
+
+      const ticket = await ticketModel.getTicketByIdSeq(
+        req.body.id_ticket,
+        req.headers.authorization
+      );
+
+      if (!ticket || ticket.length < 0)
+        return res.status(400).send({ error: "Houve algum problema" });
+
+      const user = await userController.checkUserCreated(
+        req.body.id_user,
+        req.headers.authorization
+      );
+
+      if (!user) return res.status(400).send({ error: "Houve algum problema" });
+
+      const obj = {
+        id_ticket: ticket[0].id,
+        id_protocol: req.body.id_protocol,
+        id_company: req.headers.authorization,
+        created_at: moment().format(),
+        updated_at: moment().format(),
+        id_user: user.id,
+        created_by_ticket: req.body.created_by_ticket,
+      };
+
+      const result = await ticketModel.linkProtocolToticket(obj);
+
+      if (result.length <= 0)
+        return res.status(400).send({ error: "Houve algum problema" });
+
+      obj.created_at = moment(obj.created_at).format("DD/MM/YYYY HH:mm:ss");
+      obj.updated_at = moment(obj.updated_at).format("DD/MM/YYYY HH:mm:ss");
+      return res.status(200).send(obj);
+    } catch (err) {
+      console.log("linkProtocolToTicket ====>", err);
+      return res.status(400).send({ error: "Houve algum problema" });
+    }
+  }
+
+  async viewTicket(req, res) {
+    try {
+      if (!req.body.id_ticket || !req.body.id_user || !req.body.type)
+        return res.status(400).send({ error: "Houve algum problema" });
+
+      const user = await userController.checkUserCreated(
+        req.body.id_user,
+        req.headers.authorization
+      );
+
+      if (!user) return res.status(400).send({ error: "Houve algum problema" });
+
+      const ticket = await ticketModel.getTicketById(
+        req.body.id_ticket,
+        req.headers.authorization
+      );
+
+      if (!ticket || ticket.length < 0)
+        return res.status(400).send({ error: "Houve algum problema" });
+
+      const obj = {
+        id_ticket: ticket[0].id,
+        start: null,
+        end: null,
+        id_user: user.id,
+      };
+      switch (req.body.type) {
+        case "start":
+          obj.start = moment().format();
+          break;
+        case "end":
+          obj.end = moment().format();
+          break;
+        default:
+          console.log("tipo não mapeado");
+          break;
+      }
+
+      const result = await ticketModel.insertViewTicket(obj);
+      if (!result)
+        return res.status(400).send({ error: "Houve algum problema" });
+
+      return res.status(200).send(obj);
+    } catch (err) {
+      console.log("Error view ticket =>", err);
+      return res.status(400).send({ error: "Houve algum problema" });
     }
   }
 }

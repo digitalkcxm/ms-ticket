@@ -1,7 +1,7 @@
 const { Error } = require("mongoose")
 
 const ObjectID = require("mongodb").ObjectID
-let collection = "form"
+const collection = "form"
 class FormDocuments {
     constructor(db) {
         this._db = db

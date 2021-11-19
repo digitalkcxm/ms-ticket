@@ -1,3 +1,8 @@
+const redis = require("async-redis").createClient(
+  process.env.REDIS_PORT,
+  process.env.REDIS_HOST
+);
+
 const { v1 } = require("uuid");
 
 const moment = require("moment");
@@ -17,18 +22,10 @@ const FormDocuments = require("../documents/FormDocuments");
 const UnitOfTimeModel = require("../models/UnitOfTimeModel");
 const unitOfTimeModel = new UnitOfTimeModel();
 
-const TypeColumnModel = require("../models/TypeColumnModel");
-const typeColumnModel = new TypeColumnModel();
-
 const DepartmentController = require("./DepartmentController");
 const departmentController = new DepartmentController();
 
-const asyncRedis = require("async-redis");
-const redis = asyncRedis.createClient(
-  process.env.REDIS_PORT,
-  process.env.REDIS_HOST
-);
-
+const templateValidate = require("../helpers/TemplateValidate");
 const { formatTicketForPhase } = require("../helpers/FormatTicket");
 
 const { validationResult } = require("express-validator");
@@ -38,90 +35,130 @@ const departmentModel = new DepartmentModel();
 
 const ActivitiesModel = require("../models/ActivitiesModel");
 const activitiesModel = new ActivitiesModel();
+
+const SLAModel = require("../models/SLAModel");
+const slaModel = new SLAModel();
+
+const TypeColumnModel = require("../models/TypeColumnModel");
+const typeColumnModel = new TypeColumnModel();
+
+const { counter_sla, settingsSLA } = require("../helpers/SLAFormat");
 class PhaseController {
   async create(req, res) {
+    // Validação do corpo da requisição.
     const errors = validationResult(req);
     if (!errors.isEmpty())
       return res.status(400).json({ errors: errors.array() });
 
     try {
-      const usersResponsible = [];
-      const usersNotify = [];
+      // const usersResponsible = [];
+      // const usersNotify = [];
 
       let obj = {
         id: v1(),
         id_company: req.headers.authorization,
-        id_unit_of_time: req.body.unit_of_time,
         icon: req.body.icon,
         name: req.body.name,
-        sla_time: req.body.sla_time,
-        responsible_notify_sla: req.body.notify_responsible,
-        supervisor_notify_sla: req.body.notify_supervisor,
         form: req.body.form,
         created_at: moment().format(),
         updated_at: moment().format(),
         active: req.body.active,
+        visible_new_ticket: req.body.visible_new_ticket,
+        notification_customer: req.body.customer,
+        notification_admin: req.body.admin,
+        notification_separate: { separate: req.body.separate },
+        department_can_create_protocol: {
+          department: req.body.department_can_create_protocol,
+        },
+        department_can_create_ticket: {
+          department: req.body.department_can_create_ticket,
+        },
+        create_protocol: req.body.create_protocol,
+        create_ticket: req.body.create_ticket,
       };
-
+      // Executa uma validação no formulario passado pelo cliente.
       if (req.body.form) {
-        const errorsColumns = await this._collumnTemplateValidate(
-          req.body.column
-        );
-        if (errorsColumns.length > 0)
-          return res.status(400).send({ errors: errorsColumns });
-
-        const formTemplate = await new FormTemplate(
+        const templateValidate = await this._formPhase(
+          req.body.column,
           req.app.locals.db
-        ).createRegister(req.body.column);
-        obj.id_form_template = formTemplate;
+        );
+
+        if (!templateValidate) {
+          return res.status(400).send({ errors: templateValidate });
+        }
+
+        obj.id_form_template = templateValidate;
       }
 
-      let timeType = await unitOfTimeModel.getUnitOfTime(req.body.unit_of_time);
-      if (!timeType || timeType.length <= 0)
-        return res
-          .status(400)
-          .send({ error: "Invalid information unit_of_time" });
+      // Cria a estrutura base da fase.
+      let phaseCreated = await phaseModel.createPhase(obj);
+      if (
+        !Array.isArray(phaseCreated) ||
+        (Array.isArray(phaseCreated) && phaseCreated.length <= 0)
+      ) {
+        return res.status(400).send({ errors: "Erro ao criar a fase!" });
+      }
 
-      let idPhase = await phaseModel.createPhase(obj);
-      obj.id = idPhase[0].id;
-
-      let result = await departmentController.checkDepartmentCreated(
+      // Realiza uma verificação com o id do departamento e depois gera a ligação com a fase.
+      await this._departmentPhaseLinked(
         req.body.department,
-        req.headers.authorization
+        req.headers.authorization,
+        obj.id
       );
-      await phaseModel.linkedDepartment({
-        id_department: result[0].id,
-        id_phase: idPhase[0].id,
-        active: true,
-      });
 
-      for await (const responsible of req.body.responsible) {
-        let result;
-        result = await userController.checkUserCreated(
-          responsible,
-          req.headers.authorization,
-          responsible.name
-        );
-        usersResponsible.push(result.id);
+      // Realiza uma verificação com o id do usuario responsavel pela fase, e depois vincula os dois.
+      // if (
+      //   req.body.separate &&
+      //   Array.isArray(req.body.separate) &&
+      //   req.body.separate.length > 0
+      // ) {
+      //   for await (const contact of req.body.separate) {
+      //     let result;
+
+      //     if(contact.id){
+      //       result = await userController.checkUserCreated(
+      //         contact.id,
+      //         req.headers.authorization,
+      //         contact.name
+      //       );
+      //     }else if(contact.email){
+      //      result =  checkEmailCreated(contact.email,   req.headers.authorization)
+      //     }
+
+      //     usersResponsible.push(result.id);
+      //   }
+      //   await this._responsiblePhase(obj.id, usersResponsible);
+      //   obj.responsible = req.body.responsible;
+      // }
+
+      // Realiza uma verificação com o id do usuario pela fase, e depois vincula os dois.
+      // if (
+      //   req.body.notify &&
+      //   Array.isArray(req.body.notify) &&
+      //   req.body.notify.length > 0
+      // ) {
+      //   for await (const notify of req.body.notify) {
+      //     let result;
+      //     result = await userController.checkUserCreated(
+      //       notify,
+      //       req.headers.authorization,
+      //       notify.name
+      //     );
+      //     usersNotify.push(result.id);
+      //   }
+      //   obj.notify = req.body.notify;
+
+      //   await this._notifyPhase(obj.id, usersNotify, usersResponsible);
+      // }
+
+      // Registra a configuração de SLA da fase.
+      if (req.body.sla) {
+        await this._phaseSLASettings(req.body.sla, obj.id);
       }
 
-      for await (const notify of req.body.notify) {
-        let result;
-        result = await userController.checkUserCreated(
-          notify,
-          req.headers.authorization,
-          notify.name
-        );
-        usersNotify.push(result.id);
-      }
-
-      await this._responsiblePhase(idPhase[0].id, usersResponsible);
-
-      await this._notifyPhase(idPhase[0].id, usersNotify, usersResponsible);
-      obj.notify = req.body.notify;
-      obj.responsible = req.body.responsible;
+      // Formata o obj de retorno.
       delete obj.id_company;
-      obj.id_form_template;
+
       obj.column = req.body.column;
       obj.created_at = moment(obj.created_at).format("DD/MM/YYYY HH:mm:ss");
       obj.updated_at = moment(obj.updated_at).format("DD/MM/YYYY HH:mm:ss");
@@ -135,6 +172,73 @@ class PhaseController {
     }
   }
 
+  async _departmentPhaseLinked(department, authorization, phaseId) {
+    const result = await departmentController.checkDepartmentCreated(
+      department,
+      authorization
+    );
+    await phaseModel.linkedDepartment({
+      id_department: result[0].id,
+      id_phase: phaseId,
+      active: true,
+    });
+  }
+
+  async _formPhase(column, db) {
+    const errorsColumns = await templateValidate(column);
+    if (errorsColumns.length > 0) return errorsColumns;
+
+    const formTemplate = await new FormTemplate(db).createRegister(column);
+
+    if (!formTemplate) return false;
+
+    for (const formatcolumn of column) {
+      console.log(formatcolumn);
+      const type = await typeColumnModel.getTypeByID(formatcolumn.type);
+      formatcolumn.type = type[0].name;
+    }
+
+    return formTemplate;
+  }
+
+  async _phaseSLASettings(obj, idPhase) {
+    const keys = Object.keys(obj);
+
+    const slaSettings = async function (sla, type) {
+      const timeType = await unitOfTimeModel.checkUnitOfTimeByName(
+        sla.unit_of_time
+      );
+      if (!timeType || timeType.length <= 0 || !sla.active || sla.time <= 0) {
+        return false;
+      }
+
+      await slaModel.slaPhaseSettings({
+        id_phase: idPhase,
+        id_sla_type: type,
+        id_unit_of_time: timeType,
+        time: sla.time,
+        active: sla.active,
+      });
+      return true;
+    };
+
+    keys.map((key) => {
+      switch (key) {
+        case "1":
+          slaSettings(obj[key], key);
+          break;
+        case "2":
+          slaSettings(obj[key], key);
+          break;
+        case "3":
+          slaSettings(obj[key], key);
+          break;
+        default:
+          return false;
+      }
+    });
+  }
+
   async getPhaseByID(req, res) {
     try {
       const result = await phaseModel.getPhaseById(
@@ -144,16 +248,32 @@ class PhaseController {
       if (!result || result.length < 0)
         return res.status(400).send({ error: "Invalid id phase" });
 
+      result[0].department_can_create_protocol =
+        result[0].department_can_create_protocol &&
+        result[0].department_can_create_protocol.department
+          ? result[0].department_can_create_protocol.department
+          : [];
+      result[0].department_can_create_ticket =
+        result[0].department_can_create_ticket &&
+        result[0].department_can_create_ticket.department
+          ? result[0].department_can_create_ticket.department
+          : [];
+      result[0].separate =
+        result[0].separate && result[0].separate.separate
+          ? result[0].separate.separate
+          : null;
+
+      const departments = await phaseModel.getDepartmentPhase(result[0].id);
+      result[0].department = departments[0].id_department;
+
       const tickets = await ticketModel.getTicketByPhase(result[0].id);
       result[0].ticket = [];
       for await (let ticket of tickets) {
-        const ticketFormated = await formatTicketForPhase(
-          result,
-          req.app.locals.db,
-          ticket
-        );
+        const ticketFormated = await formatTicketForPhase(result[0], ticket);
         result[0].ticket.push(ticketFormated);
       }
+
+      result[0].sla = await settingsSLA(result[0].id);
       result[0] = await this._formatPhase(result[0], req.app.locals.db);
       return res.status(200).send(result);
     } catch (err) {
@@ -169,72 +289,68 @@ class PhaseController {
       if (search) {
         result = await phaseModel.getAllPhase(req.headers.authorization);
 
-        if (isNaN(search)) {
-          const searchMongo = await new FormDocuments(
-            req.app.locals.db
-          ).searchRegister(search);
+        // if (isNaN(search)) {
+        //   const searchMongo = await new FormDocuments(
+        //     req.app.locals.db
+        //   ).searchRegister(search);
 
-          for (let i in result) {
-            result[i].ticket = [];
+        //   for (let i in result) {
+        //     result[i].ticket = [];
 
-            for (const mongoResult of searchMongo) {
-              let ticket = await ticketModel.getTicketByIDForm(
-                mongoResult._id,
-                result[i].id
-              );
-              if (ticket)
-                result[i].ticket.push(
-                  await formatTicketForPhase(
-                    result[i],
-                    req.app.locals.db,
-                    ticket
-                  )
-                );
-            }
-            result[i] = await this._formatPhase(result[i], req.app.locals.db);
-          }
-        } else {
-          for (let i in result) {
-            const tickets = await ticketModel.getTicketByPhase(
-              result[i].id,
-              search
-            );
-            result[i].ticket = [];
-            for await (let ticket of tickets) {
-              result[i].ticket.push(
-                await formatTicketForPhase(result[i], req.app.locals.db, ticket)
-              );
-            }
-            result[i] = await this._formatPhase(result[i], req.app.locals.db);
-          }
-        }
-      } else if (req.query.department) {
-        if (
-          Array.isArray(req.query.department) &&
-          req.query.department.length > 0
-        ) {
-          for (const department of req.query.department) {
-            result.push(
-              await this._queryDepartment(
-                department,
-                req.headers.authorization,
-                req.query.status,
-                req.app.locals.db
-              )
-            );
-          }
-        } else {
-          result = await this._queryDepartment(
-            req.query.department,
+        //     for (const mongoResult of searchMongo) {
+        //       let ticket = await ticketModel.getTicketByIDForm(
+        //         mongoResult._id,
+        //         result[i].id
+        //       );
+        //       if (ticket)
+        //         result[i].ticket.push(
+        //           await formatTicketForPhase(result[i], ticket)
+        //         );
+        //     }
+        //     result[i] = await this._formatPhase(result[i], req.app.locals.db);
+        //   }
+        // } else {
+        for (let i in result) {
+          const tickets = await ticketModel.searchTicket(
             req.headers.authorization,
-            req.query.status,
-            req.app.locals.db
+            search,
+            result[i].id
           );
+          result[i].ticket = [];
+          for await (let ticket of tickets) {
+            result[i].ticket.push(
+              await formatTicketForPhase(result[i], ticket)
+            );
+          }
+          result[i] = await this._formatPhase(result[i], req.app.locals.db);
         }
+        // }
+      } else if (req.query.department) {
+        result = await this._queryDepartment(
+          req.query.department,
+          req.headers.authorization,
+          req.query.status,
+          req.app.locals.db
+        );
       } else {
         result = await phaseModel.getAllPhase(req.headers.authorization);
 
         for (let i in result) {
+          result[i].department_can_create_protocol =
+            result[i].department_can_create_protocol &&
+            result[i].department_can_create_protocol.department
+              ? result[i].department_can_create_protocol.department
+              : [];
+          result[i].department_can_create_ticket =
+            result[i].department_can_create_ticket &&
+            result[i].department_can_create_ticket.department
+              ? result[i].department_can_create_ticket.department
+              : [];
+          result[i].separate =
+            result[i].separate && result[i].separate.separate
+              ? result[i].separate.separate
+              : null;
+
           const tickets = await ticketModel.getTicketByPhase(
             result[i].id,
             search
@@ -244,7 +360,7 @@ class PhaseController {
           result[i].closed = 0;
           for await (let ticket of tickets) {
             result[i].ticket.push(
-              await formatTicketForPhase(result[i], req.app.locals.db, ticket)
+              await formatTicketForPhase(result[i], ticket)
             );
             ticket.closed
               ? (result[i].closed = result[i].closed + 1)
@@ -278,16 +394,37 @@ class PhaseController {
       department_id[0].id
     );
     for (let phase of result) {
+      phase.department_can_create_protocol =
+        phase.department_can_create_protocol &&
+        phase.department_can_create_protocol.department
+          ? phase.department_can_create_protocol.department
+          : [];
+      phase.department_can_create_ticket =
+        phase.department_can_create_ticket &&
+        phase.department_can_create_ticket.department
+          ? phase.department_can_create_ticket.department
+          : [];
+      phase.separate =
+        phase.separate && phase.separate.separate
+          ? phase.separate.separate
+          : null;
+
       const tickets = await ticketModel.getTicketByPhaseAndStatus(
         phase.id,
         status
       );
+
       phase.ticket = [];
+
       phase.open = await ticketModel.countTicket(phase.id, false);
       phase.closed = await ticketModel.countTicket(phase.id, true);
       for await (let ticket of tickets) {
-        phase.ticket.push(await formatTicketForPhase(phase, db, ticket));
+        phase.ticket.push(await formatTicketForPhase(phase, ticket));
       }
+
+      phase.counter_sla = await counter_sla(phase.id);
+      phase.sla = await settingsSLA(phase.id);
+
       phase = await this._formatPhase(phase, db);
     }
 
@@ -303,21 +440,25 @@ class PhaseController {
 
       const dpt = [];
 
-      let timeType = await unitOfTimeModel.checkUnitOfTime(req.body.unit_of_time);
-      if (!timeType || timeType.length <= 0)
-        return res
-          .status(400)
-          .send({ error: "Invalid information unit_of_time" });
-
       let obj = {
-        id_unit_of_time: req.body.unit_of_time,
         icon: req.body.icon,
         name: req.body.name,
-        sla_time: req.body.sla_time,
         responsible_notify_sla: req.body.notify_responsible,
         supervisor_notify_sla: req.body.notify_supervisor,
         updated_at: moment().format(),
         active: req.body.active,
+        visible_new_ticket: req.body.visible_new_ticket,
+        notification_customer: req.body.customer,
+        notification_admin: req.body.admin,
+        notification_separate: { separate: req.body.separate },
+        department_can_create_protocol: {
+          department: req.body.department_can_create_protocol,
+        },
+        department_can_create_ticket: {
+          department: req.body.department_can_create_ticket,
+        },
+        create_protocol: req.body.create_protocol,
+        create_ticket: req.body.create_ticket,
       };
 
       await phaseModel.updatePhase(
@@ -327,53 +468,73 @@ class PhaseController {
       );
       obj.id = req.params.id;
 
-      let result = await departmentController.checkDepartmentCreated(
-        req.body.department,
-        req.headers.authorization
-      );
+      // let result = await departmentController.checkDepartmentCreated(
+      //   req.body.department,
+      //   req.headers.authorization
+      // );
 
-      let departmentLinkedWithPhase = await phaseModel.selectLinkedDepartment(
+      // let departmentLinkedWithPhase = await phaseModel.selectLinkedDepartment(
+      //   req.params.id
+      // );
+      // if (departmentLinkedWithPhase.length <= 0)
+      //   return res
+      //     .status(400)
+      //     .send({ error: "Phase without linked department" });
+
+      // if (departmentLinkedWithPhase[0].id_department != result[0].id) {
+      await this._departmentPhaseLinked(
+        req.body.department,
+        req.headers.authorization,
         req.params.id
       );
-      if (departmentLinkedWithPhase.length <= 0)
-        return res
-          .status(400)
-          .send({ error: "Phase without linked department" });
-
-      if (departmentLinkedWithPhase[0].id_department != result[0].id) {
-        await phaseModel.linkedDepartment({
-          id_department: result[0].id,
-          id_phase: req.params.id,
-          active: true,
-        });
+      //   await phaseModel.linkedDepartment({
+      //     id_department: result[0].id,
+      //     id_phase: req.params.id,
+      //     active: true,
+      //   });
+      // }
+      if (
+        req.body.responsible &&
+        Array.isArray(req.body.responsible) &&
+        req.body.responsible.length > 0
+      ) {
+        for await (const responsible of req.body.responsible) {
+          let resultUser;
+          resultUser = await userController.checkUserCreated(
+            responsible,
+            req.headers.authorization,
+            responsible.name
+          );
+          usersResponsible.push(resultUser.id);
+        }
+        await this._responsiblePhase(req.params.id, usersResponsible);
+        obj.responsible = req.body.responsible;
       }
 
-      for await (const responsible of req.body.responsible) {
-        let resultUser;
-        resultUser = await userController.checkUserCreated(
-          responsible,
-          req.headers.authorization,
-          responsible.name
-        );
-        usersResponsible.push(resultUser.id);
+      if (
+        req.body.notify &&
+        Array.isArray(req.body.notify) &&
+        req.body.notify.length > 0
+      ) {
+        for await (const notify of req.body.notify) {
+          let resultUser;
+          resultUser = await userController.checkUserCreated(
+            notify,
+            req.headers.authorization,
+            notify.name
+          );
+          usersNotify.push(resultUser.id);
+        }
+
+        await this._notifyPhase(req.params.id, usersNotify, usersResponsible);
+        obj.notify = req.body.notify;
       }
 
-      for await (const notify of req.body.notify) {
-        let resultUser;
-        resultUser = await userController.checkUserCreated(
-          notify,
-          req.headers.authorization,
-          notify.name
-        );
-        usersNotify.push(resultUser.id);
+      // Registra a configuração de SLA da fase.
+      if (req.body.sla) {
+        await this._phaseSLASettings(req.body.sla, obj.id);
       }
 
-      await this._responsiblePhase(req.params.id, usersResponsible);
-
-      await this._notifyPhase(req.params.id, usersNotify, usersResponsible);
-
-      obj.notify = req.body.notify;
-      obj.responsible = req.body.responsible;
       let phase = await phaseModel.getPhaseById(
         req.params.id,
         req.headers.authorization
@@ -441,31 +602,6 @@ class PhaseController {
     }
   }
 
-  async _collumnTemplateValidate(columns) {
-    let errors = [];
-    for (let i = 0; i < columns.length; i++) {
-      typeof columns[i].editable === "boolean"
-        ? ""
-        : errors.push(`item ${i}: o campo editable é um campo booleano`);
-      columns[i].type || columns[i].type >= 0
-        ? ""
-        : errors.push(`item ${i}: type é um campo obrigatório`);
-      columns[i].column
-        ? ""
-        : errors.push(`item ${i}: column é um campo obrigatório`);
-      columns[i].label
-        ? ""
-        : errors.push(`item ${i}: label é um campo obrigatório`);
-      typeof columns[i].required === "boolean"
-        ? ""
-        : errors.push(`item ${i}: required é um campo booleano`);
-
-      let type = await typeColumnModel.getTypeByID(columns[i].type);
-      if (type.length <= 0) errors.push(`item ${i}: Invalid type`);
-    }
-    return errors;
-  }
-
   async _checkColumnsFormTemplate(newTemplate, db, template) {
     const register = await new FormTemplate(db).findRegistes(template);
     const errors = [];
@@ -502,23 +638,23 @@ class PhaseController {
     department.length > 0
       ? (result.department = department[0].id_department)
       : 0;
-    const unit_of_time = await unitOfTimeModel.getUnitOfTime(
-      result.id_unit_of_time
-    );
-    result.unit_of_time = unit_of_time[0].name;
-    const responsibles = await phaseModel.getResponsiblePhase(result.id);
-    result.responsible = [];
-    responsibles.map((value) => result.responsible.push(value.id_user_core));
-
-    const notify = await phaseModel.getNotifiedPhase(result.id);
-    result.notify = [];
-    notify.map((value) => result.notify.push(value.id_user_core));
 
     if (result.id_form_template) {
       const register = await new FormTemplate(mongodb).findRegistes(
         result.id_form_template
       );
-      result.formTemplate = register.column;
+
+      if (register && register.column) {
+        result.formTemplate = register.column;
+
+        for (const x of result.formTemplate) {
+          const type = await typeColumnModel.getTypeByID(x.type);
+
+          type && Array.isArray(type) && type.length > 0
+            ? (x.type = type[0].name)
+            : "";
+        }
+      }
     }
     result.created_at = moment(result.created_at).format("DD/MM/YYYY HH:mm:ss");
     result.updated_at = moment(result.updated_at).format("DD/MM/YYYY HH:mm:ss");
@@ -763,14 +899,14 @@ class PhaseController {
           .status(400)
           .send({ error: "Houve um erro ordenar as fases do workflow" });
 
-          console.log('check ==>',check)
-      req.body.map( async (value, index) => {
+      console.log("check ==>", check);
+      req.body.map(async (value, index) => {
         const obj = { order: index };
         await phaseModel.updatePhase(obj, value, req.headers.authorization);
         return true;
       });
 
-      return res.status(200).send(req.body)
+      return res.status(200).send(req.body);
     } catch (err) {
       console.log("Erro ao ordenar as fases =>", err);
       return res
