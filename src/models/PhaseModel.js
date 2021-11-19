@@ -19,7 +19,7 @@ class PhaseModel {
           id: "phase.id",
           id_unit_of_time: "phase.id_unit_of_time",
           unit_of_time: "unit_of_time.name",
-          icon: "phase.icon",
+          emoji: "phase.icon",
           name: "phase.name",
           sla_time: "phase.sla_time",
           responsible_notify_sla: "phase.responsible_notify_sla",
@@ -250,7 +250,7 @@ class PhaseModel {
         .select([
           "id",
           "id_unit_of_time",
-          "icon",
+          "icon as emoji",
           "name",
           "sla_time",
           "id_form_template",
@@ -279,7 +279,7 @@ class PhaseModel {
       return await database("department_phase")
         .select([
           "phase.id",
-          "phase.icon",
+          "phase.icon as emoji",
           "phase.name",
           "phase.id_form_template",
           "phase.active",

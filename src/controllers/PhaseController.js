@@ -74,7 +74,7 @@ class PhaseController {
           department: req.body.department_can_create_ticket,
         },
         create_protocol: req.body.create_protocol,
-        create_ticket: req.body.create_ticket
+        create_ticket: req.body.create_ticket,
       };
       // Executa uma validação no formulario passado pelo cliente.
       if (req.body.form) {
@@ -193,7 +193,7 @@ class PhaseController {
     if (!formTemplate) return false;
 
     for (const formatcolumn of column) {
-      console.log(formatcolumn)
+      console.log(formatcolumn);
       const type = await typeColumnModel.getTypeByID(formatcolumn.type);
       formatcolumn.type = type[0].name;
     }
@@ -458,7 +458,7 @@ class PhaseController {
           department: req.body.department_can_create_ticket,
         },
         create_protocol: req.body.create_protocol,
-        create_ticket: req.body.create_ticket
+        create_ticket: req.body.create_ticket,
       };
 
       await phaseModel.updatePhase(
