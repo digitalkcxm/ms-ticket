@@ -245,7 +245,7 @@ class PhaseController {
       if (!result || result.length < 0)
         return res.status(400).send({ error: "Invalid id phase" });
 
-        result[0].department_can_create_protocol =
+      result[0].department_can_create_protocol =
         result[0].department_can_create_protocol &&
         result[0].department_can_create_protocol.department
           ? result[0].department_can_create_protocol.department
@@ -286,41 +286,42 @@ class PhaseController {
       if (search) {
         result = await phaseModel.getAllPhase(req.headers.authorization);
 
-        if (isNaN(search)) {
-          const searchMongo = await new FormDocuments(
-            req.app.locals.db
-          ).searchRegister(search);
+        // if (isNaN(search)) {
+        //   const searchMongo = await new FormDocuments(
+        //     req.app.locals.db
+        //   ).searchRegister(search);
 
-          for (let i in result) {
-            result[i].ticket = [];
+        //   for (let i in result) {
+        //     result[i].ticket = [];
 
-            for (const mongoResult of searchMongo) {
-              let ticket = await ticketModel.getTicketByIDForm(
-                mongoResult._id,
-                result[i].id
-              );
-              if (ticket)
-                result[i].ticket.push(
-                  await formatTicketForPhase(result[i], ticket)
-                );
-            }
-            result[i] = await this._formatPhase(result[i], req.app.locals.db);
-          }
-        } else {
-          for (let i in result) {
-            const tickets = await ticketModel.getTicketByPhase(
-              result[i].id,
-              search
+        //     for (const mongoResult of searchMongo) {
+        //       let ticket = await ticketModel.getTicketByIDForm(
+        //         mongoResult._id,
+        //         result[i].id
+        //       );
+        //       if (ticket)
+        //         result[i].ticket.push(
+        //           await formatTicketForPhase(result[i], ticket)
+        //         );
+        //     }
+        //     result[i] = await this._formatPhase(result[i], req.app.locals.db);
+        //   }
+        // } else {
+        for (let i in result) {
+          const tickets = await ticketModel.searchTicket(
+            req.headers.authorization,
+            search,
+            result[i].id
+          );
+          result[i].ticket = [];
+          for await (let ticket of tickets) {
+            result[i].ticket.push(
+              await formatTicketForPhase(result[i], ticket)
             );
-            result[i].ticket = [];
-            for await (let ticket of tickets) {
-              result[i].ticket.push(
-                await formatTicketForPhase(result[i], ticket)
-              );
-            }
-            result[i] = await this._formatPhase(result[i], req.app.locals.db);
           }
+          result[i] = await this._formatPhase(result[i], req.app.locals.db);
         }
+        // }
       } else if (req.query.department) {
         result = await this._queryDepartment(
           req.query.department,
@@ -332,23 +333,21 @@ class PhaseController {
         result = await phaseModel.getAllPhase(req.headers.authorization);
 
         for (let i in result) {
-
           result[i].department_can_create_protocol =
-          result[i].department_can_create_protocol &&
-          result[i].department_can_create_protocol.department
-            ? result[i].department_can_create_protocol.department
-            : [];
-        result[i].department_can_create_ticket =
-          result[i].department_can_create_ticket &&
-          result[i].department_can_create_ticket.department
-            ? result[i].department_can_create_ticket.department
-            : [];
-        result[i].separate =
-          result[i].separate && result[i].separate.separate
-            ? result[i].separate.separate
-            : null;
+            result[i].department_can_create_protocol &&
+            result[i].department_can_create_protocol.department
+              ? result[i].department_can_create_protocol.department
+              : [];
+          result[i].department_can_create_ticket =
+            result[i].department_can_create_ticket &&
+            result[i].department_can_create_ticket.department
+              ? result[i].department_can_create_ticket.department
+              : [];
+          result[i].separate =
+            result[i].separate && result[i].separate.separate
+              ? result[i].separate.separate
+              : null;
 
-            
           const tickets = await ticketModel.getTicketByPhase(
             result[i].id,
             search

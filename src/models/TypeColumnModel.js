@@ -6,7 +6,6 @@ class TypeColumnModel {
         try {
             return await database(tableName).where('name', name)
         } catch (err) {
-            console.log("Error when get type column by id ==>", err)
             return err
         }
     }
@@ -14,7 +13,6 @@ class TypeColumnModel {
         try {
             return await database(tableName).where('id', id)
         } catch (err) {
-            console.log("Error when get type column by id ==>", err)
             return err
         }
     }

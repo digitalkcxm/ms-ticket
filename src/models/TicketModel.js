@@ -512,8 +512,7 @@ class TicketModel {
           id_form: "id_form",
         })
         .where("id_ticket", id_ticket)
-        .andWhere("active",true)
-        
+        .andWhere("active", true);
     } catch (err) {
       console.log("Error when select history ticket ===>", err);
       return err;
@@ -601,7 +600,7 @@ class TicketModel {
           id_user: "users.id_users_core",
         })
         .leftJoin("users", "users.id", `view_ticket.id_user`)
-        .where("id_ticket",id_ticket);
+        .where("id_ticket", id_ticket);
     } catch (err) {
       console.log("error get view ticket =>", err);
       return false;
@@ -658,6 +657,57 @@ class TicketModel {
         .leftJoin("users", "users.id", `${tableName}.id_user`)
         .where(`ticket.id`, id)
         .andWhere(`ticket.id_company`, id_company);
+    } catch (err) {
+      console.log("Error when get ticket by id => ", err);
+      return err;
+    }
+  }
+
+  async searchTicket(id_company, search, id_phase) {
+    try {
+      if (typeof search === "string") search = search.toLowerCase();
+      const default_where = `ticket.id_company = '${id_company}' AND phase.id = '${id_phase}' AND`;
+      let query;
+      if (isNaN(search)) {
+        search = search.replace('"','').replace('"','')
+        query = `
+        ${default_where} users.name ILIKE '%${search}%' OR 
+        ${default_where} customer.name ILIKE '%${search}%' OR 
+        ${default_where} customer.email ILIKE '%${search}%' OR 
+        ${default_where} customer.identification_document ILIKE '%${search}%'`;
+      } else {
+        query = `
+        ${default_where} ticket.id_seq ILIKE '%${search}%' OR 
+        ${default_where} ticket.id_protocol ILIKE '%${search}%' OR
+        ${default_where} ticket.id_user ILIKE '%${search}%' OR
+        ${default_where} ticket_protocol.id_protocol ILIKE '%${search}%' OR
+        ${default_where} customer.phone ILIKE '%${search}%' OR
+        ${default_where} customer.identification_document ILIKE '%${search}%'`;
+      }
+      
+      const result = await database.raw(`
+      select 
+        ticket.id,
+        ticket.id_seq,
+        ticket.id_company,
+        phase_ticket.id_phase as id_phase,
+        phase.name as phase,
+        users.id_users_core,
+        users.name,
+        phase.form,
+        ticket.closed,
+        ticket.department_origin,
+        ticket.created_at,
+        ticket.updated_at
+      from ticket
+      left join users on users.id = ticket.id_user
+      left join phase_ticket on phase_ticket.id_ticket = ticket.id
+      left join phase on phase.id = phase_ticket.id_phase
+      left join customer on customer.id_ticket = ticket.id
+      left join ticket_protocol on ticket_protocol.id_ticket = ticket.id
+      where ${query} order by ticket.created_at desc`);
+
+      return result.rows;
     } catch (err) {
       console.log("Error when get ticket by id => ", err);
       return err;
