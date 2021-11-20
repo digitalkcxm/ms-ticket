@@ -156,11 +156,14 @@ class TicketController {
 
     try {
       let userResponsible = [];
+
+      console.log(data)
+
       let id_user = await userController.checkUserCreated(
         data.id_user,
         data.authorization
       );
-      
+
       console.log(data.resposible)
       data.responsible.map(async (responsible) => {
         let result;
