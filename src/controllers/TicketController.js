@@ -204,7 +204,7 @@ class TicketController {
               data.form
             );
             if (errors.length > 0)
-              return res.status(400).send({ errors: errors });
+              return false
 
             obj.id_form = await new FormDocuments(
               data.app.locals.db
@@ -217,7 +217,7 @@ class TicketController {
       await this._createResponsibles(userResponsible, obj.id);
 
       if (!phase || phase.length <= 0)
-        return res.status(400).send({ error: "Invalid id_phase uuid" });
+        return false
 
       let phase_id = await ticketModel.createPhaseTicket({
         id_phase: phase[0].id,
@@ -225,7 +225,7 @@ class TicketController {
       });
 
       if (!phase_id || phase_id.length <= 0)
-        return res.status(500).send({ error: "There was an error" });
+        return false
 
       // await this._notify(phase[0].id, req.company[0].notify_token, obj.id, userResponsible, emailResponsible, req.headers.authorization, 4, req.app.locals.db)
 
@@ -246,16 +246,14 @@ class TicketController {
         );
 
         // delete ticket[0].id_company
-        return res.status(200).send(ticket);
+        return ticket;
       }
       await redis.del(`ticket:phase:${data.authorization}`);
 
-      return res.status(400).send({ error: "There was an error" });
+      return false
     } catch (err) {
       console.log("Error when generate object to save ticket => ", err);
-      return res
-        .status(400)
-        .send({ error: "Error when generate object to save ticket" });
+      return false
     }
   }
 
@@ -631,7 +629,7 @@ class TicketController {
   async queueCreateActivities(data) {
     try {
       if (!data.id_user)
-        return res.status(400).send({ error: "Whitout id_user" });
+        return false
 
       let user = await userController.checkUserCreated(
         data.id_user,
@@ -639,14 +637,14 @@ class TicketController {
       );
 
       if (!user || !user.id)
-        return res.status(400).send({ error: "There was an error" });
+        return false
 
       let ticket = await ticketModel.getTicketById(
         data.id_ticket,
         data.authorization
       );
       if (!ticket || ticket.length <= 0)
-        return res.status(400).send({ error: "ID ticket is invalid" });
+        return false
 
       let obj = {
         text: data.text,
@@ -661,13 +659,13 @@ class TicketController {
       if (result && result.length > 0) {
         obj.id = result[0].id;
 
-        return res.status(200).send(obj);
+        return obj
       }
 
-      return res.status(400).send({ error: "There was an error" });
+      return false
     } catch (err) {
       console.log("Error manage object to create activities => ", err);
-      return res.status(400).send({ error: "There was an error" });
+      return false
     }
   }
 
@@ -934,9 +932,7 @@ class TicketController {
       );
 
       if (!ticket || ticket.length <= 0)
-        return res
-          .status(400)
-          .send({ error: "There is no ticket with this ID " });
+        return false
 
       let obj = {
         ids_crm: data.ids_crm,
@@ -959,7 +955,7 @@ class TicketController {
       );
 
       if (!phase || phase.length <= 0)
-        return res.status(400).send({ error: "Invalid id_phase uuid" });
+        return false
 
       if (ticket[0].phase_id != phase[0].id) {
         await phaseModel.disablePhaseTicket(data.id);
@@ -969,7 +965,7 @@ class TicketController {
           id_ticket: data.id,
         });
         if (!phase_id || phase_id.length <= 0)
-          return res.status(500).send({ error: "There was an error" });
+          return false
       }
 
       if (data.form && Object.keys(data.form).length > 0) {
@@ -982,7 +978,7 @@ class TicketController {
             ticket[0].id_form
           );
           if (errors.length > 0)
-            return res.status(400).send({ errors: errors });
+            return false
 
           console.log("FORM ====>", data.form);
           obj.id_form = await new FormDocuments(
@@ -999,14 +995,12 @@ class TicketController {
 
       await redis.del(`ticket:phase:${data.authorization}`);
 
-      if (result) return res.status(200).send(ticket);
+      if (result) return ticket
 
-      return res.status(400).send({ error: "There was an error" });
+      return false
     } catch (err) {
       console.log("Error when generate object to save ticket => ", err);
-      return res
-        .status(400)
-        .send({ error: "Error when generate object to save ticket" });
+      return false
     }
   }
 
