@@ -157,14 +157,14 @@ class TicketController {
     try {
       let userResponsible = [];
 
-      console.log(data)
+      //console.log(data)
 
       let id_user = await userController.checkUserCreated(
         data.id_user,
         data.authorization
       );
 
-      console.log(data.resposible)
+      //console.log(data.resposible)
       data.responsible.map(async (responsible) => {
         let result;
         result = await userController.checkUserCreated(
@@ -200,7 +200,7 @@ class TicketController {
       );
 
       if (data.form) {
-        console.log(global.mongodb)
+        //console.log(global.mongodb)
         if (Object.keys(data.form).length > 0) {
           if (phase[0].form) {
             let errors = await this._validateForm(
