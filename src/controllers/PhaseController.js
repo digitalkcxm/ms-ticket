@@ -248,26 +248,13 @@ class PhaseController {
       if (!result || result.length < 0)
         return res.status(400).send({ error: "Invalid id phase" });
 
-      result[0].department_can_create_protocol =
-        result[0].department_can_create_protocol &&
-        result[0].department_can_create_protocol.department
-          ? result[0].department_can_create_protocol.department
-          : [];
-      result[0].department_can_create_ticket =
-        result[0].department_can_create_ticket &&
-        result[0].department_can_create_ticket.department
-          ? result[0].department_can_create_ticket.department
-          : [];
-      result[0].separate =
-        result[0].separate && result[0].separate.separate
-          ? result[0].separate.separate
-          : null;
-
       const departments = await phaseModel.getDepartmentPhase(result[0].id);
       result[0].department = departments[0].id_department;
 
       const tickets = await ticketModel.getTicketByPhase(result[0].id);
       result[0].ticket = [];
+
+      result[0].total_tickets = tickets.length;
       for await (let ticket of tickets) {
         const ticketFormated = await formatTicketForPhase(result[0], ticket);
         result[0].ticket.push(ticketFormated);
@@ -317,6 +304,8 @@ class PhaseController {
             result[i].id
           );
           result[i].ticket = [];
+          result[i].total_tickets = tickets.length;
+
           for await (let ticket of tickets) {
             result[i].ticket.push(
               await formatTicketForPhase(result[i], ticket)
@@ -336,35 +325,17 @@ class PhaseController {
         result = await phaseModel.getAllPhase(req.headers.authorization);
 
         for (let i in result) {
-          result[i].department_can_create_protocol =
-            result[i].department_can_create_protocol &&
-            result[i].department_can_create_protocol.department
-              ? result[i].department_can_create_protocol.department
-              : [];
-          result[i].department_can_create_ticket =
-            result[i].department_can_create_ticket &&
-            result[i].department_can_create_ticket.department
-              ? result[i].department_can_create_ticket.department
-              : [];
-          result[i].separate =
-            result[i].separate && result[i].separate.separate
-              ? result[i].separate.separate
-              : null;
-
           const tickets = await ticketModel.getTicketByPhase(
             result[i].id,
             search
           );
           result[i].ticket = [];
-          result[i].open = 0;
-          result[i].closed = 0;
+          result[i].total_tickets = tickets.length;
+
           for await (let ticket of tickets) {
             result[i].ticket.push(
               await formatTicketForPhase(result[i], ticket)
             );
-            ticket.closed
-              ? (result[i].closed = result[i].closed + 1)
-              : (result[i].open = result[i].open + 1);
           }
           result[i] = await this._formatPhase(result[i], req.app.locals.db);
         }
@@ -394,30 +365,13 @@ class PhaseController {
       department_id[0].id
     );
     for (let phase of result) {
-      phase.department_can_create_protocol =
-        phase.department_can_create_protocol &&
-        phase.department_can_create_protocol.department
-          ? phase.department_can_create_protocol.department
-          : [];
-      phase.department_can_create_ticket =
-        phase.department_can_create_ticket &&
-        phase.department_can_create_ticket.department
-          ? phase.department_can_create_ticket.department
-          : [];
-      phase.separate =
-        phase.separate && phase.separate.separate
-          ? phase.separate.separate
-          : null;
-
       const tickets = await ticketModel.getTicketByPhaseAndStatus(
         phase.id,
         status
       );
 
       phase.ticket = [];
-
-      phase.open = await ticketModel.countTicket(phase.id, false);
-      phase.closed = await ticketModel.countTicket(phase.id, true);
+      phase.total_tickets = tickets.length;
       for await (let ticket of tickets) {
         phase.ticket.push(await formatTicketForPhase(phase, ticket));
       }
@@ -655,7 +609,28 @@ class PhaseController {
             : "";
         }
       }
+      result.department_can_create_protocol =
+        result.department_can_create_protocol &&
+        result.department_can_create_protocol.department
+          ? result.department_can_create_protocol.department
+          : [];
+      result.department_can_create_ticket =
+        result.department_can_create_ticket &&
+        result.department_can_create_ticket.department
+          ? result.department_can_create_ticket.department
+          : [];
+      result.separate =
+        result.separate && result.separate.separate
+          ? result.separate.separate
+          : null;
     }
+    result.open_tickets = await ticketModel.countTicket(result.id, false);
+    result.closed_tickets = await ticketModel.countTicket(result.id, true);
+    result.percent_open_tickets =
+      (result.total_tickets * 100) / result.open_tickets;
+    result.percent_closed_tickets =
+      (result.total_tickets * 100) / result.closed_tickets;
+
     result.created_at = moment(result.created_at).format("DD/MM/YYYY HH:mm:ss");
     result.updated_at = moment(result.updated_at).format("DD/MM/YYYY HH:mm:ss");
     delete result.id_form_template;
