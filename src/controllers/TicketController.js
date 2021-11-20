@@ -79,6 +79,7 @@ class TicketController {
         id_user: id_user.id,
         created_at: moment().format(),
         updated_at: moment().format(),
+        display_name: req.body.display_name
       };
 
       if (req.body.department_origin) {
@@ -907,6 +908,7 @@ class TicketController {
         // id_customer: req.body.id_customer,
         // id_protocol: req.body.id_protocol,
         updated_at: moment().format(),
+        display_name: req.body.display_name
       };
       // let userResponsible = [];
       // if (req.body.responsible) {

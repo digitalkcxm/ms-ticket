@@ -47,6 +47,7 @@ class TicketModel {
           created_at: `${tableName}.created_at`,
           updated_at: `${tableName}.updated_at`,
           start_ticket: "responsible_ticket.start_ticket",
+          display_name: "ticket.display_name",
         })
         .leftJoin("users", "users.id", `${tableName}.id_user`)
         .leftJoin("phase_ticket", "phase_ticket.id_ticket", `${tableName}.id`)
@@ -85,6 +86,7 @@ class TicketModel {
           created_at: `${tableName}.created_at`,
           updated_at: `${tableName}.updated_at`,
           start_ticket: "responsible_ticket.start_ticket",
+          display_name: "ticket.display_name",
         })
         .leftJoin("users", "users.id", `${tableName}.id_user`)
         .leftJoin("phase_ticket", "phase_ticket.id_ticket", `${tableName}.id`)
@@ -316,6 +318,7 @@ class TicketModel {
           department_origin: `ticket.department_origin`,
           created_at: "ticket.created_at",
           updated_at: "ticket.updated_at",
+          display_name: "ticket.display_name",
         })
         .leftJoin("ticket", "ticket.id", "phase_ticket.id_ticket")
         .leftJoin("users", "users.id", "ticket.id_user")
@@ -342,6 +345,7 @@ class TicketModel {
           department_origin: `ticket.department_origin`,
           created_at: "ticket.created_at",
           updated_at: "ticket.updated_at",
+          display_name: "ticket.display_name",
         })
         .leftJoin("ticket", "ticket.id", "phase_ticket.id_ticket")
         .leftJoin("users", "users.id", "ticket.id_user")
@@ -693,7 +697,8 @@ class TicketModel {
         ticket.closed,
         ticket.department_origin,
         ticket.created_at,
-        ticket.updated_at
+        ticket.updated_at,
+        ticket.display_name
       from ticket
       left join users on users.id = ticket.id_user
       left join phase_ticket on phase_ticket.id_ticket = ticket.id
