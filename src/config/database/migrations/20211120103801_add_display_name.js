@@ -1,6 +1,6 @@
 exports.up = function (knex, Promise) {
   return knex.schema.alterTable("ticket", (table) => {
-    table.string("display_name").default(true);
+    table.string("display_name");
   });
 };
 
