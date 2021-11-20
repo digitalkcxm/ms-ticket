@@ -8,10 +8,10 @@ const { body } = require("express-validator");
 const TicketController = require("../controllers/TicketController");
 const ticketController = new TicketController();
 
-router.get("/sla_check", (req, res) => ticketController.cronCheckSLA(req, res));~
-// { type: 1 } -> /15 * * * * *
-// { type: 2 } -> /5 * * * * *
-// { type: 3 } -> /30 * * * * *
+router.get("/sla_check/:type", (req, res) => ticketController.cronCheckSLA(req, res));~
+// type: 1 -> /15 * * * * *
+// type: 2 -> /5 * * * * *
+// type: 3 -> /30 * * * * *
 
 router.get("/status", (req, res) =>
   ticketController.ticketStatusCount(req, res)

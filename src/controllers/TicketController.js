@@ -1122,9 +1122,9 @@ class TicketController {
   }
 
   async cronCheckSLA(req, res){
-    const tickets = await slaModel.checkSLA(req.body.type);
+    const tickets = await slaModel.checkSLA(req.params.type);
     if (tickets && Array.isArray(tickets) && tickets.length > 0) {
-      switch (req.body.type) {
+      switch (req.params.type) {
         case 1:
           for (const ticket of tickets) {
             if (!ticket.interaction_time && ticket.limit_sla_time < moment()) {
