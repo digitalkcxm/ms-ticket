@@ -165,7 +165,7 @@ class TicketController {
         let result;
         result = await userController.checkUserCreated(
           responsible,
-          data.headers.authorization,
+          data.authorization,
           responsible.name
         );
         userResponsible.push(result.id);
