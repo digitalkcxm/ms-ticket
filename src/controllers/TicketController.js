@@ -160,7 +160,8 @@ class TicketController {
         data.id_user,
         data.authorization
       );
-
+      
+      console.log(data.resposible)
       data.responsible.map(async (responsible) => {
         let result;
         result = await userController.checkUserCreated(
