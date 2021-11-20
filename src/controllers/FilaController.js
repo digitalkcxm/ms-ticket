@@ -9,8 +9,8 @@ class FilaController {
       const queueName = 'msticket:create_ticket'
         try {
           global.amqpConn.assertQueue(queueName, { durable: true })
-          console.log("Consumindo create ticket")
           global.amqpConn.consume(queueName, async msg => {
+            console.log("Consumindo create ticket")
             await ticketController.queueCreate(JSON.parse(msg.content.toString()))
             global.amqpConn.ack(msg)
           })
@@ -23,8 +23,8 @@ class FilaController {
       const queueName = 'msticket:update_ticket'
         try {
             global.amqpConn.assertQueue(queueName, { durable: true })
-            console.log("Consumindo update ticket")
             global.amqpConn.consume(queueName, async msg => {
+              console.log("Consumindo update ticket")
               await ticketController.queueUpdateTicket(JSON.parse(msg.content.toString()))
               global.amqpConn.ack(msg)
             })
@@ -37,8 +37,8 @@ class FilaController {
       const queueName = 'msticket:create_activity'
         try {
             global.amqpConn.assertQueue(queueName, { durable: true })
-            console.log("Consumindo create activities")
             global.amqpConn.consume(queueName, async msg => {
+                console.log("Consumindo create activities")
                 await ticketController.queueCreateActivities(JSON.parse(msg.content.toString()))
                 global.amqpConn.ack(msg)
             })
