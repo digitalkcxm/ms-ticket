@@ -196,11 +196,11 @@ class TicketController {
       );
 
       if (data.form) {
-        console.log(data.db)
+        console.log(global.mongodb)
         if (Object.keys(data.form).length > 0) {
           if (phase[0].form) {
             let errors = await this._validateForm(
-              data.db,
+              global.mongodb,
               phase[0].id_form_template,
               data.form
             );
@@ -208,7 +208,7 @@ class TicketController {
               return false
 
             obj.id_form = await new FormDocuments(
-              data.db
+              global.mongodb
             ).createRegister(data.form);
           }
         }
@@ -242,7 +242,7 @@ class TicketController {
       if (result && result.length > 0 && result[0].id) {
         ticket = await formatTicketForPhase(
           ticket,
-          data.db,
+          global.mongodb,
           ticket[0]
         );
 
@@ -973,7 +973,7 @@ class TicketController {
         const firstPhase = await ticketModel.getFirstFormTicket(ticket[0].id);
         if (firstPhase[0].form) {
           let errors = await this._validateUpdate(
-            data.db,
+            global.mongodb,
             firstPhase[0].id_form_template,
             data.form,
             ticket[0].id_form
@@ -983,12 +983,12 @@ class TicketController {
 
           console.log("FORM ====>", data.form);
           obj.id_form = await new FormDocuments(
-            data.db
+            global.mongodb
           ).updateRegister(ticket[0].id_form, data.form);
         }
       }
 
-      ticket = await formatTicketForPhase(ticket, data.db, ticket[0]);
+      ticket = await formatTicketForPhase(ticket, global.mongodb, ticket[0]);
       await redis.set(
         `msTicket:ticket:${data.id}`,
         JSON.stringify(ticket)
