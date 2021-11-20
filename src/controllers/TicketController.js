@@ -196,6 +196,7 @@ class TicketController {
       );
 
       if (data.form) {
+        console.log(data.app.locals)
         if (Object.keys(data.form).length > 0) {
           if (phase[0].form) {
             let errors = await this._validateForm(
