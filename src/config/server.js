@@ -4,6 +4,7 @@ const routes = require("./routes.js")
 const cors = require("cors")
 const app = express()
 const connect = require("../config/database/mongoConnection")
+const { queue } = require('../config/RabbitMQ')
 
 // const agent = require('elastic-apm-node').start({
 //     serviceName: 'msticket',
