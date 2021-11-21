@@ -79,7 +79,7 @@ class TicketController {
         id_user: id_user.id,
         created_at: moment().format(),
         updated_at: moment().format(),
-        display_name: req.body.display_name
+        display_name: req.body.display_name,
       };
 
       if (req.body.department_origin) {
@@ -136,7 +136,7 @@ class TicketController {
       // await this._createResponsibles(userResponsible, obj.id);
 
       if (req.body.customer) {
-        console.log("customer ==> ",req.body.customer)
+        console.log("customer ==> ", req.body.customer);
         await this._createCustomers(req.body.customer, obj.id);
       }
       if (!phase || phase.length <= 0)
@@ -688,7 +688,7 @@ class TicketController {
       result.actual_department = department[0].id_department;
 
       const form = await ticketModel.getFormTicket(result.id);
-
+      console.log("form =====>", form);
       if (form[0].id_form) {
         result.form_data = await new FormDocuments(
           req.app.locals.db
@@ -908,7 +908,7 @@ class TicketController {
         // id_customer: req.body.id_customer,
         // id_protocol: req.body.id_protocol,
         updated_at: moment().format(),
-        display_name: req.body.display_name
+        display_name: req.body.display_name,
       };
       // let userResponsible = [];
       // if (req.body.responsible) {
@@ -1524,6 +1524,79 @@ class TicketController {
     } catch (err) {
       console.log("Error view ticket =>", err);
       return res.status(400).send({ error: "Houve algum problema" });
+    }
+  }
+
+  async history_ticket(req, res) {
+    try {
+      
+      if(req.params.id)
+      const ticket = await ticketModel.getTicketById(req.params.id, req.headers.authorization)
+
+      if(!ticket  || !Array.isArray(ticket))
+      return res.status(400).send({ error: "Houve algum problema" });
+
+      const history = []
+      const child_tickets = await ticketModel.getTicketCreatedByTicketFather(req.params.id, req.headers.authorization)
+      if(child_tickets && child_tickets.length > 0){
+        for(const child_ticket of child_tickets){
+          child_ticket.created_at = moment(child_ticket.created_at).format("DD/MM/YYYY HH:mm:ss")
+          child_ticket.type = "ticket"
+          ticket[0].history.push(child_ticket)
+        }
+      }
+      const father_ticket = await ticketModel.getTicketById(ticket[0].id_ticket_father, req.headers.authorization)
+      if(father_ticket && father_ticket.length > 0){
+  history.push({
+          id_seq:father_ticket[0].id_seq,
+          id_user:father_ticket[0].id_user,
+          created_at:moment(father_ticket[0].created_at).format("DD/MM/YYYY HH:mm:ss"),
+          closed:father_ticket[0].closed,
+          department_origin:father_ticket[0].department_origin,
+          phase_name:father_ticket[0].phase,
+          display_name:father_ticket[0].display_name,
+          id_protocol:father_ticket[0].id_protocol,
+          type:"ticket"
+                })
+      }
+
+      const customers = await customerModel.getAll(req.params.id)
+      if(customers && customers.length > 0 ){
+        for(const customer of customers){
+          const customersRelated =  await customerModel.getByIdentification_document(customer.identification_document)
+          if(customersRelated && customersRelated.length > 0){
+            for(const customerRelated of customersRelated){
+              const ticketRelated = await ticketModel.getTicketById(customerRelated.id_ticket,req.headers.authorization)
+              if(ticketRelated && ticketRelated.length>0){
+                ticket[0].history.push({
+                  id_seq:ticketRelated[0].id_seq,
+                  id_user:ticketRelated[0].id_user,
+                  created_at:moment(ticketRelated[0].created_at).format("DD/MM/YYYY HH:mm:ss"),
+                  closed:ticketRelated[0].closed,
+                  department_origin:ticketRelated[0].department_origin,
+                  phase_name:ticketRelated[0].phase,
+                  display_name:ticketRelated[0].display_name,
+                  id_protocol:ticketRelated[0].id_protocol,
+                  type:"ticket"
+                })
+              }
+            }
+          }
+        }
+      }
+
+      const protocols = await ticketModel.getProtocolCreatedByTicket(req.params.id, req.headers.authorization)
+      if(protocols && protocols.length > 0){
+        for(const protocol of protocols){
+          history.push({
+            id: protocol.id_protocol,
+            type: "protocol"
+          })
+        }
+      }
+    } catch (err) {
+      console.log("Error history_ticket =>", err);
+      return res.status(500).send({ error: "Houve algum problema" });
     }
   }
 }
