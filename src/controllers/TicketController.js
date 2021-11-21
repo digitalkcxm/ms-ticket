@@ -135,10 +135,10 @@ class TicketController {
       let result = await ticketModel.create(obj);
       // await this._createResponsibles(userResponsible, obj.id);
 
-      // if (req.body.customer) {
-      //   console.log("customer ==> ",req.body.customer)
-      //   await this._createCustomers(req.body.customer, obj.id);
-      // }
+      if (req.body.customer) {
+        console.log("customer ==> ",req.body.customer)
+        await this._createCustomers(req.body.customer, obj.id);
+      }
       if (!phase || phase.length <= 0)
         return res.status(400).send({ error: "Invalid id_phase uuid" });
 
@@ -203,31 +203,31 @@ class TicketController {
     }
   }
 
-  // async _createCustomers(customer = null, ticket_id) {
-  //   try {
-  //     await customerModel.delCustomerTicket(ticket_id);
-  //     if (customer.length > 0) {
-  //       for (let c of customer) {
-  //         await customerModel.create({
-  //           id_core: c.id_core,
-  //           id_ticket: ticket_id,
-  //           name: c.name,
-  //           email: c.email,
-  //           phone: c.phone,
-  //           identification_document: c.identification_document,
-  //           crm_ids: c.crm_ids,
-  //           crm_contact_id: c.crm_contact_id,
-  //           created_at: moment().format(),
-  //           updated_at: moment().format(),
-  //         });
-  //       }
-  //     }
-  //     return true;
-  //   } catch (err) {
-  //     console.log("Error when create responsibles ==> ", err);
-  //     return false;
-  //   }
-  // }
+  async _createCustomers(customer = null, ticket_id) {
+    try {
+      await customerModel.delCustomerTicket(ticket_id);
+      if (customer.length > 0) {
+        for (let c of customer) {
+          await customerModel.create({
+            id_core: c.id_core,
+            id_ticket: ticket_id,
+            name: c.name,
+            email: c.email,
+            phone: c.phone,
+            identification_document: c.identification_document,
+            crm_ids: c.crm_ids,
+            crm_contact_id: c.crm_contact_id,
+            created_at: moment().format(),
+            updated_at: moment().format(),
+          });
+        }
+      }
+      return true;
+    } catch (err) {
+      console.log("Error when create responsibles ==> ", err);
+      return false;
+    }
+  }
 
   // async _notify(
   //   phase_id,

@@ -253,8 +253,9 @@ class PhaseController {
 
       const tickets = await ticketModel.getTicketByPhase(result[0].id);
       result[0].ticket = [];
+      result[0].header = {};
 
-      result[0].total_tickets = tickets.length;
+      result[0].header.total_tickets = tickets.length;
       for await (let ticket of tickets) {
         const ticketFormated = await formatTicketForPhase(result[0], ticket);
         result[0].ticket.push(ticketFormated);
@@ -303,8 +304,9 @@ class PhaseController {
             search,
             result[i].id
           );
+          result[i].header = {};
           result[i].ticket = [];
-          result[i].total_tickets = tickets.length;
+          result[i].header.total_tickets = tickets.length;
 
           for await (let ticket of tickets) {
             result[i].ticket.push(
@@ -330,7 +332,8 @@ class PhaseController {
             search
           );
           result[i].ticket = [];
-          result[i].total_tickets = tickets.length;
+          result[i].header = {};
+          result[i].header.total_tickets = tickets.length;
 
           for await (let ticket of tickets) {
             result[i].ticket.push(
@@ -371,12 +374,12 @@ class PhaseController {
       );
 
       phase.ticket = [];
-      phase.total_tickets = tickets.length;
+      phase.header = {};
+      phase.header.total_tickets = tickets.length;
       for await (let ticket of tickets) {
         phase.ticket.push(await formatTicketForPhase(phase, ticket));
       }
 
-      phase.counter_sla = await counter_sla(phase.id);
       phase.sla = await settingsSLA(phase.id);
 
       phase = await this._formatPhase(phase, db);
@@ -624,12 +627,24 @@ class PhaseController {
           ? result.separate.separate
           : null;
     }
-    result.open_tickets = await ticketModel.countTicket(result.id, false);
-    result.closed_tickets = await ticketModel.countTicket(result.id, true);
-    result.percent_open_tickets =
-      (result.total_tickets * 100) / result.open_tickets;
-    result.percent_closed_tickets =
-      (result.total_tickets * 100) / result.closed_tickets;
+    result.header.open_tickets = await ticketModel.countTicket(
+      result.id,
+      false
+    );
+    result.header.closed_tickets = await ticketModel.countTicket(
+      result.id,
+      true
+    );
+    result.header.open_tickets!= "0"
+      ? (result.header.percent_open_tickets =
+          (result.header.total_tickets * 100) / result.header.open_tickets)
+      : result.header.percent_open_tickets;
+    result.header.closed_tickets != "0"
+      ? (result.header.percent_closed_tickets =
+          (result.header.total_tickets * 100) / result.header.closed_tickets)
+      : (result.header.percent_closed_tickets = 0);
+
+    result.header.counter_sla = await counter_sla(result.id);
 
     result.created_at = moment(result.created_at).format("DD/MM/YYYY HH:mm:ss");
     result.updated_at = moment(result.updated_at).format("DD/MM/YYYY HH:mm:ss");

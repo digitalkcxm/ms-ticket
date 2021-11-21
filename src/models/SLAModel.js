@@ -50,6 +50,7 @@ class SLAModel {
       const result = await database("ticket_sla_control as tsc")
         .count()
         .leftJoin("phase_ticket as pt", "pt.id_phase", "tsc.id_phase")
+        .leftJoin("ticket", "ticket.id", "pt.id_ticket")
         .where("tsc.id_phase", id_phase)
         .andWhere("tsc.id_sla_status", id_status)
         .andWhere("pt.active", true);
