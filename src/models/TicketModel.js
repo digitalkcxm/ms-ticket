@@ -577,7 +577,16 @@ class TicketModel {
   async getProtocolTicket(id_ticket, id_company) {
     try {
       return await database("ticket_protocol")
-        .select()
+        .select({
+          id: "ticket_protocol.id",
+          id_ticket: "ticket_protocol.id_ticket",
+          id_protocol: "ticket_protocol.id_protocol",
+          created_at: "protocol_ticket.created_at",
+          updated_at: "protocol_ticket.updated_at",
+          id_user: "users.id_users_core",
+          created_by_ticket: "ticket_protocol.created_by_ticket",
+        })
+        .leftJoin("users", "users.id", `ticket_protocol.id_user`)
         .where("id_ticket", id_ticket)
         .andWhere("id_company", id_company);
     } catch (err) {
@@ -621,9 +630,9 @@ class TicketModel {
           id_user: "users.id_users_core",
         })
         .leftJoin("users", "users.id", `ticket_protocol.id_user`)
-        .where("id_ticket", id_ticket)
+        .where("ticket_protocol.id_ticket", id_ticket)
         .andWhere("ticket_protocol.id_company", id_company)
-        .andWhere("created_by_ticket", true);
+        .andWhere("ticket_protocol.created_by_ticket", true);
     } catch (err) {
       console.log("Erro ao linkar o protocolo ao ticket", err);
       return err;
