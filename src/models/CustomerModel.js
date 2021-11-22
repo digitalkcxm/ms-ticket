@@ -35,6 +35,30 @@ class CustomerModel {
     }
   }
 
+  async getByIdentification_document(identification_document, id_ticket) {
+    try {
+      return await database(tableName)
+        .select(
+          "id",
+          "id_core",
+          "id_ticket",
+          "name",
+          "email",
+          "phone",
+          "identification_document",
+          "crm_ids",
+          "crm_contact_id",
+          "created_at",
+          "updated_at"
+        )
+        .where({ identification_document: identification_document })
+        .whereNot("id_ticket", id_ticket)
+        .orderBy("updated_at", "desc");
+    } catch (err) {
+      return err;
+    }
+  }
+
   async getByID(ticketId, id) {
     try {
       return await database(tableName)

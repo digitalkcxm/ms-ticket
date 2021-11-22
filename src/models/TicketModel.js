@@ -5,7 +5,7 @@ const tableName = "ticket";
 class TicketModel {
   async create(obj) {
     try {
-      return await database(tableName).returning(["id"]).insert(obj);
+      return await database(tableName).returning(["id", "id_seq"]).insert(obj);
     } catch (err) {
       console.log("Error 1111 when create ticket =>", err);
       return err;
@@ -43,10 +43,13 @@ class TicketModel {
           id_unit_of_time: "phase.id_unit_of_time",
           form: "phase.form",
           closed: `${tableName}.closed`,
-          department_origin: `${tableName}.department_origin`,
+          department_origin: "department.id_department_core",
           created_at: `${tableName}.created_at`,
           updated_at: `${tableName}.updated_at`,
           start_ticket: "responsible_ticket.start_ticket",
+          display_name: "ticket.display_name",
+          id_ticket_father: "ticket.id_ticket_father",
+          id_protocol: "ticket.id_protocol",
         })
         .leftJoin("users", "users.id", `${tableName}.id_user`)
         .leftJoin("phase_ticket", "phase_ticket.id_ticket", `${tableName}.id`)
@@ -56,6 +59,7 @@ class TicketModel {
           "responsible_ticket.id_ticket",
           "ticket.id"
         )
+        .leftJoin("department", "department.id", "ticket.department_origin")
         .where(`${tableName}.id`, id)
         .andWhere(`${tableName}.id_company`, id_company)
         .orderBy("phase_ticket.id", "desc")
@@ -81,10 +85,13 @@ class TicketModel {
           form: "phase.form",
           closed: `${tableName}.closed`,
           id_form: `phase_ticket.id_form`,
-          department_origin: `${tableName}.department_origin`,
+          department_origin: "department.id_department_core",
           created_at: `${tableName}.created_at`,
           updated_at: `${tableName}.updated_at`,
           start_ticket: "responsible_ticket.start_ticket",
+          display_name: "ticket.display_name",
+          id_ticket_father: "ticket.id_ticket_father",
+          id_protocol: "ticket.id_protocol",
         })
         .leftJoin("users", "users.id", `${tableName}.id_user`)
         .leftJoin("phase_ticket", "phase_ticket.id_ticket", `${tableName}.id`)
@@ -94,6 +101,7 @@ class TicketModel {
           "responsible_ticket.id_ticket",
           "ticket.id"
         )
+        .leftJoin("department", "department.id", "ticket.department_origin")
         .where(`${tableName}.id_seq`, id_seq)
         .andWhere(`${tableName}.id_company`, id_company)
         .orderBy("phase_ticket.id", "desc")
@@ -316,6 +324,7 @@ class TicketModel {
           department_origin: `ticket.department_origin`,
           created_at: "ticket.created_at",
           updated_at: "ticket.updated_at",
+          display_name: "ticket.display_name",
         })
         .leftJoin("ticket", "ticket.id", "phase_ticket.id_ticket")
         .leftJoin("users", "users.id", "ticket.id_user")
@@ -342,6 +351,7 @@ class TicketModel {
           department_origin: `ticket.department_origin`,
           created_at: "ticket.created_at",
           updated_at: "ticket.updated_at",
+          display_name: "ticket.display_name",
         })
         .leftJoin("ticket", "ticket.id", "phase_ticket.id_ticket")
         .leftJoin("users", "users.id", "ticket.id_user")
@@ -371,8 +381,6 @@ class TicketModel {
         .select({
           id: "ticket.id",
           id_seq: "ticket.id_seq",
-          ids_crm: "ticket.ids_crm",
-          id_customer: "ticket.id_customer",
           id_protocol: "ticket.id_protocol",
           id_user: "users.id_users_core",
           closed: "ticket.closed",
@@ -381,12 +389,15 @@ class TicketModel {
           id_unit_of_time: "phase.id_unit_of_time",
           id_form: "ticket.id_form",
           name: "phase.name",
-          department_origin: `ticket.department_origin`,
+          department_origin: "department.id_department_core",
           created_at: "phase_ticket.created_at",
           updated_at: "ticket.updated_at",
+          display_name: "ticket.display_name",
+          id_ticket_father: "ticket.id_ticket_father",
         })
         .leftJoin("users", "users.id", "ticket.id_user")
         .leftJoin("phase_ticket", "phase_ticket.id_ticket", `${tableName}.id`)
+        .leftJoin("department", "department.id", "ticket.department_origin")
         .leftJoin("phase", "phase.id", "phase_ticket.id_phase")
         .where("phase_ticket.active", true)
         .andWhere("ticket.id_customer", id)
@@ -505,6 +516,7 @@ class TicketModel {
       return await database("phase_ticket")
         .select({
           id_form: "id_form",
+          id_phase: "id_phase",
         })
         .where("id_ticket", id_ticket)
         .andWhere("active", true);
@@ -567,9 +579,18 @@ class TicketModel {
   async getProtocolTicket(id_ticket, id_company) {
     try {
       return await database("ticket_protocol")
-        .select()
-        .where("id_ticket", id_ticket)
-        .andWhere("id_company", id_company);
+        .select({
+          id: "ticket_protocol.id",
+          id_ticket: "ticket_protocol.id_ticket",
+          id_protocol: "ticket_protocol.id_protocol",
+          created_at: "ticket_protocol.created_at",
+          updated_at: "ticket_protocol.updated_at",
+          id_user: "users.id_users_core",
+          created_by_ticket: "ticket_protocol.created_by_ticket",
+        })
+        .leftJoin("users", "users.id", `ticket_protocol.id_user`)
+        .where("ticket_protocol.id_ticket", id_ticket)
+        .andWhere("ticket_protocol.id_company", id_company);
     } catch (err) {
       console.log("Erro ao linkar o protocolo ao ticket", err);
       return err;
@@ -611,9 +632,9 @@ class TicketModel {
           id_user: "users.id_users_core",
         })
         .leftJoin("users", "users.id", `ticket_protocol.id_user`)
-        .where("id_ticket", id_ticket)
+        .where("ticket_protocol.id_ticket", id_ticket)
         .andWhere("ticket_protocol.id_company", id_company)
-        .andWhere("created_by_ticket", true);
+        .andWhere("ticket_protocol.created_by_ticket", true);
     } catch (err) {
       console.log("Erro ao linkar o protocolo ao ticket", err);
       return err;
@@ -693,7 +714,8 @@ class TicketModel {
         ticket.closed,
         ticket.department_origin,
         ticket.created_at,
-        ticket.updated_at
+        ticket.updated_at,
+        ticket.display_name
       from ticket
       left join users on users.id = ticket.id_user
       left join phase_ticket on phase_ticket.id_ticket = ticket.id
@@ -706,6 +728,33 @@ class TicketModel {
     } catch (err) {
       console.log("Error when get ticket by id => ", err);
       return err;
+    }
+  }
+
+  async getTicketByFatherToHistory(id_ticket, id_company) {
+    try {
+      return await database("ticket")
+        .select({
+          id_seq: "ticket.id_seq",
+          id_user: "users.id_users_core",
+          created_at: "ticket.created_at",
+          closed: "ticket.closed",
+          department_origin: "department.id_department_core",
+          phase_name: "phase.name",
+          display_name: "ticket.display_name",
+          id_protocol: "ticket.id_protocol",
+        })
+        .leftJoin("users", "users.id", `ticket.id_user`)
+        .leftJoin("phase_ticket", "phase_ticket.id_ticket", "ticket.id")
+        .leftJoin("phase", "phase.id", "phase.id_phase")
+        .leftJoin("department", "department.id", "ticket.department_origin")
+        .where("created_by_ticket", true)
+        .andWhere("id_ticket_father", id_ticket)
+        .andWhere("ticket.id_company", id_company)
+        .andWhere("phase_ticket.active", true);
+    } catch (err) {
+      console.log("error get ticket created by ticket =>", err);
+      return [];
     }
   }
 }

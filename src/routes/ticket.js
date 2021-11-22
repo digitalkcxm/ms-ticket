@@ -8,6 +8,10 @@ const { body } = require("express-validator");
 const TicketController = require("../controllers/TicketController");
 const ticketController = new TicketController();
 
+router.get("/history/:id", (req, res) =>
+  ticketController.history_ticket(req, res)
+);
+
 router.get("/status", (req, res) =>
   ticketController.ticketStatusCount(req, res)
 );
@@ -40,8 +44,8 @@ router.put("/close/:id", (req, res) => ticketController.closedTicket(req, res));
 
 router.use(
   body("id_user").isNumeric(),
-  body("id_phase").isUUID(),
-  body("responsible").isArray()
+  body("id_phase").isUUID()
+  // body("responsible").isArray()
 );
 
 router.post("/", (req, res) => ticketController.create(req, res));

@@ -13,8 +13,11 @@ async function notify(id_phase, id_ticket, id_company, action) {
   const phase = await phaseModel.getPhaseById(id_phase);
 
   const company = await companyModel.getById(id_company);
+
+
   switch (action) {
     case "open_ticket":
+        phase[0].admin
       break;
     case "progress_ticket":
       break;
