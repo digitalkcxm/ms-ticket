@@ -17,7 +17,8 @@ class SLAModel {
     try {
       return await database("phase_sla_settings")
         .leftJoin("sla_type", "sla_type.id", "phase_sla_settings.id_sla_type")
-        .where("id_phase", idPhase);
+        .where("id_phase", idPhase)
+        .orderBy("phase_sla_settings.id_sla_type", "asc");
     } catch (err) {
       console.log("get sla settings -----> ", idPhase);
       return err;
@@ -45,7 +46,7 @@ class SLAModel {
     }
   }
 
-  async getTicketControl(id_phase, id_status) {
+  async getTicketControl(id_phase, id_status, id_sla_type) {
     try {
       const result = await database("ticket_sla_control as tsc")
         .count()
@@ -53,7 +54,8 @@ class SLAModel {
         .leftJoin("ticket", "ticket.id", "pt.id_ticket")
         .where("tsc.id_phase", id_phase)
         .andWhere("tsc.id_sla_status", id_status)
-        .andWhere("pt.active", true);
+        .andWhere("pt.active", true)
+        .andWhere("tsc.id_sla_type");
       return result[0].count;
     } catch (err) {
       console.log("error when get sla's =>", err);
