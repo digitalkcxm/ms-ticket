@@ -699,7 +699,7 @@ class TicketController {
       result.actual_department = department[0].id_department;
 
       const form = await ticketModel.getFormTicket(result.id);
-      
+
       if (form && form.length > 0 && form[0].id_form) {
         const phase = await phaseModel.getPhaseById(
           form[0].id_phase,
@@ -793,7 +793,6 @@ class TicketController {
             "DD/MM/YYYY HH:mm:ss"
           ),
         });
-        
 
         if (
           history_phase[index].id_phase != history_phase[index + 1].id_phase
@@ -919,7 +918,6 @@ class TicketController {
 
       const tickets = [];
       for (const ticket of result) {
-        
         const t = [ticket];
         const ticketFormated = await formatTicketForPhase(t, ticket);
         tickets.push(ticketFormated);
@@ -978,14 +976,16 @@ class TicketController {
         return res.status(400).send({ error: "Invalid id_phase uuid" });
 
       await updateSLA(ticket[0].id, ticket[0].phase_id);
-
       if (ticket[0].phase_id != phase[0].id) {
         await phaseModel.disablePhaseTicket(req.params.id);
         await slaModel.disableSLA(req.params.id);
 
         if (req.body.form) {
+
           if (Object.keys(req.body.form).length > 0) {
+
             if (phase[0].form) {
+              
               let errors = await this._validateForm(
                 req.app.locals.db,
                 phase[0].id_form_template,
@@ -999,18 +999,7 @@ class TicketController {
               ).createRegister(req.body.form);
             }
           }
-          let id_user = await userController.checkUserCreated(
-            req.body.id_user,
-            req.headers.authorization
-          );
-          let phase_id = await ticketModel.createPhaseTicket({
-            id_phase: phase[0].id,
-            id_ticket: req.params.id,
-            id_user: id_user.id,
-            id_form: obj.id_form,
-          });
         }
-
         const user = await userController.checkUserCreated(
           req.body.id_user,
           req.headers.authorization
@@ -1021,7 +1010,6 @@ class TicketController {
           id_user: user.id,
           id_form: obj.id_form,
         });
-
         if (!phase_id || phase_id.length <= 0)
           return res.status(500).send({ error: "There was an error" });
 
@@ -1245,9 +1233,9 @@ class TicketController {
         id_form_template
       );
       for (let column of form_template.column) {
-        column.required && form[column.column]
-          ? ""
-          : errors.push(`O campo ${column.column} é obrigatório`);
+        column.required && !form[column.column]
+          ? errors.push(`O campo ${column.column} é obrigatório`)
+          :"" 
       }
 
       const formColumns = Object.keys(form);
