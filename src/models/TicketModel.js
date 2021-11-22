@@ -5,7 +5,7 @@ const tableName = "ticket";
 class TicketModel {
   async create(obj) {
     try {
-      return await database(tableName).returning(["id","id_seq"]).insert(obj);
+      return await database(tableName).returning(["id", "id_seq"]).insert(obj);
     } catch (err) {
       console.log("Error 1111 when create ticket =>", err);
       return err;
@@ -516,6 +516,7 @@ class TicketModel {
       return await database("phase_ticket")
         .select({
           id_form: "id_form",
+          id_phase: "id_phase",
         })
         .where("id_ticket", id_ticket)
         .andWhere("active", true);

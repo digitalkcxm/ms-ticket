@@ -47,6 +47,9 @@ const sla_status = {
   atrasado: 2,
   aberto: 3,
 };
+
+const TypeColumnModel = require("../models/TypeColumnModel");
+const typeColumnModel = new TypeColumnModel();
 class TicketController {
   async create(req, res) {
     const errors = validationResult(req);
@@ -699,6 +702,27 @@ class TicketController {
       const form = await ticketModel.getFormTicket(result.id);
       console.log("form =====>", form);
       if (form[0].id_form) {
+        const phase = await phaseModel.getPhaseById(
+          form[0].id_phase,
+          req.headers.authorization
+        );
+        if (phase[0].form && phase[0].id_form_template) {
+          const register = await new FormTemplate(
+            req.app.locals.db
+          ).findRegistes(phase[0].id_form_template);
+
+          if (register && register.column) {
+            result.formTemplate = register.column;
+
+            for (const x of result.formTemplate) {
+              const type = await typeColumnModel.getTypeByID(x.type);
+
+              type && Array.isArray(type) && type.length > 0
+                ? (x.type = type[0].name)
+                : "";
+            }
+          }
+        }
         result.form_data = await new FormDocuments(
           req.app.locals.db
         ).findRegister(form[0].id_form);
@@ -752,12 +776,12 @@ class TicketController {
           history_phase[index + 1].template
         );
         obj.push({
-          after: {
+          before: {
             phase: history_phase[index + 1].id_phase,
             field: templateAfter.column,
             value: after,
           },
-          before: {
+          after: {
             phase: history_phase[index].id_phase,
             field: templateBefore.column,
             value: before,
@@ -779,11 +803,11 @@ class TicketController {
           obj.push({
             type: "move",
             id_user: history_phase[index + 1].id_user,
-            phase_origin: {
+            phase_dest: {
               id: history_phase[index].id_phase,
               name: history_phase[index].name,
             },
-            phase_dest: {
+            phase_origin: {
               id: history_phase[index + 1].id_phase,
               name: history_phase[index + 1].name,
             },
