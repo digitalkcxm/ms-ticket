@@ -712,9 +712,9 @@ class TicketController {
           ).findRegistes(phase[0].id_form_template);
 
           if (register && register.column) {
-            result.formTemplate = register.column;
+            result.form_template = register.column;
 
-            for (const x of result.formTemplate) {
+            for (const x of result.form_template) {
               const type = await typeColumnModel.getTypeByID(x.type);
 
               type && Array.isArray(type) && type.length > 0
