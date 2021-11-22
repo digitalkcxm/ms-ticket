@@ -381,8 +381,6 @@ class TicketModel {
         .select({
           id: "ticket.id",
           id_seq: "ticket.id_seq",
-          ids_crm: "ticket.ids_crm",
-          id_customer: "ticket.id_customer",
           id_protocol: "ticket.id_protocol",
           id_user: "users.id_users_core",
           closed: "ticket.closed",
@@ -391,12 +389,15 @@ class TicketModel {
           id_unit_of_time: "phase.id_unit_of_time",
           id_form: "ticket.id_form",
           name: "phase.name",
-          department_origin: `ticket.department_origin`,
+          department_origin: "department.id_department_core",
           created_at: "phase_ticket.created_at",
           updated_at: "ticket.updated_at",
+          display_name: "ticket.display_name",
+          id_ticket_father: "ticket.id_ticket_father",
         })
         .leftJoin("users", "users.id", "ticket.id_user")
         .leftJoin("phase_ticket", "phase_ticket.id_ticket", `${tableName}.id`)
+        .leftJoin("department", "department.id", "ticket.department_origin")
         .leftJoin("phase", "phase.id", "phase_ticket.id_phase")
         .where("phase_ticket.active", true)
         .andWhere("ticket.id_customer", id)
@@ -581,14 +582,14 @@ class TicketModel {
           id: "ticket_protocol.id",
           id_ticket: "ticket_protocol.id_ticket",
           id_protocol: "ticket_protocol.id_protocol",
-          created_at: "protocol_ticket.created_at",
-          updated_at: "protocol_ticket.updated_at",
+          created_at: "ticket_protocol.created_at",
+          updated_at: "ticket_protocol.updated_at",
           id_user: "users.id_users_core",
           created_by_ticket: "ticket_protocol.created_by_ticket",
         })
         .leftJoin("users", "users.id", `ticket_protocol.id_user`)
-        .where("id_ticket", id_ticket)
-        .andWhere("id_company", id_company);
+        .where("ticket_protocol.id_ticket", id_ticket)
+        .andWhere("ticket_protocol.id_company", id_company);
     } catch (err) {
       console.log("Erro ao linkar o protocolo ao ticket", err);
       return err;
