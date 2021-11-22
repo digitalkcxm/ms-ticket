@@ -131,7 +131,7 @@ class TicketController {
       }
 
       if (req.body.id_protocol) {
-        obj.id_protocol = id_protocol;
+        obj.id_protocol = req.body.id_protocol;
         obj.created_by_protocol = true;
       }
 

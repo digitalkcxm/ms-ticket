@@ -384,8 +384,6 @@ class TicketModel {
           id_protocol: "ticket.id_protocol",
           id_user: "users.id_users_core",
           closed: "ticket.closed",
-          sla: "ticket.sla",
-          sla_time: "phase.sla_time",
           id_unit_of_time: "phase.id_unit_of_time",
           id_form: "ticket.id_form",
           name: "phase.name",
