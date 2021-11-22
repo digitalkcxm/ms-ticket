@@ -133,6 +133,15 @@ class TicketController {
       }
 
       let result = await ticketModel.create(obj);
+      if (!req.body.display_name || req.body.display_name === "") {
+        await ticketModel.updateTicket(
+          {
+            display_name: `ticket#${result[0].id_seq}`,
+          },
+          result[0].id,
+          req.headers.authorization
+        );
+      }
       // await this._createResponsibles(userResponsible, obj.id);
 
       if (req.body.customer) {

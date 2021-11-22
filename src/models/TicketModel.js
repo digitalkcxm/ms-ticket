@@ -5,7 +5,7 @@ const tableName = "ticket";
 class TicketModel {
   async create(obj) {
     try {
-      return await database(tableName).returning(["id"]).insert(obj);
+      return await database(tableName).returning(["id","id_seq"]).insert(obj);
     } catch (err) {
       console.log("Error 1111 when create ticket =>", err);
       return err;
