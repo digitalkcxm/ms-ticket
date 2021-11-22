@@ -205,17 +205,15 @@ class PhaseController {
     const keys = Object.keys(obj);
 
     const slaSettings = async function (sla, type) {
-      const timeType = await unitOfTimeModel.checkUnitOfTimeByName(
-        sla.unit_of_time
-      );
-      if (!timeType || timeType.length <= 0 || !sla.active || sla.time <= 0) {
-        return false;
-      }
+      // const timeType = await unitOfTimeModel.checkUnitOfTime(sla.unit_of_time);
+      // if (!timeType || timeType.length <= 0 || !sla.active || sla.time <= 0) {
+      //   return false;
+      // }
 
       await slaModel.slaPhaseSettings({
         id_phase: idPhase,
         id_sla_type: type,
-        id_unit_of_time: timeType,
+        id_unit_of_time: sla.unit_of_time,
         time: sla.time,
         active: sla.active,
       });
@@ -496,22 +494,24 @@ class PhaseController {
         req.params.id,
         req.headers.authorization
       );
-      let validations = await this._checkColumnsFormTemplate(
-        req.body.column,
-        req.app.locals.db,
-        phase[0].id_form_template
-      );
-      if (validations.length > 0)
-        return res.status(400).send({ error: validations });
+      if (req.body.form && req.body.column) {
+        let validations = await this._checkColumnsFormTemplate(
+          req.body.column,
+          req.app.locals.db,
+          phase[0].id_form_template
+        );
+        if (validations.length > 0)
+          return res.status(400).send({ error: validations });
 
-      validations.column = req.body.column;
-      await new FormTemplate(req.app.locals.db).updateRegister(
-        validations._id,
-        validations
-      );
-      phase[0].department = req.body.department;
-      phase[0].formTemplate = req.body.column;
-      delete phase[0].id_form_template;
+        validations.column = req.body.column;
+        await new FormTemplate(req.app.locals.db).updateRegister(
+          validations._id,
+          validations
+        );
+        phase[0].department = req.body.department;
+        phase[0].formTemplate = req.body.column;
+        delete phase[0].id_form_template;
+      }
 
       await redis.del(`ticket:phase:${req.headers.authorization}`);
       return res.status(200).send(phase);
@@ -612,21 +612,23 @@ class PhaseController {
             : "";
         }
       }
-      result.department_can_create_protocol =
-        result.department_can_create_protocol &&
-        result.department_can_create_protocol.department
-          ? result.department_can_create_protocol.department
-          : [];
-      result.department_can_create_ticket =
-        result.department_can_create_ticket &&
-        result.department_can_create_ticket.department
-          ? result.department_can_create_ticket.department
-          : [];
-      result.separate =
-        result.separate && result.separate.separate
-          ? result.separate.separate
-          : null;
     }
+    result.department_can_create_protocol &&
+    result.department_can_create_protocol.department
+      ? (result.department_can_create_protocol =
+          result.department_can_create_protocol.department)
+      : (result.department_can_create_protocol = []);
+
+    result.department_can_create_ticket &&
+    result.department_can_create_ticket.department
+      ? (result.department_can_create_ticket =
+          result.department_can_create_ticket.department)
+      : (result.department_can_create_ticket = []);
+
+    result.separate && result.separate.separate
+      ? (result.separate = result.separate.separate)
+      : (result.separate = null);
+
     result.header.open_tickets = await ticketModel.countTicket(
       result.id,
       false
@@ -635,7 +637,7 @@ class PhaseController {
       result.id,
       true
     );
-    result.header.open_tickets!= "0"
+    result.header.open_tickets != "0"
       ? (result.header.percent_open_tickets =
           (result.header.total_tickets * 100) / result.header.open_tickets)
       : result.header.percent_open_tickets;

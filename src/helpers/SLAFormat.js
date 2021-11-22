@@ -48,14 +48,12 @@ const counter_sla = async function (phase_id) {
 
 const settingsSLA = async function (id) {
   const slas = await slaModel.getSLASettings(id);
-
   let sla = {};
   for await (const value of slas) {
     const unit_of_time = await unitOfTimeModel.checkUnitOfTime(
       value.id_unit_of_time
     );
-
-    switch (value.id_sla_type) {
+    switch (parseInt(value.id_sla_type)) {
       case 1:
         sla = {
           ...sla,

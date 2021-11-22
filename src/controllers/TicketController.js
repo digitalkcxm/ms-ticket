@@ -148,7 +148,6 @@ class TicketController {
       // await this._createResponsibles(userResponsible, obj.id);
 
       if (req.body.customer) {
-        console.log("customer ==> ", req.body.customer);
         await this._createCustomers(req.body.customer, obj.id);
       }
       if (!phase || phase.length <= 0)
@@ -217,23 +216,23 @@ class TicketController {
 
   async _createCustomers(customer = null, ticket_id) {
     try {
-      await customerModel.delCustomerTicket(ticket_id);
-      if (customer.length > 0) {
-        for (let c of customer) {
-          await customerModel.create({
-            id_core: c.id_core,
-            id_ticket: ticket_id,
-            name: c.name,
-            email: c.email,
-            phone: c.phone,
-            identification_document: c.identification_document,
-            crm_ids: c.crm_ids,
-            crm_contact_id: c.crm_contact_id,
-            created_at: moment().format(),
-            updated_at: moment().format(),
-          });
-        }
-      }
+      // await customerModel.delCustomerTicket(ticket_id);
+      // if (customer.length > 0) {
+      //   for (let c of customer) {
+      await customerModel.create({
+        id_core: customer.id_core,
+        id_ticket: ticket_id,
+        name: customer.name,
+        email: customer.email,
+        phone: customer.phone,
+        identification_document: customer.identification_document,
+        crm_ids: customer.crm_ids,
+        crm_contact_id: customer.crm_contact_id,
+        created_at: moment().format(),
+        updated_at: moment().format(),
+      });
+      //   }
+      // }
       return true;
     } catch (err) {
       console.log("Error when create responsibles ==> ", err);
@@ -700,8 +699,8 @@ class TicketController {
       result.actual_department = department[0].id_department;
 
       const form = await ticketModel.getFormTicket(result.id);
-      console.log("form =====>", form);
-      if (form[0].id_form) {
+      
+      if (form && form.length > 0 && form[0].id_form) {
         const phase = await phaseModel.getPhaseById(
           form[0].id_phase,
           req.headers.authorization
@@ -759,7 +758,6 @@ class TicketController {
       index = parseInt(index);
 
       if (history_phase[index + 1]) {
-        console.log("array[index + 1]", history_phase[index + 1]);
         const before = await new FormDocuments(db).findRegister(
           history_phase[index].id_form
         );
@@ -795,7 +793,7 @@ class TicketController {
             "DD/MM/YYYY HH:mm:ss"
           ),
         });
-        console.log("TESTE ===>", obj);
+        
 
         if (
           history_phase[index].id_phase != history_phase[index + 1].id_phase
@@ -921,7 +919,7 @@ class TicketController {
 
       const tickets = [];
       for (const ticket of result) {
-        console.log;
+        
         const t = [ticket];
         const ticketFormated = await formatTicketForPhase(t, ticket);
         tickets.push(ticketFormated);
@@ -1001,6 +999,16 @@ class TicketController {
               ).createRegister(req.body.form);
             }
           }
+          let id_user = await userController.checkUserCreated(
+            req.body.id_user,
+            req.headers.authorization
+          );
+          let phase_id = await ticketModel.createPhaseTicket({
+            id_phase: phase[0].id,
+            id_ticket: req.params.id,
+            id_user: id_user.id,
+            id_form: obj.id_form,
+          });
         }
 
         const user = await userController.checkUserCreated(
@@ -1031,7 +1039,6 @@ class TicketController {
             if (errors.length > 0)
               return res.status(400).send({ errors: errors });
 
-            console.log("FORM ====>", req.body.form);
             obj.id_form = await new FormDocuments(
               req.app.locals.db
             ).updateRegister(ticket[0].id_form, req.body.form);
@@ -1052,7 +1059,6 @@ class TicketController {
       );
 
       await redis.del(`ticket:phase:${req.headers.authorization}`);
-      console.log("ticket update", ticket);
       if (result) return res.status(200).send(ticket);
 
       return res.status(400).send({ error: "There was an error" });
@@ -1246,10 +1252,6 @@ class TicketController {
 
       const formColumns = Object.keys(form);
       for (const column of formColumns) {
-        console.log(
-          "==>",
-          form_template.column.filter((x) => x.column === column)
-        );
         form_template.column.filter((x) => x.column === column).length > 0
           ? ""
           : errors.push(`O campo ${column} não faz parte desse template`);
@@ -1292,7 +1294,6 @@ class TicketController {
       let result = await ticketModel.getTicketByCustomerOrProtocol(
         req.params.id
       );
-      console.log("result =====> ", result);
       for (let ticket of result) {
         ticket = await formatTicketForPhase([ticket], ticket);
 
@@ -1575,7 +1576,6 @@ class TicketController {
         req.params.id,
         req.headers.authorization
       );
-      console.log("child_ticket", child_tickets);
       if (child_tickets && child_tickets.length > 0) {
         for (const child_ticket of child_tickets) {
           child_ticket.created_at = moment(child_ticket.created_at).format(
@@ -1590,7 +1590,6 @@ class TicketController {
         ticket[0].id_ticket_father,
         req.headers.authorization
       );
-      console.log("father_ticket", father_ticket);
       if (father_ticket && father_ticket.length > 0) {
         history.push({
           id_seq: father_ticket[0].id_seq,
@@ -1608,7 +1607,6 @@ class TicketController {
       }
 
       const customers = await customerModel.getAll(req.params.id);
-      console.log("customer", customers);
       if (customers && customers.length > 0) {
         for (const customer of customers) {
           const customersRelated =
@@ -1645,7 +1643,6 @@ class TicketController {
         req.params.id,
         req.headers.authorization
       );
-      console.log("protocols", protocols);
       if (protocols && protocols.length > 0) {
         for (const protocol of protocols) {
           history.push({

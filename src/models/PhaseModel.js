@@ -226,7 +226,8 @@ class PhaseModel {
         })
         .leftJoin("phase", "phase.id", "department_phase.id_phase")
         .where("department_phase.id_department", id_department)
-        .andWhere("phase.active", true);
+        .andWhere("phase.active", true)
+        .andWhere("department_phase.active", true);
     } catch (err) {
       console.log("Error when catch department id ==>", err);
       return err;
@@ -293,7 +294,7 @@ class PhaseModel {
           "phase.department_can_create_protocol",
           "phase.department_can_create_ticket",
           "phase.create_protocol",
-          "phase.create_ticket"
+          "phase.create_ticket",
         ])
         .leftJoin("phase", "phase.id", "department_phase.id_phase")
         .where("department_phase.id_department", id_department)
