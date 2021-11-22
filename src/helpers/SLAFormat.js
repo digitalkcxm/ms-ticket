@@ -17,7 +17,7 @@ const sla_status = {
 
 const counter_sla = async function (phase_id) {
   let obj = {};
-  const slas = await slaModel.getSLASettings(id);
+  const slas = await slaModel.getSLASettings(phase_id);
   const type_sla = slas[0].id_sla_type;
 
   for await (const x of sla_status_id) {
