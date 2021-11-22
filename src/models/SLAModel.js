@@ -50,12 +50,12 @@ class SLAModel {
     try {
       const result = await database("ticket_sla_control as tsc")
         .count()
-        .leftJoin("phase_ticket as pt", "pt.id_phase", "tsc.id_phase")
+        .leftJoin("phase_ticket as pt", "pt.id_ticket", "tsc.id_ticket")
         .leftJoin("ticket", "ticket.id", "pt.id_ticket")
-        .where("tsc.id_phase", id_phase)
+        .where("pt.id_phase", id_phase)
         .andWhere("tsc.id_sla_status", id_status)
         .andWhere("pt.active", true)
-        .andWhere("tsc.id_sla_type");
+        .andWhere("tsc.id_sla_type",id_sla_type);
       return result[0].count;
     } catch (err) {
       console.log("error when get sla's =>", err);

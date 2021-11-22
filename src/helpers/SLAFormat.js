@@ -18,23 +18,29 @@ const sla_status = {
 const counter_sla = async function (phase_id) {
   let obj = {};
   const slas = await slaModel.getSLASettings(phase_id);
-  const type_sla = slas[0].id_sla_type;
+  if (slas && slas.length > 0) {
+    const type_sla = slas[0].id_sla_type;
 
-  for await (const x of sla_status_id) {
-    switch (x) {
-      case 1:
-        obj.emdia = await slaModel.getTicketControl(phase_id, x, type_sla);
-        break;
-      case 2:
-        obj.atrasado = await slaModel.getTicketControl(phase_id, x, type_sla);
-        break;
-      case 3:
-        obj.aberto = await slaModel.getTicketControl(phase_id, x, type_sla);
-        break;
-      default:
-        console.log("Unmapped status");
-        break;
+    for await (const x of sla_status_id) {
+      switch (x) {
+        case 1:
+          obj.emdia = await slaModel.getTicketControl(phase_id, x, type_sla);
+          break;
+        case 2:
+          obj.atrasado = await slaModel.getTicketControl(phase_id, x, type_sla);
+          break;
+        case 3:
+          obj.aberto = await slaModel.getTicketControl(phase_id, x, type_sla);
+          break;
+        default:
+          console.log("Unmapped status");
+          break;
+      }
     }
+  } else {
+    obj.emdia = 0;
+    obj.atrasado = 0;
+    obj.aberto = 0;
   }
 
   return obj;
