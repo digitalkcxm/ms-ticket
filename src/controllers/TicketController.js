@@ -717,7 +717,7 @@ class TicketController {
       return res.status(400).send({ error: "There was an error" });
     }
   }
-  
+
   async getTicket(req, res) {
     try {
       let result = await ticketModel.getTicketById(
