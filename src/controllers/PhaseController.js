@@ -637,14 +637,23 @@ class PhaseController {
       result.id,
       true
     );
-    result.header.open_tickets != "0"
-      ? (result.header.percent_open_tickets =
-          (result.header.total_tickets * 100) / result.header.open_tickets)
-      : result.header.percent_open_tickets;
-    result.header.closed_tickets != "0"
-      ? (result.header.percent_closed_tickets =
-          (result.header.total_tickets * 100) / result.header.closed_tickets)
-      : (result.header.percent_closed_tickets = 0);
+    if (result.header.open_tickets != "0") {
+      result.header.percent_open_tickets = (
+        (parseInt(result.header.open_tickets) * 100) /
+        result.header.total_tickets
+      ).toFixed(2);
+    } else {
+      result.header.percent_open_tickets = 0.0;
+    }
+
+    if (result.header.closed_tickets != "0") {
+      result.header.percent_closed_tickets = (
+        (parseInt(result.header.closed_tickets) * 100) /
+        result.header.total_tickets
+      ).toFixed(2);
+    } else {
+      result.header.percent_closed_tickets = 0;
+    }
 
     result.header.counter_sla = await counter_sla(result.id);
 
