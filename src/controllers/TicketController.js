@@ -57,21 +57,10 @@ class TicketController {
       return res.status(400).json({ errors: errors.array() });
 
     try {
-      // let userResponsible = [];
       let id_user = await userController.checkUserCreated(
         req.body.id_user,
         req.headers.authorization
       );
-
-      // req.body.responsible.map(async (responsible) => {
-      //   let result;
-      //   result = await userController.checkUserCreated(
-      //     responsible,
-      //     req.headers.authorization,
-      //     responsible.name
-      //   );
-      //   userResponsible.push(result.id);
-      // });
 
       let obj = {
         id: v1(),
@@ -1092,8 +1081,13 @@ class TicketController {
           2
         );
 
-        if (slaTicket && Array.isArray(slaTicket) && slaTicket.length > 0) {
-          if (slaTicket[0].limit_sla_time < slaTicket[0].interaction_time) {
+        if (
+          slaTicket &&
+          Array.isArray(slaTicket) &&
+          slaTicket.length > 0 &&
+          !slaTicket[0].interaction_time
+        ) {
+          if (slaTicket[0].limit_sla_time < moment()) {
             obj = { id_sla_status: sla_status.atrasado, active: false };
           } else if (slaTicket[0].limit_sla_time > moment()) {
             obj = { id_sla_status: sla_status.emdia, active: false };

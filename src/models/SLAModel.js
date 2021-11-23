@@ -55,7 +55,7 @@ class SLAModel {
         .where("pt.id_phase", id_phase)
         .andWhere("tsc.id_sla_status", id_status)
         .andWhere("pt.active", true)
-        .andWhere("tsc.id_sla_type",id_sla_type);
+        .andWhere("tsc.id_sla_type", id_sla_type);
       return result[0].count;
     } catch (err) {
       console.log("error when get sla's =>", err);
@@ -92,12 +92,13 @@ class SLAModel {
     }
   }
 
-  async updateTicketSLA(id_ticket, obj, id_type) {
+  async updateTicketSLA(id_ticket, obj, id_type, id_phase) {
     try {
       return await database("ticket_sla_control")
         .update(obj)
         .where("id_ticket", id_ticket)
-        .andWhere("id_sla_type", id_type);
+        .andWhere("id_sla_type", id_type)
+        .andWhere("id_phase", id_phase);
     } catch (err) {
       console.log("error when updaet sla ticket ==>", err);
       return err;
