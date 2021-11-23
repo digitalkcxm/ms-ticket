@@ -918,11 +918,10 @@ class PhaseController {
 
   async dash(req, res) {
     try {
-      console.log("1");
+
       if (!req.params.id)
         return res.status(400).send({ error: "Houve algum problema!" });
 
-      console.log("2");
       const result = await phaseModel.dash(
         req.params.id,
         req.headers.authorization
@@ -973,6 +972,7 @@ class PhaseController {
           }
         }
       }
+      delete result.tickets;
       return res.status(200).send(result);
     } catch (err) {
       console.log(err);
