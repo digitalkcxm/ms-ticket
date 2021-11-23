@@ -981,11 +981,8 @@ class TicketController {
         await slaModel.disableSLA(req.params.id);
 
         if (req.body.form) {
-
           if (Object.keys(req.body.form).length > 0) {
-
             if (phase[0].form) {
-              
               let errors = await this._validateForm(
                 req.app.locals.db,
                 phase[0].id_form_template,
@@ -1235,7 +1232,7 @@ class TicketController {
       for (let column of form_template.column) {
         column.required && !form[column.column]
           ? errors.push(`O campo ${column.column} é obrigatório`)
-          :"" 
+          : "";
       }
 
       const formColumns = Object.keys(form);
@@ -1285,26 +1282,23 @@ class TicketController {
       for (let ticket of result) {
         ticket = await formatTicketForPhase([ticket], ticket);
 
-        ticket.attachments = await attachmentsModel.getAttachments(ticket.id);
-        ticket.attachments.map((value) => {
-          value.created_at = moment(value.created_at).format(
-            "DD/MM/YYYY HH:mm:ss"
-          );
-          value.updated_at = moment(value.updated_at).format(
-            "DD/MM/YYYY HH:mm:ss"
-          );
-        });
-
-        ticket.activities = await activitiesModel.getActivities(ticket.id);
-        ticket.activities.map((value) => {
-          value.created_at = moment(value.created_at).format(
-            "DD/MM/YYYY HH:mm:ss"
-          );
-          value.updated_at = moment(value.updated_at).format(
-            "DD/MM/YYYY HH:mm:ss"
-          );
-        });
-
+        const sla_status = function (sla) {
+          if (sla) {
+            let status = "";
+            const keys = Object.keys(sla);
+            for (const key of keys) {
+              if (sla[key].status === "Aberto") {
+                return "Aberto";
+              } else {
+                status = sla[key].status;
+              }
+            }
+            return status;
+          } else {
+            return "";
+          }
+        };
+        ticket.sla_status = sla_status(ticket.sla);
         ticket.history_phase = await ticketModel.getHistoryTicket(ticket.id);
         ticket.history_phase.map((value) => {
           value.created_at = moment(value.created_at).format(
@@ -1560,6 +1554,42 @@ class TicketController {
         return res.status(400).send({ error: "Houve algum problema" });
 
       const history = [];
+
+      const slaInfo = await formatTicketForPhase(
+        { id: ticket[0].phase_id },
+        ticket[0]
+      );
+
+      const sla_status = function (sla) {
+        if (sla) {
+          let status = "";
+          const keys = Object.keys(sla);
+          for (const key of keys) {
+            if (sla[key].status === "Aberto") {
+              return "Aberto";
+            } else {
+              status = sla[key].status;
+            }
+          }
+          return status;
+        } else {
+          return "";
+        }
+      };
+
+      history.push({
+        id_seq: ticket[0].id_seq,
+        id_user: ticket[0].id_user,
+        created_at: moment(ticket[0].created_at).format("DD/MM/YYYY HH:mm:ss"),
+        closed: ticket[0].closed,
+        department_origin: ticket[0].department_origin,
+        phase_name: ticket[0].phase,
+        display_name: ticket[0].display_name,
+        id_protocol: ticket[0].id_protocol,
+        type: "ticket",
+        sla_status: sla_status(slaInfo.sla),
+      });
+
       const child_tickets = await ticketModel.getTicketCreatedByTicketFather(
         req.params.id,
         req.headers.authorization
@@ -1639,6 +1669,14 @@ class TicketController {
           });
         }
       }
+
+      if (ticket[0].id_protocol) {
+        history.push({
+          id: ticket[0].id_protocol,
+          type: "protocol",
+        });
+      }
+
       return res.status(200).send(history);
     } catch (err) {
       console.log("Error history_ticket =>", err);
