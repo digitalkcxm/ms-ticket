@@ -1,14 +1,4 @@
-const TicketModel = require("../models/TicketModel");
-const UserController = require("./UserController");
-const DepartmentController = require("./DepartmentController");
-const PhaseModel = require("../models/PhaseModel");
-const EmailController = require("./EmailController");
-const UserModel = require("../models/UserModel");
-const CompanyModel = require("../models/CompanyModel");
-const EmailService = require("../services/EmailService");
-const EmailModel = require("../models/EmailModel");
 const FormTemplate = require("../documents/FormTemplate");
-const CustomerModel = require("../models/CustomerModel");
 const FormDocuments = require("../documents/FormDocuments");
 const asyncRedis = require("async-redis");
 const redis = asyncRedis.createClient(
@@ -16,24 +6,28 @@ const redis = asyncRedis.createClient(
   process.env.REDIS_HOST
 );
 const { formatTicketForPhase } = require("../helpers/FormatTicket");
-const AttachmentsModel = require("../models/AttachmentsModel");
 const { validationResult } = require("express-validator");
 
 const moment = require("moment");
 const { v1 } = require("uuid");
-const notify = require("../helpers/Notify");
 
-const ticketModel = new TicketModel();
+const UserController = require("./UserController");
 const userController = new UserController();
+
+const PhaseModel = require("../models/PhaseModel");
 const phaseModel = new PhaseModel();
-const emailController = new EmailController();
-const userModel = new UserModel();
+
+const CustomerModel = require("../models/CustomerModel");
 const customerModel = new CustomerModel();
-const companyModel = new CompanyModel();
-const emailService = new EmailService();
-const emailModel = new EmailModel();
-const attachmentsModel = new AttachmentsModel();
+
+const TicketModel = require("../models/TicketModel");
+const ticketModel = new TicketModel();
+
+const DepartmentController = require("./DepartmentController");
 const departmentController = new DepartmentController();
+
+const AttachmentsModel = require("../models/AttachmentsModel");
+const attachmentsModel = new AttachmentsModel();
 
 const ActivitiesModel = require("../models/ActivitiesModel");
 const activitiesModel = new ActivitiesModel();
@@ -635,6 +629,98 @@ class TicketController {
   async getTicketByID(req, res) {
     try {
       let result = await ticketModel.getTicketByIdSeq(
+        req.params.id,
+        req.headers.authorization
+      );
+      if (result.name && result.name == "error")
+        return res.status(400).send({ error: "There was an error" });
+
+      if (result && result.length <= 0)
+        return res
+          .status(400)
+          .send({ error: "There is no ticket with this ID" });
+
+      result = await formatTicketForPhase(
+        { id: result[0].phase_id },
+        result[0]
+      );
+      const customer = await customerModel.getAll(result.id);
+      if (customer && Array.isArray(customer) && customer.length > 0) {
+        result.customers = customer;
+      }
+
+      const protocols = await ticketModel.getProtocolTicket(
+        result.id,
+        req.headers.authorization
+      );
+
+      if (protocols && Array.isArray(protocols) && protocols.length > 0) {
+        result.protocols = protocols;
+      }
+
+      result.activities = await this._activities(
+        result.id,
+        req.app.locals.db,
+        req.headers.authorization
+      );
+
+      result.activities.sort((a, b) => {
+        if (
+          moment(a.created_at, "DD/MM/YYYY HH:mm:ss").format("X") ===
+          moment(b.created_at, "DD/MM/YYYY HH:mm:ss").format("X")
+        ) {
+          return a.id;
+        } else {
+          return (
+            moment(a.created_at, "DD/MM/YYYY HH:mm:ss").format("X") -
+            moment(b.created_at, "DD/MM/YYYY HH:mm:ss").format("X")
+          );
+        }
+      });
+
+      const department = await phaseModel.getDepartmentPhase(result.phase_id);
+      result.actual_department = department[0].id_department;
+
+      const form = await ticketModel.getFormTicket(result.id);
+
+      if (form && form.length > 0 && form[0].id_form) {
+        const phase = await phaseModel.getPhaseById(
+          form[0].id_phase,
+          req.headers.authorization
+        );
+        if (phase[0].form && phase[0].id_form_template) {
+          const register = await new FormTemplate(
+            req.app.locals.db
+          ).findRegistes(phase[0].id_form_template);
+
+          if (register && register.column) {
+            result.form_template = register.column;
+
+            for (const x of result.form_template) {
+              const type = await typeColumnModel.getTypeByID(x.type);
+
+              type && Array.isArray(type) && type.length > 0
+                ? (x.type = type[0].name)
+                : "";
+            }
+          }
+        }
+        result.form_data = await new FormDocuments(
+          req.app.locals.db
+        ).findRegister(form[0].id_form);
+        delete result.form_data._id;
+      }
+
+      return res.status(200).send(result);
+    } catch (err) {
+      console.log("Error when select ticket by id =>", err);
+      return res.status(400).send({ error: "There was an error" });
+    }
+  }
+  
+  async getTicket(req, res) {
+    try {
+      let result = await ticketModel.getTicketById(
         req.params.id,
         req.headers.authorization
       );
@@ -1583,7 +1669,7 @@ class TicketController {
       history.push({
         id_seq: ticket[0].id_seq,
         id_user: ticket[0].id_user,
-        created_at: moment(ticket[0].created_at).format("DD/MM/YYYY HH:mm:ss"),
+        created_at: ticket[0].created_at,
         closed: ticket[0].closed,
         department_origin: ticket[0].department_origin,
         phase_name: ticket[0].phase,
