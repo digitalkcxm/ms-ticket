@@ -46,7 +46,7 @@ class TicketModel {
           department_origin: "department.id_department_core",
           created_at: `${tableName}.created_at`,
           updated_at: `${tableName}.updated_at`,
-          start_ticket: "responsible_ticket.start_ticket",
+          start_ticket: "ticket.start_ticket",
           display_name: "ticket.display_name",
           id_ticket_father: "ticket.id_ticket_father",
           id_protocol: "ticket.id_protocol",
@@ -54,11 +54,6 @@ class TicketModel {
         .leftJoin("users", "users.id", `${tableName}.id_user`)
         .leftJoin("phase_ticket", "phase_ticket.id_ticket", `${tableName}.id`)
         .leftJoin("phase", "phase.id", "phase_ticket.id_phase")
-        .leftJoin(
-          "responsible_ticket",
-          "responsible_ticket.id_ticket",
-          "ticket.id"
-        )
         .leftJoin("department", "department.id", "ticket.department_origin")
         .where(`${tableName}.id`, id)
         .andWhere(`${tableName}.id_company`, id_company)
@@ -88,7 +83,7 @@ class TicketModel {
           department_origin: "department.id_department_core",
           created_at: `${tableName}.created_at`,
           updated_at: `${tableName}.updated_at`,
-          start_ticket: "responsible_ticket.start_ticket",
+          start_ticket: "ticket.start_ticket",
           display_name: "ticket.display_name",
           id_ticket_father: "ticket.id_ticket_father",
           id_protocol: "ticket.id_protocol",
@@ -96,11 +91,6 @@ class TicketModel {
         .leftJoin("users", "users.id", `${tableName}.id_user`)
         .leftJoin("phase_ticket", "phase_ticket.id_ticket", `${tableName}.id`)
         .leftJoin("phase", "phase.id", "phase_ticket.id_phase")
-        .leftJoin(
-          "responsible_ticket",
-          "responsible_ticket.id_ticket",
-          "ticket.id"
-        )
         .leftJoin("department", "department.id", "ticket.department_origin")
         .where(`${tableName}.id_seq`, id_seq)
         .andWhere(`${tableName}.id_company`, id_company)

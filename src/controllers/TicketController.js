@@ -1399,6 +1399,15 @@ class TicketController {
             result.id
           );
 
+        const ticket = await ticketModel.getTicketById(req.body.id_ticket);
+        if (ticket && ticket.length > 0 && !ticket[0].start_ticket) {
+          await ticketModel.updateTicket(
+            { start_ticket: time },
+            req.body.id_ticket,
+            req.headers.authorization
+          );
+        }
+
         if (
           responsibleCheck &&
           Array.isArray(responsibleCheck) &&

@@ -357,6 +357,103 @@ class PhaseModel {
       return err;
     }
   }
+
+  async dash(department, id_company) {
+    try {
+      const total_fases = await database.raw(`
+    SELECT COUNT(phase.id) 
+    FROM department_phase 
+    LEFT JOIN department ON department.id = department_phase.id_department 
+    LEFT JOIN phase ON phase.id = department_phase.id_phase 
+    WHERE department_phase.active = true 
+    AND phase.active = true 
+    AND department.id_department_core = ${department} 
+    AND phase.id_company = '${id_company}'
+    `);
+
+      const total_tickets = await database.raw(`
+    SELECT COUNT(ticket.id) FROM ticket
+    LEFT JOIN phase_ticket ON phase_ticket.id_ticket = ticket.id
+    LEFT JOIN phase ON phase.id = phase_ticket.id_phase
+    LEFT JOIN department_phase ON department_phase.id_phase = phase.id
+    LEFT JOIN department ON department.id = department_phase.id_department
+    WHERE department.id_department_core = ${department} 
+    AND phase.id_company = '${id_company}'
+    AND phase.active = true
+    AND department_phase.active = true
+    AND phase_ticket.active = true;
+    `);
+
+      const total_tickets_abertos = await database.raw(`
+    SELECT COUNT(ticket.id) FROM ticket
+    LEFT JOIN phase_ticket ON phase_ticket.id_ticket = ticket.id
+    LEFT JOIN phase ON phase.id = phase_ticket.id_phase
+    LEFT JOIN department_phase ON department_phase.id_phase = phase.id
+    LEFT JOIN department ON department.id = department_phase.id_department
+    WHERE department.id_department_core = ${department} 
+    AND phase.id_company = '${id_company}'
+    AND phase.active = true
+    AND department_phase.active = true
+    AND phase_ticket.active = true
+    AND ticket.closed = false;
+    `);
+
+      const tickets = await database.raw(`
+    SELECT ticket.id, phase_ticket.id_phase FROM ticket
+    LEFT JOIN phase_ticket ON phase_ticket.id_ticket = ticket.id
+    LEFT JOIN phase ON phase.id = phase_ticket.id_phase
+    LEFT JOIN department_phase ON department_phase.id_phase = phase.id
+    LEFT JOIN department ON department.id = department_phase.id_department
+    WHERE department.id_department_core = ${department} 
+    AND phase.id_company = '${id_company}'
+    AND phase.active = true
+    AND department_phase.active = true
+    AND phase_ticket.active = true
+    AND ticket.closed = false;
+    `);
+
+      const total_tickets_fechados = await database.raw(`   
+    SELECT COUNT(ticket.id) FROM ticket
+    LEFT JOIN phase_ticket ON phase_ticket.id_ticket = ticket.id
+    LEFT JOIN phase ON phase.id = phase_ticket.id_phase
+    LEFT JOIN department_phase ON department_phase.id_phase = phase.id
+    LEFT JOIN department ON department.id = department_phase.id_department
+    WHERE department.id_department_core = ${department} 
+    AND phase.id_company = '${id_company}'
+    AND phase.active = true
+    AND department_phase.active = true
+    AND phase_ticket.active = true
+    AND ticket.closed = true;
+    `);
+
+      const total_tickets_atendimento = await database.raw(`
+    SELECT COUNT(ticket.id) FROM ticket
+    LEFT JOIN phase_ticket ON phase_ticket.id_ticket = ticket.id
+    LEFT JOIN phase ON phase.id = phase_ticket.id_phase
+    LEFT JOIN department_phase ON department_phase.id_phase = phase.id
+    LEFT JOIN department ON department.id = department_phase.id_department
+    WHERE department.id_department_core = ${department} 
+    AND phase.id_company = '${id_company}'
+    AND phase.active = true
+    AND department_phase.active = true
+    AND phase_ticket.active = true
+    AND ticket.closed = false
+    AND ticket.start_ticket is not null
+    `);
+
+      return {
+        total_fases: total_fases.rows[0].count,
+        total_tickets: total_tickets.rows[0].count,
+        total_tickets_abertos: total_tickets_abertos.rows[0].count,
+        total_tickets_fechados: total_tickets_fechados.rows[0].count,
+        tickets: tickets.rows,
+        total_tickets_atendimento: total_tickets_atendimento.rows[0].count,
+      };
+    } catch (err) {
+      console.log("dashs =>", err);
+      return false;
+    }
+  }
 }
 
 module.exports = PhaseModel;

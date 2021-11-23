@@ -42,7 +42,7 @@ const slaModel = new SLAModel();
 const TypeColumnModel = require("../models/TypeColumnModel");
 const typeColumnModel = new TypeColumnModel();
 
-const { counter_sla, settingsSLA } = require("../helpers/SLAFormat");
+const { counter_sla, settingsSLA, ticketSLA } = require("../helpers/SLAFormat");
 class PhaseController {
   async create(req, res) {
     // Validação do corpo da requisição.
@@ -913,6 +913,70 @@ class PhaseController {
       return res
         .status(500)
         .send({ error: "Houve um erro ordenar as fases do workflow" });
+    }
+  }
+
+  async dash(req, res) {
+    try {
+      console.log("1");
+      if (!req.params.id)
+        return res.status(400).send({ error: "Houve algum problema!" });
+
+      console.log("2");
+      const result = await phaseModel.dash(
+        req.params.id,
+        req.headers.authorization
+      );
+
+      result.tickets_abertos = {
+        emdia: 0,
+        aberto: 0,
+        atrasado: 0,
+      };
+      result.tickets_atendimento = {
+        emdia: 0,
+        aberto: 0,
+        atrasado: 0,
+      };
+      for (const ticket of result.tickets) {
+        const ticketsla = await slaModel.getByPhaseTicket(
+          ticket.id_phase,
+          ticket.id,
+          1
+        );
+        if (ticketsla && ticketsla.length > 0) {
+          switch (ticketsla[0].name) {
+            case "Aberto":
+              result.tickets_abertos.aberto = result.tickets_abertos.aberto + 1;
+              if (ticketsla[0].interaction_time) {
+                result.tickets_atendimento.aberto =
+                  result.tickets_atendimento.aberto + 1;
+              }
+              break;
+            case "Em dia":
+              result.tickets_abertos.emdia = result.tickets_abertos.emdia + 1;
+              if (ticketsla[0].interaction_time) {
+                result.tickets_atendimento.emdia =
+                  result.tickets_atendimento.emdia + 1;
+              }
+              break;
+            case "Atrasado":
+              result.tickets_abertos.atrasado =
+                result.tickets_abertos.atrasado + 1;
+              if (ticketsla[0].interaction_time) {
+                result.tickets_atendimento.atrasado =
+                  result.tickets_atendimento.atrasado + 1;
+              }
+              break;
+            default:
+              break;
+          }
+        }
+      }
+      return res.status(200).send(result);
+    } catch (err) {
+      console.log(err);
+      return res.status(500).send({ error: "Houve algum problema!" });
     }
   }
 }

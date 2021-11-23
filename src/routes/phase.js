@@ -11,6 +11,7 @@ const phaseController = new PhaseController();
 router.get("/cache/", (req, res) =>
   phaseController.getAllPhaseForCache(req, res)
 );
+router.get("/dash/:id", (req, res) => phaseController.dash(req, res));
 router.get("/:id", (req, res) => phaseController.getPhaseByID(req, res));
 router.get("/", (req, res) => phaseController.getAllPhase(req, res));
 
@@ -28,7 +29,7 @@ router.put("/order/:id", (req, res) => phaseController.orderPhase(req, res));
 router.use(
   body("name").notEmpty(),
   body("department").isNumeric(),
-  body("form").isBoolean(),
+  body("form").isBoolean()
   // body("notify").isArray(),
   // body("notify").isArray(),
   // body("active").isBoolean()
