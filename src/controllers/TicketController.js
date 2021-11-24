@@ -826,6 +826,7 @@ class TicketController {
       return res.status(400).send({ error: "There was an error" });
     }
   }
+
   async _activities(id_ticket, db, id_company) {
     const obj = [];
 
@@ -1128,6 +1129,14 @@ class TicketController {
         req.params.id,
         req.headers.authorization
       );
+
+      if (!ticket[0].start_ticket) {
+        await ticketModel.updateTicket(
+          { start_ticket: moment() },
+          req.body.id_ticket,
+          req.headers.authorization
+        );
+      }
 
       ticket = await formatTicketForPhase(ticket, ticket[0]);
       await redis.set(
