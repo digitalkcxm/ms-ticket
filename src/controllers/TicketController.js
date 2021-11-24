@@ -901,7 +901,7 @@ class TicketController {
               id: history_phase[index + 1].id_phase,
               name: history_phase[index + 1].name,
             },
-            created_at: moment(history_phase[index + 1].updated_at).format(
+            created_at: moment(history_phase[index + 1].created_at).format(
               "DD/MM/YYYY HH:mm:ss"
             ),
           });
