@@ -653,6 +653,7 @@ class TicketController {
         result.id,
         req.headers.authorization
       );
+      console.log("protocols =>", protocols);
 
       if (protocols && Array.isArray(protocols) && protocols.length > 0) {
         result.protocols = protocols;
@@ -710,7 +711,7 @@ class TicketController {
         ).findRegister(form[0].id_form);
         delete result.form_data._id;
       }
-
+      console.log("result =>",result);
       return res.status(200).send(result);
     } catch (err) {
       console.log("Error when select ticket by id =>", err);
@@ -745,9 +746,9 @@ class TicketController {
         result.id,
         req.headers.authorization
       );
-
+      console.log("protocols =>", protocols);
       if (protocols && Array.isArray(protocols) && protocols.length > 0) {
-        result.protocols = protocols;
+        result.protocols = protocols[0];
       }
 
       result.activities = await this._activities(
@@ -840,7 +841,7 @@ class TicketController {
         const templateBefore = await new FormTemplate(db).findRegistes(
           history_phase[index].template
         );
-
+        console.log("templateBefore =>", templateBefore);
         const after = await new FormDocuments(db).findRegister(
           history_phase[index + 1].id_form
         );
@@ -851,12 +852,12 @@ class TicketController {
         obj.push({
           before: {
             phase: history_phase[index + 1].id_phase,
-            field: templateAfter.column,
+            field: templateAfter ? templateAfter.column : {},
             value: after,
           },
           after: {
             phase: history_phase[index].id_phase,
-            field: templateBefore.column,
+            field: templateBefore ? templateBefore.column : {},
             value: before,
           },
           type: "change_form",
@@ -1485,13 +1486,15 @@ class TicketController {
             result.id
           );
 
-        const ticket = await ticketModel.getTicketById(req.body.id_ticket);
+        const ticket = await ticketModel.getTicketById(req.body.id_ticket,req.headers.authorization);
+        console.log("req.body =>",req.body)
         if (ticket && ticket.length > 0 && !ticket[0].start_ticket) {
-          await ticketModel.updateTicket(
+          const result = await ticketModel.updateTicket(
             { start_ticket: time },
             req.body.id_ticket,
             req.headers.authorization
           );
+          console.log("result =>",result)
         }
 
         if (
