@@ -922,14 +922,15 @@ class TicketController {
           limit_sla_time: moment(sla.limit_sla_time).format(
             "DD/MM/YYYY HH:mm:ss"
           ),
-          interaction_time: moment(sla.interaction_time).format(
-            "DD/MM~/YYYY HH:mm:ss"
-          ),
+          interaction_time: sla.interaction_time
+            ? moment(sla.interaction_time).format("DD/MM~/YYYY HH:mm:ss")
+            : "",
           created_at: sla.created_at
             ? moment(sla.created_at).format("DD/MM/YYYY HH:mm:ss")
             : moment(history_phase[index + 1].updated_at).format(
                 "DD/MM/YYYY HH:mm:ss"
               ),
+          type: "sla",
         });
       }
     }
