@@ -907,6 +907,8 @@ class TicketController {
           });
         }
       }
+      const sla = await slaModel.getByTicket(history_phase[index], id_ticket);
+      console.log(sla);
     }
 
     const view_ticket = await ticketModel.getViewTicket(id_ticket);

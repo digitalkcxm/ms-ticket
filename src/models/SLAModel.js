@@ -63,9 +63,8 @@ class SLAModel {
     }
   }
 
-  async  getByPhaseTicket(id_phase, id_ticket, id_sla_type) {
+  async getByPhaseTicket(id_phase, id_ticket, id_sla_type) {
     try {
-      
       return await database("ticket_sla_control as tsc")
         .leftJoin("phase_ticket as pt", "pt.id_phase", "tsc.id_phase")
         .leftJoin("sla_status as ss", "ss.id", "tsc.id_sla_status")
@@ -111,6 +110,22 @@ class SLAModel {
         .where("id_ticket", id_ticket);
     } catch (err) {
       console.log("Error when disable sla ticket =>", err);
+      return err;
+    }
+  }
+
+  async getByPhaseTiket(id_phase, id_ticket) {
+    try {
+      const result = await database("ticket_sla_control as tsc")
+        .count()
+        .leftJoin("phase_ticket as pt", "pt.id_ticket", "tsc.id_ticket")
+        .leftJoin("ticket", "ticket.id", "pt.id_ticket")
+        .where("pt.id_phase", id_phase)
+        .andWhere("pt.active", true)
+        .andWhere("tsc.id_ticket", id_ticket);
+      return result[0].count;
+    } catch (err) {
+      console.log("error when get sla's =>", err);
       return err;
     }
   }

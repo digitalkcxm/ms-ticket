@@ -77,7 +77,6 @@ class TicketModel {
           phase: "phase.name",
           id_user: "users.id_users_core",
           name: "users.name",
-          sla_time: "phase.sla_time",
           id_unit_of_time: "phase.id_unit_of_time",
           form: "phase.form",
           closed: `${tableName}.closed`,
