@@ -568,7 +568,7 @@ class TicketController {
       let result = await activitiesModel.create(obj);
 
       if (result && result.length > 0) {
-        await updateSLA(req.body.id_ticket, ticket[0].phase_id);
+        await updateSLA(req.body.id_ticket, ticket[0].phase_id, true);
 
         obj.id = result[0].id;
 
@@ -627,7 +627,7 @@ class TicketController {
 
       let result = await attachmentsModel.create(obj);
 
-      await updateSLA(req.body.id_ticket, ticket[0].phase_id);
+      await updateSLA(req.body.id_ticket, ticket[0].phase_id, true);
 
       if (result && result.length > 0) {
         obj.id = result[0].id;

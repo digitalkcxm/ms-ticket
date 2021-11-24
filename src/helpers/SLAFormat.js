@@ -219,7 +219,7 @@ const createSLAControl = async function (id_phase, id_ticket) {
 };
 
 // Função responsavel por atualizar o controle de sla do ticket.
-const updateSLA = async function (id_ticket, id_phase) {
+const updateSLA = async function (id_ticket, id_phase, activity = false) {
   // Busca a configuração de sla do ticket pela phase e id_do ticket, primeiramente pela opção de inicialização do ticket.
   let slaTicket = await slaModel.getByPhaseTicket(id_phase, id_ticket, 1);
 
