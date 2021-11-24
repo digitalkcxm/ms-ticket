@@ -38,6 +38,8 @@ class PhaseModel {
           department_can_create_ticket: "phase.department_can_create_ticket",
           create_protocol: "phase.create_protocol",
           create_ticket: "phase.create_ticket",
+          visible_new_ticket: "phase.visible_new_ticket",
+
         })
         .leftJoin("unit_of_time", "unit_of_time.id", "phase.id_unit_of_time")
         .where("phase.id", id_phase)
