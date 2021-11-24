@@ -171,7 +171,7 @@ class PhaseController {
         channel: `wf_department_${req.body.department}`,
         event: "new_phase",
         obj,
-      });
+      },req.company[0].callback);
 
       return res.status(200).send(obj);
     } catch (err) {
@@ -466,7 +466,7 @@ class PhaseController {
           channel: `wf_department_${req.body.department}`,
           event: "change_active_phase",
           obj: { id: req.params.id, active: obj.active },
-        });
+        },req.company[0].callback);
       }
       // let result = await departmentController.checkDepartmentCreated(
       //   req.body.department,
@@ -957,7 +957,7 @@ class PhaseController {
         channel: `wf_department_${req.body.department}`,
         event: "new_order_phase",
         obj: req.body,
-      });
+      },req.company[0].callback);
 
       return res.status(200).send(req.body);
     } catch (err) {

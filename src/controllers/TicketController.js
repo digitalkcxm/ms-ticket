@@ -166,12 +166,15 @@ class TicketController {
 
         // delete ticket[0].id_company
 
-        await CallbackDigitalk({
-          type: "socket",
-          channel: `phase_${phase[0].id}`,
-          event: "new_ticket",
-          obj: ticket,
-        });
+        await CallbackDigitalk(
+          {
+            type: "socket",
+            channel: `phase_${phase[0].id}`,
+            event: "new_ticket",
+            obj: ticket,
+          },
+          req.company[0].callback
+        );
         return res.status(200).send(ticket);
       }
 
@@ -584,12 +587,15 @@ class TicketController {
         obj.created_at = moment(obj.created_at).format("DD/MM/YYYY HH:mm:ss");
         obj.updated_at = moment(obj.updated_at).format("DD/MM/YYYY HH:mm:ss");
         obj.type = "note";
-        await CallbackDigitalk({
-          type: "socket",
-          channel: `ticket_${ticket[0].id}`,
-          event: "activity",
-          obj: obj,
-        });
+        await CallbackDigitalk(
+          {
+            type: "socket",
+            channel: `ticket_${ticket[0].id}`,
+            event: "activity",
+            obj: obj,
+          },
+          req.company[0].callback
+        );
         return res.status(200).send(obj);
       }
 
@@ -653,12 +659,15 @@ class TicketController {
         obj.created_at = moment(obj.created_at).format("DD/MM/YYYY HH:mm:ss");
         obj.updated_at = moment(obj.updated_at).format("DD/MM/YYYY HH:mm:ss");
         obj.type = "file";
-        await CallbackDigitalk({
-          type: "socket",
-          channel: `ticket_${ticket[0].id}`,
-          event: "activity",
-          obj: obj,
-        });
+        await CallbackDigitalk(
+          {
+            type: "socket",
+            channel: `ticket_${ticket[0].id}`,
+            event: "activity",
+            obj: obj,
+          },
+          req.company[0].callback
+        );
         return res.status(200).send(obj);
       }
 
@@ -1158,19 +1167,25 @@ class TicketController {
 
         await createSLAControl(phase[0].id, req.params.id);
 
-        await CallbackDigitalk({
-          type: "socket",
-          channel: `phase_${phase[0].id}`,
-          event: "move_ticket",
-          obj: ticket[0],
-        });
+        await CallbackDigitalk(
+          {
+            type: "socket",
+            channel: `phase_${phase[0].id}`,
+            event: "move_ticket",
+            obj: ticket[0],
+          },
+          req.company[0].callback
+        );
 
-        await CallbackDigitalk({
-          type: "socket",
-          channel: `phase_${ticket[0].phase_id}`,
-          event: "move_ticket",
-          obj: ticket[0],
-        });
+        await CallbackDigitalk(
+          {
+            type: "socket",
+            channel: `phase_${ticket[0].phase_id}`,
+            event: "move_ticket",
+            obj: ticket[0],
+          },
+          req.company[0].callback
+        );
       } else {
         if (req.body.form && Object.keys(req.body.form).length > 0) {
           const firstPhase = await ticketModel.getFirstFormTicket(ticket[0].id);
@@ -1206,19 +1221,25 @@ class TicketController {
         JSON.stringify(ticket)
       );
 
-      await CallbackDigitalk({
-        type: "socket",
-        channel: `phase_${req.body.id_phase}`,
-        event: "update_ticket",
-        obj: ticket,
-      });
+      await CallbackDigitalk(
+        {
+          type: "socket",
+          channel: `phase_${req.body.id_phase}`,
+          event: "update_ticket",
+          obj: ticket,
+        },
+        req.company[0].callback
+      );
 
-      await CallbackDigitalk({
-        type: "socket",
-        channel: `ticket_${ticket.id}`,
-        event: "update",
-        obj: ticket,
-      });
+      await CallbackDigitalk(
+        {
+          type: "socket",
+          channel: `ticket_${ticket.id}`,
+          event: "update",
+          obj: ticket,
+        },
+        req.company[0].callback
+      );
 
       await redis.del(`ticket:phase:${req.headers.authorization}`);
       if (result) return res.status(200).send(ticket);
@@ -1292,18 +1313,24 @@ class TicketController {
           ticket[0]
         );
 
-        await CallbackDigitalk({
-          type: "socket",
-          channel: `phase_${ticket[0].id_phase}`,
-          event: "update_ticket",
-          obj: ticket[0],
-        });
-        await CallbackDigitalk({
-          type: "socket",
-          channel: `ticket_${ticket[0].id}`,
-          event: "update",
-          obj: ticket[0],
-        });
+        await CallbackDigitalk(
+          {
+            type: "socket",
+            channel: `phase_${ticket[0].id_phase}`,
+            event: "update_ticket",
+            obj: ticket[0],
+          },
+          req.company[0].callback
+        );
+        await CallbackDigitalk(
+          {
+            type: "socket",
+            channel: `ticket_${ticket[0].id}`,
+            event: "update",
+            obj: ticket[0],
+          },
+          req.company[0].callback
+        );
 
         return res.status(200).send(ticket[0]);
       }
@@ -1614,18 +1641,24 @@ class TicketController {
           );
         }
 
-        await CallbackDigitalk({
-          type: "socket",
-          channel: `phase_${ticket[0].id_phase}`,
-          event: "update_ticket",
-          obj: ticket[0],
-        });
-        await CallbackDigitalk({
-          type: "socket",
-          channel: `ticket_${ticket[0].id}`,
-          event: "update",
-          obj: ticket[0],
-        });
+        await CallbackDigitalk(
+          {
+            type: "socket",
+            channel: `phase_${ticket[0].id_phase}`,
+            event: "update_ticket",
+            obj: ticket[0],
+          },
+          req.company[0].callback
+        );
+        await CallbackDigitalk(
+          {
+            type: "socket",
+            channel: `ticket_${ticket[0].id}`,
+            event: "update",
+            obj: ticket[0],
+          },
+          req.company[0].callback
+        );
         if (
           responsibleCheck &&
           Array.isArray(responsibleCheck) &&
