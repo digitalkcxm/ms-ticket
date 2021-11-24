@@ -113,6 +113,7 @@ const ticketSLA = async function (phase_id, ticket_id) {
                 limit_sla_time: moment(ticket[0].limit_sla_time).format(
                   "DD/MM/YYYY HH:mm:ss"
                 ),
+                active: ticket[0].active,
               },
             };
             break;
@@ -125,6 +126,7 @@ const ticketSLA = async function (phase_id, ticket_id) {
                 limit_sla_time: moment(ticket[0].limit_sla_time).format(
                   "DD/MM/YYYY HH:mm:ss"
                 ),
+                active: ticket[0].active,
               },
             };
             break;
@@ -137,6 +139,7 @@ const ticketSLA = async function (phase_id, ticket_id) {
                 limit_sla_time: moment(ticket[0].limit_sla_time).format(
                   "DD/MM/YYYY HH:mm:ss"
                 ),
+                active: ticket[0].active,
               },
             };
             break;
