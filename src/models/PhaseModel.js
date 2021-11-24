@@ -396,7 +396,7 @@ class PhaseModel {
     AND phase.active = true
     AND department_phase.active = true
     AND phase_ticket.active = true
-    AND ticket.closed = false;
+    AND ticket.closed = false
     AND ticket.id_status = 1
     `);
 
@@ -424,7 +424,7 @@ class PhaseModel {
     AND phase.active = true
     AND department_phase.active = true
     AND phase_ticket.active = true
-    AND ticket.closed = true;
+    AND ticket.closed = true
     AND ticket.id_status = 3
     `);
 
