@@ -551,7 +551,7 @@ class TicketController {
 
       if (!ticket[0].start_ticket) {
         await ticketModel.updateTicket(
-          { start_ticket: moment() },
+          { start_ticket: moment(), id_status: 2 },
           req.body.id_ticket,
           req.headers.authorization
         );
@@ -604,7 +604,7 @@ class TicketController {
 
       if (!ticket[0].start_ticket) {
         await ticketModel.updateTicket(
-          { start_ticket: moment() },
+          { start_ticket: moment(), id_status: 2 },
           req.body.id_ticket,
           req.headers.authorization
         );
@@ -1125,6 +1125,7 @@ class TicketController {
       }
       if (!ticket[0].start_ticket) {
         obj.start_ticket = moment();
+        obj.id_status = 2;
       }
       let result = await ticketModel.updateTicket(
         obj,
@@ -1512,7 +1513,7 @@ class TicketController {
         console.log("req.body =>", req.body);
         if (ticket && ticket.length > 0 && !ticket[0].start_ticket) {
           await ticketModel.updateTicket(
-            { start_ticket: time },
+            { start_ticket: time, id_status: 2 },
             req.body.id_ticket,
             req.headers.authorization
           );

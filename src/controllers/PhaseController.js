@@ -918,7 +918,6 @@ class PhaseController {
 
   async dash(req, res) {
     try {
-
       if (!req.params.id)
         return res.status(400).send({ error: "Houve algum problema!" });
 
