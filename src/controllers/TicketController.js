@@ -907,8 +907,31 @@ class TicketController {
           });
         }
       }
-      const sla = await slaModel.getByPhaseTiket(history_phase[index].id_phase, id_ticket);
-      console.log(sla);
+      const slas = await slaModel.getByPhaseTiket(
+        history_phase[index].id_phase,
+        id_ticket
+      );
+      for (const sla of slas) {
+        obj.push({
+          id_phase: history_phase[index].id_phase,
+          name: history_phase[index].name,
+          status: sla.status,
+          id_sla_status: sla.id_sla_status,
+          sla_type: sla.type,
+          id_sla_type: sla.id_sla_type,
+          limit_sla_time: moment(sla.limit_sla_time).format(
+            "DD/MM/YYYY HH:mm:ss"
+          ),
+          interaction_time: moment(sla.interaction_time).format(
+            "DD/MM~/YYYY HH:mm:ss"
+          ),
+          created_at: sla.created_at
+            ? moment(sla.created_at).format("DD/MM/YYYY HH:mm:ss")
+            : moment(history_phase[index + 1].updated_at).format(
+                "DD/MM/YYYY HH:mm:ss"
+              ),
+        });
+      }
     }
 
     const view_ticket = await ticketModel.getViewTicket(id_ticket);

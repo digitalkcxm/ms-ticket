@@ -162,6 +162,8 @@ const createSLAControl = async function (id_phase, id_ticket) {
         id_sla_type: value.id_sla_type,
         id_sla_status: sla_status.aberto,
         limit_sla_time: momentFormated,
+        created_at: moment(),
+        updated_at: moment(),
       });
     };
     for await (const value of slaSettings) {
