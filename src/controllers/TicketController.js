@@ -549,6 +549,14 @@ class TicketController {
       if (!ticket || ticket.length <= 0)
         return res.status(400).send({ error: "ID ticket is invalid" });
 
+      if (!ticket[0].start_ticket) {
+        await ticketModel.updateTicket(
+          { start_ticket: moment() },
+          req.body.id_ticket,
+          req.headers.authorization
+        );
+      }
+
       let obj = {
         text: req.body.text,
         id_ticket: req.body.id_ticket,
@@ -593,6 +601,14 @@ class TicketController {
       );
       if (!ticket || ticket.length <= 0)
         return res.status(400).send({ error: "ID ticket is invalid" });
+
+      if (!ticket[0].start_ticket) {
+        await ticketModel.updateTicket(
+          { start_ticket: moment() },
+          req.body.id_ticket,
+          req.headers.authorization
+        );
+      }
 
       let typeAttachments = await ticketModel.getTypeAttachments(req.body.type);
 
@@ -711,7 +727,7 @@ class TicketController {
         ).findRegister(form[0].id_form);
         delete result.form_data._id;
       }
-      console.log("result =>",result);
+      console.log("result =>", result);
       return res.status(200).send(result);
     } catch (err) {
       console.log("Error when select ticket by id =>", err);
@@ -1486,15 +1502,17 @@ class TicketController {
             result.id
           );
 
-        const ticket = await ticketModel.getTicketById(req.body.id_ticket,req.headers.authorization);
-        console.log("req.body =>",req.body)
+        const ticket = await ticketModel.getTicketById(
+          req.body.id_ticket,
+          req.headers.authorization
+        );
+        console.log("req.body =>", req.body);
         if (ticket && ticket.length > 0 && !ticket[0].start_ticket) {
-          const result = await ticketModel.updateTicket(
+          await ticketModel.updateTicket(
             { start_ticket: time },
             req.body.id_ticket,
             req.headers.authorization
           );
-          console.log("result =>",result)
         }
 
         if (
