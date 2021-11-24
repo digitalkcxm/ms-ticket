@@ -248,6 +248,33 @@ const updateSLA = async function (id_ticket, id_phase) {
     await slaModel.updateTicketSLA(id_ticket, obj, 1, id_phase);
 
     await createSLAControl(id_phase, id_ticket);
+    if (activity) {
+      slaTicket = await slaModel.getByPhaseTicket(id_phase, id_ticket, 2);
+      if (
+        slaTicket &&
+        slaTicket.length > 0 &&
+        slaTicket[0].limit_sla_time &&
+        !slaTicket[0].interaction_time &&
+        slaTicket[0].limit_sla_time < moment()
+      ) {
+        obj = {
+          id_sla_status: sla_status.atrasado,
+          active: false,
+          interaction_time: moment(),
+        };
+      } else if (
+        slaTicket &&
+        slaTicket.length > 0 &&
+        slaTicket[0].limit_sla_time > moment()
+      ) {
+        obj = {
+          id_sla_status: sla_status.emdia,
+          active: false,
+          interaction_time: moment(),
+        };
+      }
+      await slaModel.updateTicketSLA(id_ticket, obj, 2, id_phase);
+    }
   } else {
     slaTicket = await slaModel.getByPhaseTicket(id_phase, id_ticket, 2);
 
