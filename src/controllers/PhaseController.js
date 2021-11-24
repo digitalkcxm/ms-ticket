@@ -354,6 +354,29 @@ class PhaseController {
     }
   }
 
+  async getBySocket(req, res) {
+    try {
+    } catch (err) {
+      console.log("err =>", err);
+    }
+    const department_id = await departmentModel.getByID(
+      req.params.id,
+      req.headers.authorization
+    );
+    if (department_id && department_id.length <= 0) return false;
+
+    let result = await phaseModel.getAllPhasesByDepartmentID(
+      department_id[0].id
+    );
+    for (let phase of result) {
+      phase.header.total_tickets = tickets.length;
+
+      phase.sla = await settingsSLA(phase.id);
+
+      phase = await this._formatPhase(phase, req.app.locals.db);
+    }
+    return res.status(200).send(result);
+  }
   // departments = JSON.parse(departments)
   async _queryDepartment(department, authorization, status, db) {
     const department_id = await departmentModel.getByID(
