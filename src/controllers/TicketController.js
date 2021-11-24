@@ -35,6 +35,8 @@ const activitiesModel = new ActivitiesModel();
 const SLAModel = require("../models/SLAModel");
 const slaModel = new SLAModel();
 
+const CallbackDigitalk = require("../services/CallbackDigitalk");
+
 const { createSLAControl, updateSLA } = require("../helpers/SLAFormat");
 const sla_status = {
   emdia: 1,
