@@ -992,23 +992,110 @@ class PhaseController {
         atrasado: 0,
         sem_sla: 0,
       };
+      result.total_tickets_iniciados_sem_resposta = 0;
+      result.tickets_iniciados_sem_resposta = {
+        aberto: 0,
+        atrasado: 0,
+        sem_sla: 0,
+      };
 
+      result.total_tickets_respondidos_sem_conclusao = 0;
+      result.tickets_respondidos_sem_conclusao = {
+        aberto: 0,
+        atrasado: 0,
+        sem_sla: 0,
+      };
+
+      result.tickets_concluidos = {
+        emdia: 0,
+        atrasado: 0,
+        sem_sla: 0,
+      };
       for (const ticket of result.tickets) {
-        if (ticket.id_status === 1) {
-          const ticketsla = await slaModel.getByPhaseTicket(
-            ticket.id_phase,
-            ticket.id,
-            1
-          );
-          if (ticketsla && ticketsla.length > 0 && ticketsla[0].active) {
-            if(ticketsla[0].name === "Aberto"){
-              result.tickets_nao_iniciados.aberto = result.tickets_nao_iniciados.aberto + 1
-            }else if(ticketsla[0].name === "Atrasado"){
-              result.tickets_nao_iniciados.atrasado = result.tickets_nao_iniciados.atrasado + 1
+        switch (ticket.id_status) {
+          case 1:
+            const sla = await slaModel.getByPhaseTicket(
+              ticket.id_phase,
+              ticket.id,
+              1
+            );
+            if (sla && sla.length > 0 && sla[0].active) {
+              if (sla[0].name === "Aberto") {
+                result.tickets_nao_iniciados.aberto =
+                  result.tickets_nao_iniciados.aberto + 1;
+              } else if (sla[0].name === "Atrasado") {
+                result.tickets_nao_iniciados.atrasado =
+                  result.tickets_nao_iniciados.atrasado + 1;
+              }
+            } else {
+              result.tickets_nao_iniciados.sem_sla =
+                result.tickets_nao_iniciados.sem_sla + 1;
             }
-          } else {
-            result.tickets_nao_iniciados.sem_sla = result.tickets_nao_iniciados.sem_sla + 1;
-          }
+            break;
+          case 2:
+            let sla = await slaModel.getByPhaseTicket(
+              ticket.id_phase,
+              ticket.id,
+              2
+            );
+            if (sla && sla.length > 0) {
+              if (sla[0].interaction_time) {
+                result.total_tickets_respondidos_sem_conclusao =
+                  result.total_tickets_respondidos_sem_conclusao + 1;
+                sla = await slaModel.getByPhaseTicket(
+                  ticket.id_phase,
+                  ticket.id,
+                  3
+                );
+                if (sla && sla.length > 0) {
+                  if (sla[0].id_status === 3) {
+                    result.tickets_respondidos_sem_conclusao.aberto =
+                      result.tickets_respondidos_sem_conclusao.aberto + 1;
+                  } else if (sla[0].id_status === 2) {
+                    result.tickets_respondidos_sem_conclusao.atrasado =
+                      result.tickets_respondidos_sem_conclusao.atrasado + 1;
+                  }
+                } else {
+                  result.tickets_respondidos_sem_conclusao.sem_sla =
+                    result.tickets_respondidos_sem_conclusao.sem_sla + 1;
+                }
+              } else {
+                result.total_tickets_iniciados_sem_resposta =
+                  result.total_tickets_iniciados_sem_resposta + 1;
+                if (sla[0].id_sla_status === 3) {
+                  result.tickets_iniciados_sem_resposta.aberto =
+                    result.tickets_iniciados_sem_resposta.aberto + 1;
+                } else if (sla[0].id_sla_status === 2) {
+                  result.tickets_iniciados_sem_resposta.atrasado =
+                    result.tickets_iniciados_sem_resposta.atrasado + 1;
+                }
+              }
+            } else {
+              result.tickets_iniciados_sem_resposta.sem_sla =
+                result.tickets_iniciados_sem_resposta.sem_sla + 1;
+            }
+            break;
+          case 3:
+            const sla = await slaModel.getByPhaseTicket(
+              ticket.id_phase,
+              ticket.id,
+              3
+            );
+            if (sla && sla.length > 0) {
+              if (sla[0].id_sla_status === 1)
+                result.tickets_concluidos.emdia =
+                  result.tickets_concluidos.emdia + 1;
+              if (sla[0].id_sla_status === 2)
+                result.tickets_concluidos.atrasado =
+                  result.tickets_concluidos.atrasado + 1;
+            } else {
+              result.tickets_concluidos.sem_sla =
+                result.tickets_concluidos.sem_sla + 1;
+            }
+
+            break;
+          default:
+            break;
         }
       }
       delete result.tickets;
