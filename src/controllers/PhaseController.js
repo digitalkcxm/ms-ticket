@@ -166,12 +166,15 @@ class PhaseController {
       obj.updated_at = moment(obj.updated_at).format("DD/MM/YYYY HH:mm:ss");
 
       await redis.del(`ticket:phase:${req.headers.authorization}`);
-      await CallbackDigitalk({
-        type: "socket",
-        channel: `wf_department_${req.body.department}`,
-        event: "new_phase",
-        obj,
-      },req.company[0].callback);
+      await CallbackDigitalk(
+        {
+          type: "socket",
+          channel: `wf_department_${req.body.department}`,
+          event: "new_phase",
+          obj,
+        },
+        req.company[0].callback
+      );
 
       return res.status(200).send(obj);
     } catch (err) {
@@ -461,12 +464,15 @@ class PhaseController {
       obj.id = req.params.id;
 
       if (obj.active != oldPhase[0].active) {
-        await CallbackDigitalk({
-          type: "socket",
-          channel: `wf_department_${req.body.department}`,
-          event: "change_active_phase",
-          obj: { id: req.params.id, active: obj.active },
-        },req.company[0].callback);
+        await CallbackDigitalk(
+          {
+            type: "socket",
+            channel: `wf_department_${req.body.department}`,
+            event: "change_active_phase",
+            obj: { id: req.params.id, active: obj.active },
+          },
+          req.company[0].callback
+        );
       }
       // let result = await departmentController.checkDepartmentCreated(
       //   req.body.department,
@@ -952,12 +958,15 @@ class PhaseController {
         return true;
       });
 
-      await CallbackDigitalk({
-        type: "socket",
-        channel: `wf_department_${req.body.department}`,
-        event: "new_order_phase",
-        obj: req.body,
-      },req.company[0].callback);
+      await CallbackDigitalk(
+        {
+          type: "socket",
+          channel: `wf_department_${req.body.department}`,
+          event: "new_order_phase",
+          obj: req.body,
+        },
+        req.company[0].callback
+      );
 
       return res.status(200).send(req.body);
     } catch (err) {
@@ -978,48 +987,27 @@ class PhaseController {
         req.headers.authorization
       );
 
-      result.tickets_abertos = {
-        emdia: 0,
+      result.tickets_nao_iniciados = {
         aberto: 0,
         atrasado: 0,
+        sem_sla: 0,
       };
-      result.tickets_atendimento = {
-        emdia: 0,
-        aberto: 0,
-        atrasado: 0,
-      };
+
       for (const ticket of result.tickets) {
-        const ticketsla = await slaModel.getByPhaseTicket(
-          ticket.id_phase,
-          ticket.id,
-          1
-        );
-        if (ticketsla && ticketsla.length > 0) {
-          switch (ticketsla[0].name) {
-            case "Aberto":
-              result.tickets_abertos.aberto = result.tickets_abertos.aberto + 1;
-              if (ticketsla[0].interaction_time) {
-                result.tickets_atendimento.aberto =
-                  result.tickets_atendimento.aberto + 1;
-              }
-              break;
-            case "Em dia":
-              result.tickets_abertos.emdia = result.tickets_abertos.emdia + 1;
-              if (ticketsla[0].interaction_time) {
-                result.tickets_atendimento.emdia =
-                  result.tickets_atendimento.emdia + 1;
-              }
-              break;
-            case "Atrasado":
-              result.tickets_abertos.atrasado =
-                result.tickets_abertos.atrasado + 1;
-              if (ticketsla[0].interaction_time) {
-                result.tickets_atendimento.atrasado =
-                  result.tickets_atendimento.atrasado + 1;
-              }
-              break;
-            default:
-              break;
+        if (ticket.id_status === 1) {
+          const ticketsla = await slaModel.getByPhaseTicket(
+            ticket.id_phase,
+            ticket.id,
+            1
+          );
+          if (ticketsla && ticketsla.length > 0 && ticketsla[0].active) {
+            if(ticketsla[0].name === "Aberto"){
+              result.tickets_nao_iniciados.aberto = result.tickets_nao_iniciados.aberto + 1
+            }else if(ticketsla[0].name === "Atrasado"){
+              result.tickets_nao_iniciados.atrasado = result.tickets_nao_iniciados.atrasado + 1
+            }
+          } else {
+            result.tickets_nao_iniciados.sem_sla = result.tickets_nao_iniciados.sem_sla + 1;
           }
         }
       }

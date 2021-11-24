@@ -71,7 +71,8 @@ class SLAModel {
         .where("tsc.id_phase", id_phase)
         .andWhere("tsc.id_ticket", id_ticket)
         .andWhere("pt.active", true)
-        .andWhere("tsc.id_sla_type", id_sla_type);
+        .andWhere("tsc.id_sla_type", id_sla_type)
+        
     } catch (err) {
       console.log("error when get sla's =>", err);
       return err;

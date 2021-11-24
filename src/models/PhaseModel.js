@@ -39,7 +39,6 @@ class PhaseModel {
           create_protocol: "phase.create_protocol",
           create_ticket: "phase.create_ticket",
           visible_new_ticket: "phase.visible_new_ticket",
-
         })
         .leftJoin("unit_of_time", "unit_of_time.id", "phase.id_unit_of_time")
         .where("phase.id", id_phase)
@@ -398,10 +397,11 @@ class PhaseModel {
     AND department_phase.active = true
     AND phase_ticket.active = true
     AND ticket.closed = false;
+    AND ticket.id_status = 1
     `);
 
       const tickets = await database.raw(`
-    SELECT ticket.id, phase_ticket.id_phase FROM ticket
+    SELECT ticket.id, phase_ticket.id_phase, ticket.id_status FROM ticket
     LEFT JOIN phase_ticket ON phase_ticket.id_ticket = ticket.id
     LEFT JOIN phase ON phase.id = phase_ticket.id_phase
     LEFT JOIN department_phase ON department_phase.id_phase = phase.id
@@ -411,8 +411,7 @@ class PhaseModel {
     AND phase.active = true
     AND department_phase.active = true
     AND phase_ticket.active = true
-    AND ticket.closed = false;
-    `);
+ `);
 
       const total_tickets_fechados = await database.raw(`   
     SELECT COUNT(ticket.id) FROM ticket
@@ -426,6 +425,7 @@ class PhaseModel {
     AND department_phase.active = true
     AND phase_ticket.active = true
     AND ticket.closed = true;
+    AND ticket.id_status = 3
     `);
 
       const total_tickets_atendimento = await database.raw(`
@@ -440,13 +440,13 @@ class PhaseModel {
     AND department_phase.active = true
     AND phase_ticket.active = true
     AND ticket.closed = false
-    AND ticket.start_ticket is not null
+    AND ticket.id_status = 2
     `);
 
       return {
         total_fases: total_fases.rows[0].count,
         total_tickets: total_tickets.rows[0].count,
-        total_tickets_abertos: total_tickets_abertos.rows[0].count,
+        total_tickets_nao_iniciados: total_tickets_abertos.rows[0].count,
         total_tickets_fechados: total_tickets_fechados.rows[0].count,
         tickets: tickets.rows,
         total_tickets_atendimento: total_tickets_atendimento.rows[0].count,
