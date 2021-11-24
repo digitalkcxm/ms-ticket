@@ -117,7 +117,6 @@ class SLAModel {
   async getByPhaseTiket(id_phase, id_ticket) {
     try {
       const result = await database("ticket_sla_control as tsc")
-        .count()
         .leftJoin("phase_ticket as pt", "pt.id_ticket", "tsc.id_ticket")
         .leftJoin("ticket", "ticket.id", "pt.id_ticket")
         .where("pt.id_phase", id_phase)
