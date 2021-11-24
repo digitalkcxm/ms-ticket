@@ -4,6 +4,7 @@ const routes = require("./routes.js")
 const cors = require("cors")
 const app = express()
 const connect = require("../config/database/mongoConnection")
+const moment = require('moment-timezone')
 
 // const agent = require('elastic-apm-node').start({
 //     serviceName: 'msticket',
@@ -22,6 +23,7 @@ app.use(cors())
 app.use(bodyParser.json({ limit: "256mb", extended: true }))
 app.use(bodyParser.urlencoded({ extended: true, limit: "256mb" }))
 // app.use(expressValidator())
+moment.tz.setDefault('America/Sao_Paulo')
 
 app.use(routes)
 connect(app, () => {
