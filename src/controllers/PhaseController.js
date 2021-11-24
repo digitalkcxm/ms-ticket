@@ -43,6 +43,8 @@ const TypeColumnModel = require("../models/TypeColumnModel");
 const typeColumnModel = new TypeColumnModel();
 
 const { counter_sla, settingsSLA, ticketSLA } = require("../helpers/SLAFormat");
+const CallbackDigitalk = require("../services/CallbackDigitalk");
+
 class PhaseController {
   async create(req, res) {
     // Validação do corpo da requisição.
@@ -164,6 +166,12 @@ class PhaseController {
       obj.updated_at = moment(obj.updated_at).format("DD/MM/YYYY HH:mm:ss");
 
       await redis.del(`ticket:phase:${req.headers.authorization}`);
+      await CallbackDigitalk({
+        type: "socket",
+        channel: `wf_department_${req.body.department}`,
+        event: "new_phase",
+        obj,
+      });
 
       return res.status(200).send(obj);
     } catch (err) {
@@ -439,6 +447,12 @@ class PhaseController {
         create_ticket: req.body.create_ticket,
       };
 
+      const oldPhase = await phaseModel.getPhaseById(req.params.id);
+      if (!oldPhase || oldPhase.length <= 0)
+        return res
+          .status(400)
+          .send({ error: "Error when manage phase update" });
+
       await phaseModel.updatePhase(
         obj,
         req.params.id,
@@ -446,6 +460,14 @@ class PhaseController {
       );
       obj.id = req.params.id;
 
+      if (obj.active != oldPhase[0].active) {
+        await CallbackDigitalk({
+          type: "socket",
+          channel: `wf_department_${req.body.department}`,
+          event: "change_active_phase",
+          obj: { id: req.params.id, active: obj.active },
+        });
+      }
       // let result = await departmentController.checkDepartmentCreated(
       //   req.body.department,
       //   req.headers.authorization
@@ -928,6 +950,13 @@ class PhaseController {
         const obj = { order: index };
         await phaseModel.updatePhase(obj, value, req.headers.authorization);
         return true;
+      });
+
+      await CallbackDigitalk({
+        type: "socket",
+        channel: `wf_department_${req.body.department}`,
+        event: "new_order_phase",
+        obj: req.body,
       });
 
       return res.status(200).send(req.body);
