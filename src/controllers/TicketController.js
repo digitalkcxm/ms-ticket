@@ -1123,20 +1123,14 @@ class TicketController {
           }
         }
       }
-
+      if (!ticket[0].start_ticket) {
+        obj.start_ticket = moment();
+      }
       let result = await ticketModel.updateTicket(
         obj,
         req.params.id,
         req.headers.authorization
       );
-
-      if (!ticket[0].start_ticket) {
-        await ticketModel.updateTicket(
-          { start_ticket: moment() },
-          req.body.id_ticket,
-          req.headers.authorization
-        );
-      }
 
       ticket = await formatTicketForPhase(ticket, ticket[0]);
       await redis.set(
