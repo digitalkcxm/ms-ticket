@@ -163,6 +163,13 @@ class TicketController {
         ticket = await formatTicketForPhase({ id: phase[0].id }, ticket[0]);
 
         // delete ticket[0].id_company
+
+        await CallbackDigitalk({
+          type: "socket",
+          channel: `phase_${phase[0].id}`,
+          event: "new_ticket",
+          obj: ticket,
+        });
         return res.status(200).send(ticket);
       }
 
