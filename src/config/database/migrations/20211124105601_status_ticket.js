@@ -1,5 +1,5 @@
 exports.up = async function (knex) {
-  knex.schema.createTable("status_ticket", (table) => {
+  await knex.schema.createTable("status_ticket", (table) => {
     table.increments();
     table.string("name");
     table.timestamps(true, true);
