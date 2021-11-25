@@ -1030,13 +1030,13 @@ class PhaseController {
 
               break;
             case 2:
-              result.total_tickets_iniciados_sem_resposta.emdia =
+              result.tickets_iniciados_sem_resposta.emdia =
                 await slaModel.getTicketControl(phase.id, 1, x.id_sla_type);
 
-              result.total_tickets_iniciados_sem_resposta.atrasado =
+              result.tickets_iniciados_sem_resposta.atrasado =
                 await slaModel.getTicketControl(phase.id, 2, x.id_sla_type);
 
-              result.total_tickets_iniciados_sem_resposta.aberto =
+              result.tickets_iniciados_sem_resposta.aberto =
                 await slaModel.getTicketControl(phase.id, 3, x.id_sla_type);
               break;
             case 3:
@@ -1049,10 +1049,10 @@ class PhaseController {
               result.tickets_concluidos.atrasado =
                 await slaModel.getTicketControl(phase.id, 2, x.id_sla_type);
 
-              result.total_tickets_respondidos_sem_conclusao.atrasado =
+              result.tickets_respondidos_sem_conclusao.atrasado =
                 await slaModel.getTicketControl(phase.id, 2, x.id_sla_type);
 
-              result.total_tickets_respondidos_sem_conclusao.aberto =
+              result.tickets_respondidos_sem_conclusao.aberto =
                 await slaModel.getTicketControl(phase.id, 3, x.id_sla_type);
               break;
             default:
@@ -1067,29 +1067,54 @@ class PhaseController {
             result.total_tickets_respondidos_sem_conclusao =
               result.total_tickets_respondidos_sem_conclusao + 1;
 
-            result.tickets_respondidos_sem_conclusao.sem_sla =
-              result.tickets_respondidos_sem_conclusao.sem_sla + 1;
+            const sla = await slaModel.getByPhaseTicket(
+              ticket.id_phase,
+              ticket.id,
+              3
+            );
+            if (sla && sla.length <= 0)
+              result.tickets_respondidos_sem_conclusao.sem_sla =
+                result.tickets_respondidos_sem_conclusao.sem_sla + 1;
           } else {
             result.total_tickets_iniciados_sem_resposta =
               result.total_tickets_iniciados_sem_resposta + 1;
 
-            result.tickets_iniciados_sem_resposta.sem_sla =
-              result.tickets_iniciados_sem_resposta.sem_sla + 1;
+            const sla = await slaModel.getByPhaseTicket(
+              ticket.id_phase,
+              ticket.id,
+              2
+            );
+            if (sla && sla.length <= 0)
+              result.tickets_iniciados_sem_resposta.sem_sla =
+                result.tickets_iniciados_sem_resposta.sem_sla + 1;
           }
         }
 
         if (ticket.id_status === 1) {
-          result.tickets_nao_iniciados.sem_sla =
-            result.tickets_nao_iniciados.sem_sla + 1;
+          const sla = await slaModel.getByPhaseTicket(
+            ticket.id_phase,
+            ticket.id,
+            1
+          );
+          if (sla && sla.length <= 0)
+            result.tickets_nao_iniciados.sem_sla =
+              result.tickets_nao_iniciados.sem_sla + 1;
         }
 
         if (ticket.id_status === 3) {
-          result.tickets_concluidos.sem_sla =
-            result.tickets_concluidos.sem_sla + 1;
+          const sla = await slaModel.getByPhaseTicket(
+            ticket.id_phase,
+            ticket.id,
+            3
+          );
+          if (sla && sla.length <= 0)
+            result.tickets_concluidos.sem_sla =
+              result.tickets_concluidos.sem_sla + 1;
         }
       }
 
       delete result.tickets;
+      delete result.phases;
       return res.status(200).send(result);
     } catch (err) {
       console.log(err);
