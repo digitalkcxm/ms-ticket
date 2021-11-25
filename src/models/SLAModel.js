@@ -46,13 +46,19 @@ class SLAModel {
     }
   }
 
-  async getTicketControl(id_phase, id_status, id_sla_type) {
+  async getTicketControl(
+    id_phase,
+    id_status,
+    id_sla_type,
+    status = [true, false]
+  ) {
     try {
       const result = await database("ticket_sla_control as tsc")
         .count()
         .leftJoin("phase_ticket as pt", "pt.id_ticket", "tsc.id_ticket")
         .leftJoin("ticket", "ticket.id", "pt.id_ticket")
-        .where("pt.id_phase", id_phase)
+        .whereIn("ticket.closed", status)
+        .andWhere("pt.id_phase", id_phase)
         .andWhere("tsc.id_sla_status", id_status)
         .andWhere("pt.active", true)
         .andWhere("tsc.id_sla_type", id_sla_type);

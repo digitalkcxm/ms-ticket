@@ -706,7 +706,8 @@ class PhaseController {
       result.header.percent_closed_tickets = 0;
     }
 
-    result.header.counter_sla = await counter_sla(result.id);
+    result.header.counter_sla = await counter_sla(result.id, [false]);
+    result.header.counter_sla_closed = await counter_sla(result.id, [true]);
 
     result.created_at = moment(result.created_at).format("DD/MM/YYYY HH:mm:ss");
     result.updated_at = moment(result.updated_at).format("DD/MM/YYYY HH:mm:ss");
