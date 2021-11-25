@@ -410,7 +410,7 @@ class PhaseModel {
     AND phase.id_company = '${id_company}'
     AND phase.active = true
     AND department_phase.active = true
-    AND phase_ticket.active = true
+    AND phase_ticket.active = true;
  `);
 
       const total_tickets_fechados = await database.raw(`   
@@ -428,19 +428,14 @@ class PhaseModel {
     AND ticket.id_status = 3
     `);
 
-      const total_tickets_atendimento = await database.raw(`
-    SELECT COUNT(ticket.id) FROM ticket
-    LEFT JOIN phase_ticket ON phase_ticket.id_ticket = ticket.id
-    LEFT JOIN phase ON phase.id = phase_ticket.id_phase
+      const phases = await database.raw(`   
+    SELECT phase.id FROM phase
     LEFT JOIN department_phase ON department_phase.id_phase = phase.id
     LEFT JOIN department ON department.id = department_phase.id_department
     WHERE department.id_department_core = ${department} 
     AND phase.id_company = '${id_company}'
     AND phase.active = true
     AND department_phase.active = true
-    AND phase_ticket.active = true
-    AND ticket.closed = false
-    AND ticket.id_status = 2
     `);
 
       return {
@@ -449,7 +444,8 @@ class PhaseModel {
         total_tickets_nao_iniciados: total_tickets_abertos.rows[0].count,
         total_tickets_fechados: total_tickets_fechados.rows[0].count,
         tickets: tickets.rows,
-        total_tickets_atendimento: total_tickets_atendimento.rows[0].count,
+        phases: phases.rows,
+        // total_tickets_atendimento: total_tickets_atendimento.rows[0].count,
       };
     } catch (err) {
       console.log("dashs =>", err);
