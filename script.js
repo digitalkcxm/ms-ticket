@@ -238,7 +238,6 @@ async function update_status_ticket() {
               })
             );
           });
-          
 
           if (result && result.length > 0) {
             console.log(3, result[0].created_at);
@@ -257,6 +256,61 @@ async function update_status_ticket() {
     console.log("ERRO =>", err);
   }
 }
-update_status_ticket();
+//update_status_ticket();
 // phases();
 // tickets();
+
+async function update_status_sla_ticket() {
+  const SLAModel = require("./src/models/SLAModel");
+  const slaModel = new SLAModel();
+  const tickets = await knex("ticket_sla_control").where("id_sla_status", 1);
+  console.log(tickets.length);
+  for (const ticket of tickets) {
+    switch (ticket.id_sla_type) {
+      case 1:
+        if (!ticket.interaction_time && ticket.limit_sla_time < moment()) {
+          console.log(1);
+          await slaModel.updateTicketSLA(
+            ticket.id_ticket,
+            { id_sla_status: 2 },
+            ticket.id_sla_type,
+            ticket.id_phase
+          );
+        }
+
+        break;
+      case 2:
+        if (
+          ticket.interaction_time < ticket.limit_sla_time &&
+          ticket.limit_sla_time < moment()
+        ) {
+          console.log(2);
+          await slaModel.updateTicketSLA(
+            ticket.id_ticket,
+            { id_sla_status: 2 },
+            ticket.id_sla_type,
+            ticket.id_phase
+          );
+        }
+
+        break;
+      case 3:
+        if (ticket.limit_sla_time < moment()) {
+          console.log(2);
+          await slaModel.updateTicketSLA(
+            ticket.id_ticket,
+            { id_sla_status: 2 },
+            ticket.id_sla_type,
+            ticket.id_phase
+          );
+        }
+
+        break;
+      default:
+        break;
+    }
+  }
+  console.log("fim");
+}
+
+update_status_sla_ticket();

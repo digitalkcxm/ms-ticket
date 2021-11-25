@@ -1639,6 +1639,8 @@ class TicketController {
             req.body.id_ticket,
             req.headers.authorization
           );
+
+          await updateSLA(req.body.id_ticket, ticket[0].phase_id);
         }
 
         await CallbackDigitalk(

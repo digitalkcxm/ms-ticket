@@ -260,15 +260,10 @@ class PhaseController {
       const departments = await phaseModel.getDepartmentPhase(result[0].id);
       result[0].department = departments[0].id_department;
 
-      const tickets = await ticketModel.getTicketByPhase(result[0].id);
       result[0].ticket = [];
       result[0].header = {};
 
       result[0].header.total_tickets = tickets.length;
-      for await (let ticket of tickets) {
-        const ticketFormated = await formatTicketForPhase(result[0], ticket);
-        result[0].ticket.push(ticketFormated);
-      }
 
       result[0].sla = await settingsSLA(result[0].id);
       result[0] = await this._formatPhase(result[0], req.app.locals.db);
@@ -322,7 +317,11 @@ class PhaseController {
               await formatTicketForPhase(result[i], ticket)
             );
           }
-          result[i] = await this._formatPhase(result[i], req.app.locals.db);
+          result[i] = await this._formatPhase(
+            result[i],
+            req.app.locals.db,
+            true
+          );
         }
         // }
       } else if (req.query.department) {
@@ -336,19 +335,10 @@ class PhaseController {
         result = await phaseModel.getAllPhase(req.headers.authorization);
 
         for (let i in result) {
-          const tickets = await ticketModel.getTicketByPhase(
-            result[i].id,
-            search
-          );
           result[i].ticket = [];
           result[i].header = {};
           result[i].header.total_tickets = tickets.length;
 
-          for await (let ticket of tickets) {
-            result[i].ticket.push(
-              await formatTicketForPhase(result[i], ticket)
-            );
-          }
           result[i] = await this._formatPhase(result[i], req.app.locals.db);
         }
 
@@ -400,17 +390,9 @@ class PhaseController {
       department_id[0].id
     );
     for (let phase of result) {
-      const tickets = await ticketModel.getTicketByPhaseAndStatus(
-        phase.id,
-        status
-      );
-
       phase.ticket = [];
       phase.header = {};
       phase.header.total_tickets = tickets.length;
-      for await (let ticket of tickets) {
-        phase.ticket.push(await formatTicketForPhase(phase, ticket));
-      }
 
       phase.sla = await settingsSLA(phase.id);
 
@@ -640,7 +622,7 @@ class PhaseController {
     return register;
   }
 
-  async _formatPhase(result, mongodb) {
+  async _formatPhase(result, mongodb, search = false) {
     const department = await phaseModel.getDepartmentPhase(result.id);
 
     department.length > 0
@@ -704,6 +686,14 @@ class PhaseController {
       ).toFixed(2);
     } else {
       result.header.percent_closed_tickets = 0;
+    }
+    if (!search) {
+      const tickets = await ticketModel.getTicketByPhase(result[0].id);
+
+      for await (let ticket of tickets) {
+        result.ticket.push(await formatTicketForPhase(result, ticket));
+        // if (ticket) const getByPhaseTicket(id_phase, id_ticket);
+      }
     }
 
     result.header.counter_sla = await counter_sla(result.id);
@@ -990,21 +980,18 @@ class PhaseController {
 
       result.tickets_nao_iniciados = {
         emdia: 0,
-        aberto: 0,
         atrasado: 0,
         sem_sla: 0,
       };
       result.total_tickets_iniciados_sem_resposta = 0;
       result.tickets_iniciados_sem_resposta = {
         emdia: 0,
-        aberto: 0,
         atrasado: 0,
         sem_sla: 0,
       };
 
       result.total_tickets_respondidos_sem_conclusao = 0;
       result.tickets_respondidos_sem_conclusao = {
-        aberto: 0,
         atrasado: 0,
         sem_sla: 0,
       };
@@ -1021,40 +1008,64 @@ class PhaseController {
           switch (x.id_sla_type) {
             case 1:
               result.tickets_nao_iniciados.emdia =
-                await slaModel.getTicketControl(phase.id, 1, x.id_sla_type);
+                await slaModel.getTicketControl(
+                  phase.id,
+                  1,
+                  x.id_sla_type,
+                  true
+                );
 
               result.tickets_nao_iniciados.atrasado =
-                await slaModel.getTicketControl(phase.id, 2, x.id_sla_type);
-
-              result.tickets_nao_iniciados.aberto =
-                await slaModel.getTicketControl(phase.id, 3, x.id_sla_type);
+                await slaModel.getTicketControl(
+                  phase.id,
+                  2,
+                  x.id_sla_type,
+                  true
+                );
 
               break;
             case 2:
               result.tickets_iniciados_sem_resposta.emdia =
-                await slaModel.getTicketControl(phase.id, 1, x.id_sla_type);
+                await slaModel.getTicketControl(
+                  phase.id,
+                  1,
+                  x.id_sla_type,
+                  true
+                );
 
               result.tickets_iniciados_sem_resposta.atrasado =
-                await slaModel.getTicketControl(phase.id, 2, x.id_sla_type);
+                await slaModel.getTicketControl(
+                  phase.id,
+                  2,
+                  x.id_sla_type,
+                  true
+                );
 
-              result.tickets_iniciados_sem_resposta.aberto =
-                await slaModel.getTicketControl(phase.id, 3, x.id_sla_type);
               break;
             case 3:
               result.tickets_concluidos.emdia = await slaModel.getTicketControl(
                 phase.id,
                 1,
-                x.id_sla_type
+                x.id_sla_type,
+                false
               );
 
               result.tickets_concluidos.atrasado =
-                await slaModel.getTicketControl(phase.id, 2, x.id_sla_type);
+                await slaModel.getTicketControl(
+                  phase.id,
+                  2,
+                  x.id_sla_type,
+                  false
+                );
 
               result.tickets_respondidos_sem_conclusao.atrasado =
-                await slaModel.getTicketControl(phase.id, 2, x.id_sla_type);
+                await slaModel.getTicketControl(
+                  phase.id,
+                  2,
+                  x.id_sla_type,
+                  true
+                );
 
-              result.tickets_respondidos_sem_conclusao.aberto =
-                await slaModel.getTicketControl(phase.id, 3, x.id_sla_type);
               break;
             default:
               break;
@@ -1073,9 +1084,20 @@ class PhaseController {
               ticket.id,
               3
             );
-            if (sla && sla.length <= 0)
+            if (sla && sla.length <= 0) {
               result.tickets_respondidos_sem_conclusao.sem_sla =
                 result.tickets_respondidos_sem_conclusao.sem_sla + 1;
+            } else if (sla && sla[0].active) {
+              const sla2 = await slaModel.getByPhaseTicket(
+                ticket.id_phase,
+                ticket.id,
+                2
+              );
+              if (sla2 && !sla2[0].active) {
+                result.tickets_respondidos_sem_conclusao.emdia =
+                  result.tickets_respondidos_sem_conclusao.emdia + 1;
+              }
+            }
           } else {
             result.total_tickets_iniciados_sem_resposta =
               result.total_tickets_iniciados_sem_resposta + 1;

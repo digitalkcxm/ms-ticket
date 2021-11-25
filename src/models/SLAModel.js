@@ -46,36 +46,17 @@ class SLAModel {
     }
   }
 
-  async getTicketControl(id_phase, id_status, id_sla_type) {
-    try {
-      const result = await database("ticket_sla_control as tsc")
-        .leftJoin("phase_ticket as pt", "pt.id_ticket", "tsc.id_ticket")
-        .leftJoin("ticket", "ticket.id", "pt.id_ticket")
-        .whereIn("ticket.closed", status)
-        .andWhere("pt.id_phase", id_phase)
-        .andWhere("tsc.id_sla_status", id_status)
-        .andWhere("pt.active", true)
-        .andWhere("tsc.id_sla_type", id_sla_type);
-
-      return result[0];
-    } catch (err) {
-      console.log("error when get sla's =>", err);
-      return err;
-    }
-  }
-
-  async getControlByStatus(id_phase, id_status) {
+  async getTicketControl(id_phase, id_status, id_sla_type, status = true) {
     try {
       const result = await database("ticket_sla_control as tsc")
         .count()
         .leftJoin("phase_ticket as pt", "pt.id_ticket", "tsc.id_ticket")
+        .leftJoin("ticket", "ticket.id", "pt.id_ticket")
         .where("pt.id_phase", id_phase)
         .andWhere("tsc.id_sla_status", id_status)
         .andWhere("pt.active", true)
-        .andWhere("tsc.active", true)
-        .orderBy("tsc.id_sla_type", "asc")
-        .limit(1);
-
+        .andWhere("tsc.id_sla_type", id_sla_type)
+        .andWhere("tsc.active", status);
       return result[0].count;
     } catch (err) {
       console.log("error when get sla's =>", err);
@@ -151,6 +132,21 @@ class SLAModel {
         .leftJoin("sla_status", "sla_status.id", "tsc.id_sla_status")
         .where("tsc.id_phase", id_phase)
         .andWhere("tsc.id_ticket", id_ticket);
+    } catch (err) {
+      console.log("error when get sla's =>", err);
+      return err;
+    }
+  }
+
+  async getByPhaseTicket(id_phase, id_ticket) {
+    try {
+      return await database("ticket_sla_control as tsc")
+        .leftJoin("phase_ticket as pt", "pt.id_phase", "tsc.id_phase")
+        .leftJoin("sla_status as ss", "ss.id", "tsc.id_sla_status")
+        .where("tsc.id_phase", id_phase)
+        .andWhere("tsc.id_ticket", id_ticket)
+        .andWhere("pt.active", true)
+        .limit(true);
     } catch (err) {
       console.log("error when get sla's =>", err);
       return err;
