@@ -943,7 +943,7 @@ class TicketController {
           });
         }
       }
-      const slas = await slaModel.getByPhaseTiket(
+      const slas = await slaModel.getSLAControl(
         history_phase[index].id_phase,
         id_ticket
       );

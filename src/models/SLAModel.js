@@ -71,8 +71,7 @@ class SLAModel {
         .where("tsc.id_phase", id_phase)
         .andWhere("tsc.id_ticket", id_ticket)
         .andWhere("pt.active", true)
-        .andWhere("tsc.id_sla_type", id_sla_type)
-        
+        .andWhere("tsc.id_sla_type", id_sla_type);
     } catch (err) {
       console.log("error when get sla's =>", err);
       return err;
@@ -115,7 +114,7 @@ class SLAModel {
     }
   }
 
-  async getByPhaseTiket(id_phase, id_ticket) {
+  async getSLAControl(id_phase, id_ticket) {
     try {
       return await database("ticket_sla_control as tsc")
         .select(
@@ -125,7 +124,8 @@ class SLAModel {
           "tsc.interaction_time",
           "tsc.id_sla_type",
           "tsc.id_sla_status",
-          "tsc.created_at"
+          "tsc.created_at",
+          "tsc.active"
         )
         .leftJoin("sla_type", "sla_type.id", "tsc.id_sla_type")
         .leftJoin("sla_status", "sla_status.id", "tsc.id_sla_status")

@@ -988,12 +988,14 @@ class PhaseController {
       );
 
       result.tickets_nao_iniciados = {
+        emdia: 0,
         aberto: 0,
         atrasado: 0,
         sem_sla: 0,
       };
       result.total_tickets_iniciados_sem_resposta = 0;
       result.tickets_iniciados_sem_resposta = {
+        emdia: 0,
         aberto: 0,
         atrasado: 0,
         sem_sla: 0,
@@ -1012,90 +1014,107 @@ class PhaseController {
         sem_sla: 0,
       };
       for (const ticket of result.tickets) {
-        switch (ticket.id_status) {
-          case 1:
-            const sla1 = await slaModel.getByPhaseTicket(
-              ticket.id_phase,
-              ticket.id,
-              1
-            );
-            if (sla1 && sla1.length > 0 && sla1[0].active) {
-              if (sla1[0].name === "Aberto") {
-                result.tickets_nao_iniciados.aberto =
-                  result.tickets_nao_iniciados.aberto + 1;
-              } else if (sla1[0].name === "Atrasado") {
-                result.tickets_nao_iniciados.atrasado =
-                  result.tickets_nao_iniciados.atrasado + 1;
-              }
-            } else {
-              result.tickets_nao_iniciados.sem_sla =
-                result.tickets_nao_iniciados.sem_sla + 1;
-            }
-            break;
-          case 2:
-            let sla2 = await slaModel.getByPhaseTicket(
-              ticket.id_phase,
-              ticket.id,
-              2
-            );
-            if (sla2 && sla2.length > 0) {
-              if (sla2[0].interaction_time) {
-                result.total_tickets_respondidos_sem_conclusao =
-                  result.total_tickets_respondidos_sem_conclusao + 1;
-                  sla2 = await slaModel.getByPhaseTicket(
-                  ticket.id_phase,
-                  ticket.id,
-                  3
-                );
-                if (sla2 && sla2.length > 0) {
-                  if (sla2[0].id_status === 3) {
-                    result.tickets_respondidos_sem_conclusao.aberto =
-                      result.tickets_respondidos_sem_conclusao.aberto + 1;
-                  } else if (sla2[0].id_status === 2) {
-                    result.tickets_respondidos_sem_conclusao.atrasado =
-                      result.tickets_respondidos_sem_conclusao.atrasado + 1;
-                  }
-                } else {
-                  result.tickets_respondidos_sem_conclusao.sem_sla =
-                    result.tickets_respondidos_sem_conclusao.sem_sla + 1;
+        const slas = await slaModel.getSLAControl(ticket.id_phase, ticket.id);
+
+        if (slas && slas.length > 0) {
+          for (const sla of slas) {
+            switch (sla.id_sla_type) {
+              case 1:
+                if (sla.id_sla_status === 1)
+                  result.tickets_nao_iniciados.emdia =
+                    result.tickets_nao_iniciados.emdia + 1;
+
+                if (sla.id_sla_status === 2)
+                  result.tickets_nao_iniciados.atrasado =
+                    result.tickets_nao_iniciados.atrasado + 1;
+
+                if (sla.id_sla_status === 3)
+                  result.tickets_nao_iniciados.aberto =
+                    result.tickets_nao_iniciados.aberto + 1;
+                break;
+              case 2:
+                if (sla.id_sla_status === 1) {
+                  result.tickets_iniciados_sem_resposta.emdia =
+                    result.tickets_iniciados_sem_resposta.emdia + 1;
+
+                  result.total_tickets_respondidos_sem_conclusao =
+                    result.total_tickets_respondidos_sem_conclusao + 1;
                 }
-              } else {
-                result.total_tickets_iniciados_sem_resposta =
-                  result.total_tickets_iniciados_sem_resposta + 1;
-                if (sla2[0].id_sla_status === 3) {
-                  result.tickets_iniciados_sem_resposta.aberto =
-                    result.tickets_iniciados_sem_resposta.aberto + 1;
-                } else if (sla2[0].id_sla_status === 2) {
+
+                if (sla.id_sla_status === 2) {
                   result.tickets_iniciados_sem_resposta.atrasado =
                     result.tickets_iniciados_sem_resposta.atrasado + 1;
+
+                  sla.interaction_time
+                    ? ""
+                    : (result.total_tickets_iniciados_sem_resposta =
+                        result.total_tickets_iniciados_sem_resposta + 1);
                 }
-              }
+
+                if (sla.id_sla_status === 3) {
+                  result.total_tickets_iniciados_sem_resposta =
+                    result.total_tickets_iniciados_sem_resposta + 1;
+
+                  result.tickets_iniciados_sem_resposta.aberto =
+                    result.tickets_iniciados_sem_resposta.aberto + 1;
+                }
+
+                break;
+              case 3:
+                if (sla.id_sla_status === 1) {
+                  result.tickets_concluidos.emdia =
+                    result.tickets_concluidos.emdia + 1;
+                }
+
+                if (sla.id_sla_status === 2) {
+                  result.tickets_concluidos.atrasado =
+                    result.tickets_concluidos.atrasado + 1;
+
+                  sla.interaction_time
+                    ? ""
+                    : (result.total_tickets_respondidos_sem_conclusao =
+                        result.total_tickets_respondidos_sem_conclusao + 1);
+                }
+
+                if (sla.id_sla_status === 3) {
+                  result.total_tickets_respondidos_sem_conclusao =
+                    result.total_tickets_respondidos_sem_conclusao + 1;
+
+                  result.tickets_respondidos_sem_conclusao.aberto =
+                    result.tickets_respondidos_sem_conclusao.aberto + 1;
+                }
+                break;
+              default:
+                break;
+            }
+          }
+        } else {
+          if (ticket.id_status === 2) {
+            const interaction = await ticketModel.first_interaction(ticket.id);
+            if (interaction && interaction.length > 0) {
+              result.total_tickets_respondidos_sem_conclusao =
+                result.total_tickets_respondidos_sem_conclusao + 1;
+
+              result.tickets_respondidos_sem_conclusao.sem_sla =
+                result.tickets_respondidos_sem_conclusao.sem_sla + 1;
             } else {
+              result.total_tickets_iniciados_sem_resposta =
+                result.total_tickets_iniciados_sem_resposta + 1;
+
               result.tickets_iniciados_sem_resposta.sem_sla =
                 result.tickets_iniciados_sem_resposta.sem_sla + 1;
             }
-            break;
-          case 3:
-            const sla3 = await slaModel.getByPhaseTicket(
-              ticket.id_phase,
-              ticket.id,
-              3
-            );
-            if (sla3 && sla.length > 0) {
-              if (sla3[0].id_sla_status === 1)
-                result.tickets_concluidos.emdia =
-                  result.tickets_concluidos.emdia + 1;
-              if (sla3[0].id_sla_status === 2)
-                result.tickets_concluidos.atrasado =
-                  result.tickets_concluidos.atrasado + 1;
-            } else {
-              result.tickets_concluidos.sem_sla =
-                result.tickets_concluidos.sem_sla + 1;
-            }
+          }
 
-            break;
-          default:
-            break;
+          if (ticket.id_status === 1) {
+            result.tickets_nao_iniciados.sem_sla =
+              result.tickets_nao_iniciados.sem_sla + 1;
+          }
+
+          if (ticket.id_status === 3) {
+            result.tickets_concluidos.sem_sla =
+              result.tickets_concluidos.sem_sla + 1;
+          }
         }
       }
       delete result.tickets;
