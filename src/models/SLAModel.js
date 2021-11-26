@@ -152,6 +152,30 @@ class SLAModel {
       return err;
     }
   }
+
+  async getToCountSLA(id_phase, closed = false) {
+    if (closed) {
+      return await database.raw(`
+      select ticket_sla_control.*, ticket.id_status 
+      from ticket_sla_control 
+      left join phase_ticket on phase_ticket.id_ticket = ticket_sla_control.id_ticket 
+      left join ticket on ticket.id = ticket_sla_control.id_ticket 
+      where phase_ticket.id_phase = '${id_phase}' 
+      and phase_ticket.active = true 
+      and ticket.id_status = 3;
+      `);
+    } else {
+      return await database.raw(`
+      select ticket_sla_control.*, ticket.id_status 
+      from ticket_sla_control 
+      left join phase_ticket on phase_ticket.id_ticket = ticket_sla_control.id_ticket 
+      left join ticket on ticket.id = ticket_sla_control.id_ticket 
+      where phase_ticket.id_phase = '${id_phase}' 
+      and phase_ticket.active = true 
+      and ticket.id_status != 3;
+      `);
+    }
+  }
 }
 
 module.exports = SLAModel;

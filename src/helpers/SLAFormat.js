@@ -15,25 +15,59 @@ const sla_status = {
   aberto: 3,
 };
 
-const counter_sla = async function (phase_id) {
+const counter_sla = async function (phase_id, closed= false) {
   let obj = {};
   const slas = await slaModel.getSLASettings(phase_id);
   if (slas && slas.length > 0) {
-    const type_sla = slas[0].id_sla_type;
-
-    for await (const x of sla_status_id) {
-      switch (x) {
+    const sla_ticket = await slaModel.getToCountSLA(phase_id, closed);
+    for await (const sla of sla_ticket) {
+      switch (sla.id_sla_type) {
         case 1:
-          obj.emdia = await slaModel.getTicketControl(phase_id, x, type_sla);
+          if (sla.active) {
+            if (sla.id_sla_status == 1) {
+              obj.emdia = obj.emdia + 1;
+            } else if (sla.id_sla_status == 2) {
+              obj.atrasado = obj.atrasado + 1;
+            }
+          }
           break;
         case 2:
-          obj.atrasado = await slaModel.getTicketControl(phase_id, x, type_sla);
+          if (!sla.interaction_time) {
+            if (sla.id_sla_status === 1) {
+              obj.emdia = obj.emdia + 1;
+            } else {
+              obj.atrasado = obj.atrasado + 1;
+            }
+          } else {
+            const nextSLA = sla_ticket.filter(
+              (x) => x.id_sla_type === 3 && x.active
+            );
+            nextSLA;
+            if (nextSLA.length > 0) {
+              if (nextSLA[0].id_sla_status === 2) {
+                obj.atrasado = obj.atrasado + 1;
+              } else {
+                obj.emdia = obj.emdia + 1;
+              }
+            }
+          }
           break;
         case 3:
-          obj.aberto = await slaModel.getTicketControl(phase_id, x, type_sla);
+          if (!sla.active) {
+            const nextSLA = sla_ticket.filter(
+              (x) => x.id_sla_type === 2 && x.interaction_time
+            );
+            if (nextSLA.length > 0) {
+              if (sla.id_sla_status === 1) {
+                obj.emdia = obj.emdia + 1;
+              } else if (sla.id_sla_status === 2) {
+                obj.atrasado = obj.atrasado + 1;
+              }
+            }
+          }
           break;
+
         default:
-          console.log("Unmapped status");
           break;
       }
     }

@@ -700,7 +700,7 @@ class PhaseController {
     }
 
     result.header.counter_sla = await counter_sla(result.id);
-    result.header.counter_sla_closed = await counter_sla(result.id);
+    result.header.counter_sla_closed = await counter_sla(result.id, true);
 
     result.created_at = moment(result.created_at).format("DD/MM/YYYY HH:mm:ss");
     result.updated_at = moment(result.updated_at).format("DD/MM/YYYY HH:mm:ss");
@@ -795,7 +795,7 @@ class PhaseController {
           type: "socket",
           channel: `wf_department_${result[0].department}`,
           event: "disable_phase",
-          obj: {id: req.params.id, active:req.body.active },
+          obj: { id: req.params.id, active: req.body.active },
         },
         req.company[0].callback
       );
