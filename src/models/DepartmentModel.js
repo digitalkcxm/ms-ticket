@@ -41,9 +41,25 @@ class DepartmentModel {
           name: "phase.name",
         })
         .leftJoin("phase", "phase.id", "department_phase.id_phase")
-        .where("department_phase.id_department",id_department);
+        .where("department_phase.id_department", id_department);
     } catch (err) {
       console.log("Error get department phase by department =>", err);
+      return false;
+    }
+  }
+
+  async getDepartmentByPhase(id_phase) {
+    try {
+      return await database("department_phase")
+        .leftJoin(
+          "department",
+          "department.id",
+          "department_phase.id_department"
+        )
+        .where("department_phase.active", true)
+        .andWhere("department_phase.id_phase", id_phase);
+    } catch (err) {
+      console.log("Error get departmet by phase =>", err);
       return false;
     }
   }

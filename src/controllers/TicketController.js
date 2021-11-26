@@ -587,6 +587,7 @@ class TicketController {
         obj.created_at = moment(obj.created_at).format("DD/MM/YYYY HH:mm:ss");
         obj.updated_at = moment(obj.updated_at).format("DD/MM/YYYY HH:mm:ss");
         obj.type = "note";
+        obj.id_user = req.body.id_user;
         await CallbackDigitalk(
           {
             type: "socket",
@@ -659,6 +660,7 @@ class TicketController {
         obj.created_at = moment(obj.created_at).format("DD/MM/YYYY HH:mm:ss");
         obj.updated_at = moment(obj.updated_at).format("DD/MM/YYYY HH:mm:ss");
         obj.type = "file";
+        obj.id_user = req.body.id_user
         await CallbackDigitalk(
           {
             type: "socket",

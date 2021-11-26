@@ -263,8 +263,6 @@ class PhaseController {
       result[0].ticket = [];
       result[0].header = {};
 
-      result[0].header.total_tickets = tickets.length;
-
       result[0].sla = await settingsSLA(result[0].id);
       result[0] = await this._formatPhase(result[0], req.app.locals.db);
       return res.status(200).send(result);
@@ -767,11 +765,32 @@ class PhaseController {
 
   async disablePhase(req, res) {
     try {
+      const phase = await phaseModel.getPhaseById(
+        req.params.id,
+        req.headers.authorization
+      );
+      if (!phase || (phase && phase.length <= 0))
+        return res.status(400).send({ error: "There was an error" });
+
+      const department = await departmentModel.getDepartmentByPhase(
+        phase[0].id
+      );
       await phaseModel.updatePhase(
         { active: req.body.active },
         req.params.id,
         req.headers.authorization
       );
+
+      await CallbackDigitalk(
+        {
+          type: "socket",
+          channel: `wf_department_${department[0].id_department_core}`,
+          event: "disable_phase",
+          obj: req.body,
+        },
+        req.company[0].callback
+      );
+
       return res.status(200).send({ status: "ok" });
     } catch (err) {
       console.log(err);
@@ -952,7 +971,7 @@ class PhaseController {
       await CallbackDigitalk(
         {
           type: "socket",
-          channel: `wf_department_${req.body.department}`,
+          channel: `wf_department_${req.params.id}`,
           event: "new_order_phase",
           obj: req.body,
         },
