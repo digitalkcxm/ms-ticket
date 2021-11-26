@@ -1282,9 +1282,17 @@ class TicketController {
         let obj;
         if (slaTicket && Array.isArray(slaTicket) && slaTicket.length > 0) {
           if (slaTicket[0].limit_sla_time < moment()) {
-            obj = { id_sla_status: sla_status.atrasado, active: false };
+            obj = {
+              id_sla_status: sla_status.atrasado,
+              active: false,
+              interaction_time: moment(),
+            };
           } else if (slaTicket[0].limit_sla_time > moment()) {
-            obj = { id_sla_status: sla_status.emdia, active: false };
+            obj = {
+              id_sla_status: sla_status.emdia,
+              active: false,
+              interaction_time: moment(),
+            };
           }
           await slaModel.updateTicketSLA(
             ticket.id_ticket,
@@ -1307,9 +1315,15 @@ class TicketController {
           !slaTicket[0].interaction_time
         ) {
           if (slaTicket[0].limit_sla_time < moment()) {
-            obj = { id_sla_status: sla_status.atrasado, active: false };
+            obj = {
+              id_sla_status: sla_status.atrasado,
+              active: false,
+            };
           } else if (slaTicket[0].limit_sla_time > moment()) {
-            obj = { id_sla_status: sla_status.emdia, active: false };
+            obj = {
+              id_sla_status: sla_status.emdia,
+              active: false,
+            };
           }
           await slaModel.updateTicketSLA(
             ticket.id_ticket,
@@ -1318,6 +1332,7 @@ class TicketController {
           );
         }
 
+        await slaModel.disableSLA(ticket.id_ticket);
         ticket[0] = await formatTicketForPhase(
           { id: ticket[0].phase_id },
           ticket[0]
