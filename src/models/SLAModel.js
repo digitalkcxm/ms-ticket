@@ -67,7 +67,7 @@ class SLAModel {
   async getByPhaseTicket(id_phase, id_ticket, id_sla_type) {
     try {
       return await database("ticket_sla_control as tsc")
-        .leftJoin("phase_ticket as pt", "pt.id_phase", "tsc.id_phase")
+        .leftJoin("phase_ticket as pt", "pt.id_ticket", "tsc.id_ticket")
         .leftJoin("sla_status as ss", "ss.id", "tsc.id_sla_status")
         .where("tsc.id_phase", id_phase)
         .andWhere("tsc.id_ticket", id_ticket)
@@ -138,15 +138,15 @@ class SLAModel {
     }
   }
 
-  async getByPhaseTicket(id_phase, id_ticket) {
+  async getForDash(id_phase, id_ticket) {
     try {
       return await database("ticket_sla_control as tsc")
-        .leftJoin("phase_ticket as pt", "pt.id_phase", "tsc.id_phase")
+        .select("tsc.*")
+        .leftJoin("phase_ticket as pt", "pt.id_ticket", "tsc.id_ticket")
         .leftJoin("sla_status as ss", "ss.id", "tsc.id_sla_status")
         .where("tsc.id_phase", id_phase)
         .andWhere("tsc.id_ticket", id_ticket)
-        .andWhere("pt.active", true)
-        .limit(true);
+        .andWhere("pt.active", true);
     } catch (err) {
       console.log("error when get sla's =>", err);
       return err;

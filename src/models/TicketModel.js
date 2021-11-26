@@ -331,6 +331,7 @@ class TicketModel {
       return err;
     }
   }
+  
   async getTicketByPhaseAndStatus(id_phase, status) {
     try {
       let newStatus;

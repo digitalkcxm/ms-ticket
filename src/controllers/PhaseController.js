@@ -392,7 +392,6 @@ class PhaseController {
     for (let phase of result) {
       phase.ticket = [];
       phase.header = {};
-      phase.header.total_tickets = tickets.length;
 
       phase.sla = await settingsSLA(phase.id);
 
@@ -688,12 +687,13 @@ class PhaseController {
       result.header.percent_closed_tickets = 0;
     }
     if (!search) {
-      const tickets = await ticketModel.getTicketByPhase(result[0].id);
+      const tickets = await ticketModel.getTicketByPhase(result.id);
 
       for await (let ticket of tickets) {
         result.ticket.push(await formatTicketForPhase(result, ticket));
         // if (ticket) const getByPhaseTicket(id_phase, id_ticket);
       }
+      result.header.total_tickets = tickets.length;
     }
 
     result.header.counter_sla = await counter_sla(result.id);
@@ -977,7 +977,7 @@ class PhaseController {
         req.params.id,
         req.headers.authorization
       );
-
+      result.total_tickets_nao_iniciados = 0;
       result.tickets_nao_iniciados = {
         emdia: 0,
         atrasado: 0,
@@ -992,6 +992,7 @@ class PhaseController {
 
       result.total_tickets_respondidos_sem_conclusao = 0;
       result.tickets_respondidos_sem_conclusao = {
+        emdia: 0,
         atrasado: 0,
         sem_sla: 0,
       };
@@ -1002,139 +1003,207 @@ class PhaseController {
         sem_sla: 0,
       };
 
-      for (const phase of result.phases) {
-        const slas = await slaModel.getSLASettings(phase.id);
-        for await (const x of slas) {
-          switch (x.id_sla_type) {
+      for await (const ticket of result.tickets) {
+        if (ticket.id_status == 3) {
+          console.log(ticket);
+        }
+        const phaseSettings = await slaModel.getSLASettings(ticket.id_phase);
+        if (phaseSettings && phaseSettings.length > 0) {
+          const sla_ticket = await slaModel.getForDash(
+            ticket.id_phase,
+            ticket.id
+          );
+          for await (const sla of sla_ticket) {
+            switch (sla.id_sla_type) {
+              case 1:
+                if (sla.active) {
+                  result.total_tickets_nao_iniciados =
+                    result.total_tickets_nao_iniciados + 1;
+                  if (sla.id_sla_status == 1) {
+                    result.tickets_nao_iniciados.emdia =
+                      result.tickets_nao_iniciados.emdia + 1;
+                  } else if (sla.id_sla_status == 2) {
+                    result.tickets_nao_iniciados.atrasado =
+                      result.tickets_nao_iniciados.atrasado + 1;
+                  }
+                } else {
+                  const nextSLA = sla_ticket.filter(
+                    (x) => x.id_sla_type === 2 || x.id_sla_type === 3
+                  );
+                  if (nextSLA.length <= 0) {
+                    switch (ticket.id_status) {
+                      case 2:
+                        const firstInteraction =
+                          await ticketModel.first_interaction(ticket.id);
+                        if (firstInteraction && firstInteraction.length <= 0) {
+                          result.total_tickets_iniciados_sem_resposta =
+                            result.total_tickets_iniciados_sem_resposta + 1;
+
+                          result.tickets_iniciados_sem_resposta.sem_sla =
+                            result.tickets_iniciados_sem_resposta.sem_sla + 1;
+                        } else {
+                          result.total_tickets_respondidos_sem_conclusao =
+                            result.total_tickets_respondidos_sem_conclusao + 1;
+
+                          result.tickets_respondidos_sem_conclusao.sem_sla =
+                            result.tickets_respondidos_sem_conclusao.sem_sla +
+                            1;
+                        }
+
+                        break;
+                      case 3:
+                        result.tickets_concluidos.sem_sla =
+                          result.tickets_concluidos.sem_sla + 1;
+                        break;
+                      default:
+                        break;
+                    }
+                  }
+                }
+                break;
+              case 2:
+                if (!sla.interaction_time) {
+                  result.total_tickets_iniciados_sem_resposta =
+                    result.total_tickets_iniciados_sem_resposta + 1;
+                  if (sla.id_sla_status === 1) {
+                    result.tickets_iniciados_sem_resposta.emdia =
+                      result.tickets_iniciados_sem_resposta.emdia + 1;
+                  } else {
+                    result.tickets_iniciados_sem_resposta.atrasado =
+                      result.tickets_iniciados_sem_resposta.atrasado + 1;
+                  }
+                } else {
+                  const nextSLA = sla_ticket.filter(
+                    (x) => x.id_sla_type === 3 && x.active
+                  );
+                  nextSLA;
+                  if (nextSLA.length > 0) {
+                    result.total_tickets_respondidos_sem_conclusao =
+                      result.total_tickets_respondidos_sem_conclusao + 1;
+                    if (nextSLA[0].id_sla_status === 2) {
+                      result.tickets_respondidos_sem_conclusao.atrasado =
+                        result.tickets_respondidos_sem_conclusao.atrasado + 1;
+                    } else {
+                      result.tickets_respondidos_sem_conclusao.emdia =
+                        result.tickets_respondidos_sem_conclusao.emdia + 1;
+                    }
+                  }
+                }
+                break;
+              case 3:
+                if (!sla.active) {
+                  const nextSLA = sla_ticket.filter(
+                    (x) => x.id_sla_type === 2 && x.interaction_time
+                  );
+                  if (nextSLA.length > 0) {
+                    if (sla.id_sla_status === 1) {
+                      result.tickets_concluidos.emdia =
+                        result.tickets_concluidos.emdia + 1;
+                    } else if (sla.id_sla_status === 2) {
+                      result.tickets_concluidos.atrasado =
+                        result.tickets_concluidos.atrasado + 1;
+                    }
+                  }
+                }
+                break;
+
+              default:
+                break;
+            }
+          }
+        } else {
+          switch (ticket.id_status) {
             case 1:
-              result.tickets_nao_iniciados.emdia =
-                await slaModel.getTicketControl(
-                  phase.id,
-                  1,
-                  x.id_sla_type,
-                  true
-                );
-
-              result.tickets_nao_iniciados.atrasado =
-                await slaModel.getTicketControl(
-                  phase.id,
-                  2,
-                  x.id_sla_type,
-                  true
-                );
-
+              result.tickets_nao_iniciados.sem_sla =
+                result.tickets_nao_iniciados.sem_sla + 1;
               break;
             case 2:
-              result.tickets_iniciados_sem_resposta.emdia =
-                await slaModel.getTicketControl(
-                  phase.id,
-                  1,
-                  x.id_sla_type,
-                  true
-                );
+              const firstInteraction = await ticketModel.first_interaction(
+                ticket.id
+              );
+              if (firstInteraction && firstInteraction.length <= 0) {
+                result.total_tickets_iniciados_sem_resposta =
+                  result.total_tickets_iniciados_sem_resposta + 1;
 
-              result.tickets_iniciados_sem_resposta.atrasado =
-                await slaModel.getTicketControl(
-                  phase.id,
-                  2,
-                  x.id_sla_type,
-                  true
-                );
+                result.tickets_iniciados_sem_resposta.sem_sla =
+                  result.tickets_iniciados_sem_resposta.sem_sla + 1;
+              } else {
+                result.total_tickets_respondidos_sem_conclusao =
+                  result.total_tickets_respondidos_sem_conclusao + 1;
+
+                result.tickets_respondidos_sem_conclusao.sem_sla =
+                  result.tickets_respondidos_sem_conclusao.sem_sla + 1;
+              }
 
               break;
             case 3:
-              result.tickets_concluidos.emdia = await slaModel.getTicketControl(
-                phase.id,
-                1,
-                x.id_sla_type,
-                false
-              );
-
-              result.tickets_concluidos.atrasado =
-                await slaModel.getTicketControl(
-                  phase.id,
-                  2,
-                  x.id_sla_type,
-                  false
-                );
-
-              result.tickets_respondidos_sem_conclusao.atrasado =
-                await slaModel.getTicketControl(
-                  phase.id,
-                  2,
-                  x.id_sla_type,
-                  true
-                );
-
+              result.tickets_concluidos.sem_sla =
+                result.tickets_concluidos.sem_sla + 1;
               break;
             default:
               break;
           }
         }
       }
-      for (const ticket of result.tickets) {
-        if (ticket.id_status === 2) {
-          const interaction = await ticketModel.first_interaction(ticket.id);
-          if (interaction && interaction.length > 0) {
-            result.total_tickets_respondidos_sem_conclusao =
-              result.total_tickets_respondidos_sem_conclusao + 1;
-
-            const sla = await slaModel.getByPhaseTicket(
-              ticket.id_phase,
-              ticket.id,
-              3
-            );
-            if (sla && sla.length <= 0) {
-              result.tickets_respondidos_sem_conclusao.sem_sla =
-                result.tickets_respondidos_sem_conclusao.sem_sla + 1;
-            } else if (sla && sla[0].active) {
-              const sla2 = await slaModel.getByPhaseTicket(
-                ticket.id_phase,
-                ticket.id,
-                2
-              );
-              if (sla2 && !sla2[0].active) {
-                result.tickets_respondidos_sem_conclusao.emdia =
-                  result.tickets_respondidos_sem_conclusao.emdia + 1;
-              }
-            }
-          } else {
-            result.total_tickets_iniciados_sem_resposta =
-              result.total_tickets_iniciados_sem_resposta + 1;
-
-            const sla = await slaModel.getByPhaseTicket(
-              ticket.id_phase,
-              ticket.id,
-              2
-            );
-            if (sla && sla.length <= 0)
-              result.tickets_iniciados_sem_resposta.sem_sla =
-                result.tickets_iniciados_sem_resposta.sem_sla + 1;
-          }
-        }
-
-        if (ticket.id_status === 1) {
-          const sla = await slaModel.getByPhaseTicket(
-            ticket.id_phase,
-            ticket.id,
-            1
-          );
-          if (sla && sla.length <= 0)
-            result.tickets_nao_iniciados.sem_sla =
-              result.tickets_nao_iniciados.sem_sla + 1;
-        }
-
-        if (ticket.id_status === 3) {
-          const sla = await slaModel.getByPhaseTicket(
-            ticket.id_phase,
-            ticket.id,
-            3
-          );
-          if (sla && sla.length <= 0)
-            result.tickets_concluidos.sem_sla =
-              result.tickets_concluidos.sem_sla + 1;
-        }
-      }
+      const calc_percentual = async function (total, value) {
+        return parseInt((parseInt(value) * 100) / parseInt(total)).toFixed(2);
+      };
+      result.percentual_nao_iniciado = {
+        emdia: await calc_percentual(
+          result.total_tickets_nao_iniciados,
+          result.tickets_nao_iniciados.emdia
+        ),
+        atrasado: await calc_percentual(
+          result.total_tickets_nao_iniciados,
+          result.tickets_nao_iniciados.atrasado
+        ),
+        sem_sla: await calc_percentual(
+          result.total_tickets_nao_iniciados,
+          result.tickets_nao_iniciados.sem_sla
+        ),
+      };
+      result.percentual_iniciado_sem_resposta = {
+        emdia: await calc_percentual(
+          result.total_tickets_iniciados_sem_resposta,
+          result.tickets_iniciados_sem_resposta.emdia
+        ),
+        atrasado: await calc_percentual(
+          result.total_tickets_iniciados_sem_resposta,
+          result.tickets_iniciados_sem_resposta.atrasado
+        ),
+        sem_sla: await calc_percentual(
+          result.total_tickets_iniciados_sem_resposta,
+          result.tickets_iniciados_sem_resposta.sem_sla
+        ),
+      };
+      result.percentual_respondido_sem_conclusao = {
+        emdia: await calc_percentual(
+          result.total_tickets_respondidos_sem_conclusao,
+          result.tickets_respondidos_sem_conclusao.emdia
+        ),
+        atrasado: await calc_percentual(
+          result.total_tickets_respondidos_sem_conclusao,
+          result.tickets_respondidos_sem_conclusao.atrasado
+        ),
+        sem_sla: await calc_percentual(
+          result.total_tickets_respondidos_sem_conclusao,
+          result.tickets_respondidos_sem_conclusao.sem_sla
+        ),
+      };
+      result.percentual_concluido = {
+        emdia: await calc_percentual(
+          result.total_tickets_fechados,
+          result.tickets_concluidos.emdia
+        ),
+        atrasado: await calc_percentual(
+          result.total_tickets_fechados,
+          result.tickets_concluidos.atrasado
+        ),
+        sem_sla: await calc_percentual(
+          result.total_tickets_fechados,
+          result.tickets_concluidos.sem_sla
+        ),
+      };
 
       delete result.tickets;
       delete result.phases;
