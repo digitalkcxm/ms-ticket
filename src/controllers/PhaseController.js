@@ -164,6 +164,11 @@ class PhaseController {
       obj.column = req.body.column;
       obj.created_at = moment(obj.created_at).format("DD/MM/YYYY HH:mm:ss");
       obj.updated_at = moment(obj.updated_at).format("DD/MM/YYYY HH:mm:ss");
+      obj.ticket = [];
+      obj.header = {};
+
+      obj.sla = await settingsSLA(obj.id);
+      obj = await this._formatPhase(obj, req.app.locals.db);
 
       await redis.del(`ticket:phase:${req.headers.authorization}`);
       await CallbackDigitalk(
@@ -765,28 +770,32 @@ class PhaseController {
 
   async disablePhase(req, res) {
     try {
-      const phase = await phaseModel.getPhaseById(
+      const result = await phaseModel.getPhaseById(
         req.params.id,
         req.headers.authorization
       );
-      if (!phase || (phase && phase.length <= 0))
-        return res.status(400).send({ error: "There was an error" });
+      if (!result || result.length < 0)
+        return res.status(400).send({ error: "Invalid id phase" });
 
-      const department = await departmentModel.getDepartmentByPhase(
-        phase[0].id
-      );
-      await phaseModel.updatePhase(
-        { active: req.body.active },
-        req.params.id,
-        req.headers.authorization
-      );
+      const departments = await phaseModel.getDepartmentPhase(result[0].id);
+      result[0].department = departments[0].id_department;
 
+      result[0].ticket = [];
+      result[0].header = {};
+
+      result[0].sla = await settingsSLA(result[0].id);
+      // await phaseModel.updatePhase(
+      //   { active: req.body.active },
+      //   req.params.id,
+      //   req.headers.authorization
+      // );
+      console.log("teste", result[0]);
       await CallbackDigitalk(
         {
           type: "socket",
-          channel: `wf_department_${department[0].id_department_core}`,
+          channel: `wf_department_${result[0].department}`,
           event: "disable_phase",
-          obj: req.body,
+          obj: {id: req.params.id, active:req.body.active },
         },
         req.company[0].callback
       );

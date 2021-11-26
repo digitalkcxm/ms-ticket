@@ -1173,24 +1173,27 @@ class TicketController {
           {
             type: "socket",
             channel: `phase_${phase[0].id}`,
-            event: "move_ticket",
+            event: "move_ticket_new_phase",
             obj: ticket[0],
           },
           req.company[0].callback
         );
 
+        
         await CallbackDigitalk(
           {
             type: "socket",
             channel: `phase_${ticket[0].phase_id}`,
-            event: "move_ticket",
+            event: "move_ticket_old_phase",
             obj: ticket[0],
           },
           req.company[0].callback
         );
       } else {
+        console.log("FORM",req.body.form)
         if (req.body.form && Object.keys(req.body.form).length > 0) {
           const firstPhase = await ticketModel.getFirstFormTicket(ticket[0].id);
+          console.log("firstPhase===>",firstPhase)
           if (firstPhase[0].form) {
             let errors = await this._validateUpdate(
               req.app.locals.db,

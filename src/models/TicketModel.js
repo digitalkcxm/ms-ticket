@@ -331,7 +331,7 @@ class TicketModel {
       return err;
     }
   }
-  
+
   async getTicketByPhaseAndStatus(id_phase, status) {
     try {
       let newStatus;
@@ -531,11 +531,14 @@ class TicketModel {
           "phase.id",
           "phase.id_form_template",
           "phase_ticket.created_at",
-          "phase.form"
+          "phase.form",
+          "phase_ticket.id_form"
         )
         .leftJoin("phase", "phase.id", "phase_ticket.id_phase")
         .where("phase_ticket.id_ticket", id_ticket)
+        .andWhere("phase_ticket.active",true)
         .orderBy("phase_ticket.created_at", "asc");
+
     } catch (err) {
       console.log("Error Get First Form Ticket ==>", err);
       return err;
