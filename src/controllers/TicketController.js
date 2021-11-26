@@ -660,7 +660,7 @@ class TicketController {
         obj.created_at = moment(obj.created_at).format("DD/MM/YYYY HH:mm:ss");
         obj.updated_at = moment(obj.updated_at).format("DD/MM/YYYY HH:mm:ss");
         obj.type = "file";
-        obj.id_user = req.body.id_user
+        obj.id_user = req.body.id_user;
         await CallbackDigitalk(
           {
             type: "socket",
@@ -1120,6 +1120,10 @@ class TicketController {
           .status(400)
           .send({ error: "There is no ticket with this ID " });
 
+      if (ticket[0].id_status === 3)
+        return res
+          .status(400)
+          .send({ error: "Impossivel atualizar um ticket finalizado!" });
       // if (req.body.customer) {
       //   await this._createCustomers(req.body.customer, req.params.id);
       // }
@@ -1172,41 +1176,41 @@ class TicketController {
         await CallbackDigitalk(
           {
             type: "socket",
-            channel: `phase_${phase[0].id}`,
-            event: "move_ticket_new_phase",
-            obj: ticket[0],
+            channel: `phase_${ticket[0].phase_id}`,
+            event: "move_ticket_old_phase",
+            obj: { id: ticket[0].id, id_phase: ticket[0].phase_id },
           },
           req.company[0].callback
         );
 
-        
         await CallbackDigitalk(
           {
             type: "socket",
-            channel: `phase_${ticket[0].phase_id}`,
-            event: "move_ticket_old_phase",
-            obj: ticket[0],
+            channel: `phase_${phase[0].id}`,
+            event: "move_ticket_new_phase",
+            obj: { ...ticket[0], phase_id: phase[0].id },
           },
           req.company[0].callback
         );
       } else {
-        console.log("FORM",req.body.form)
+        console.log("FORM", req.body.form);
         if (req.body.form && Object.keys(req.body.form).length > 0) {
           const firstPhase = await ticketModel.getFirstFormTicket(ticket[0].id);
-          console.log("firstPhase===>",firstPhase)
+          console.log("firstPhase===>", firstPhase);
           if (firstPhase[0].form) {
             let errors = await this._validateUpdate(
               req.app.locals.db,
               firstPhase[0].id_form_template,
               req.body.form,
-              ticket[0].id_form
+              firstPhase[0].id_form
             );
             if (errors.length > 0)
               return res.status(400).send({ errors: errors });
 
-            obj.id_form = await new FormDocuments(
-              req.app.locals.db
-            ).updateRegister(ticket[0].id_form, req.body.form);
+            await new FormDocuments(req.app.locals.db).updateRegister(
+              firstPhase[0].id_form,
+              req.body.form
+            );
           }
         }
       }
@@ -1214,6 +1218,7 @@ class TicketController {
         obj.start_ticket = moment();
         obj.id_status = 2;
       }
+      delete obj.id_form;
       let result = await ticketModel.updateTicket(
         obj,
         req.params.id,
