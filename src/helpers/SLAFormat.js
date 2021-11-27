@@ -15,12 +15,15 @@ const sla_status = {
   aberto: 3,
 };
 
-const counter_sla = async function (phase_id, closed= false) {
-  let obj = {};
+const counter_sla = async function (phase_id, closed = false) {
+  let obj = {
+    emdia: 0,
+    atrasado: 0,
+  };
   const slas = await slaModel.getSLASettings(phase_id);
   if (slas && slas.length > 0) {
     const sla_ticket = await slaModel.getToCountSLA(phase_id, closed);
-    for await (const sla of sla_ticket) {
+    for await (const sla of sla_ticket.rows) {
       switch (sla.id_sla_type) {
         case 1:
           if (sla.active) {
@@ -28,6 +31,33 @@ const counter_sla = async function (phase_id, closed= false) {
               obj.emdia = obj.emdia + 1;
             } else if (sla.id_sla_status == 2) {
               obj.atrasado = obj.atrasado + 1;
+            }
+          } else {
+            const nextSLA = sla_ticket.rows.filter(
+              (x) => x.id_sla_type === 2 || x.id_sla_type === 3
+            );
+            if (sla.id_phase === "75885e90-1632-11ec-aff3-85a136a45cec")
+              console.log(nextSLA);
+              
+            if (nextSLA.length <= 0) {
+              switch (sla.id_status) {
+                case 2:
+                  if (sla.id_sla_status == 1) {
+                    obj.emdia = obj.emdia + 1;
+                  } else if (sla.id_sla_status == 2) {
+                    obj.atrasado = obj.atrasado + 1;
+                  }
+                  break;
+                case 3:
+                  if (sla.id_sla_status == 1) {
+                    obj.emdia = obj.emdia + 1;
+                  } else if (sla.id_sla_status == 2) {
+                    obj.atrasado = obj.atrasado + 1;
+                  }
+                  break;
+                default:
+                  break;
+              }
             }
           }
           break;
@@ -39,7 +69,7 @@ const counter_sla = async function (phase_id, closed= false) {
               obj.atrasado = obj.atrasado + 1;
             }
           } else {
-            const nextSLA = sla_ticket.filter(
+            const nextSLA = sla_ticket.rows.filter(
               (x) => x.id_sla_type === 3 && x.active
             );
             nextSLA;
@@ -54,7 +84,7 @@ const counter_sla = async function (phase_id, closed= false) {
           break;
         case 3:
           if (!sla.active) {
-            const nextSLA = sla_ticket.filter(
+            const nextSLA = sla_ticket.rows.filter(
               (x) => x.id_sla_type === 2 && x.interaction_time
             );
             if (nextSLA.length > 0) {
