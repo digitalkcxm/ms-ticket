@@ -30,19 +30,18 @@ class DepartmentController {
         );
         let emdia = 0;
         let atrasado = 0;
-        let aberto = 0;
+
         for await (const phase of phases) {
           const sla = await counter_sla(phase.id_phase);
           emdia = parseInt(sla.emdia) + emdia;
           atrasado = parseInt(sla.atrasado) + atrasado;
-          aberto = parseInt(sla.aberto) + aberto;
         }
         obj.push({
           id_department: department.id_department_core,
-          counter_sla: { emdia, aberto, atrasado },
+          counter_sla: { emdia, atrasado },
         });
       }
-      return res.status(200).send(obj)
+      return res.status(200).send(obj);
     } catch (err) {
       console.log("Error get count sla department =>", err);
       return res.status(400).send({ error: "Houve um problema" });
