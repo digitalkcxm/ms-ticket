@@ -648,6 +648,15 @@ class PhaseController {
         }
       }
     }
+    if (!search) {
+      const tickets = await ticketModel.getTicketByPhase(result.id);
+
+      for await (let ticket of tickets) {
+        result.ticket.push(await formatTicketForPhase(result, ticket));
+        // if (ticket) const getByPhaseTicket(id_phase, id_ticket);
+      }
+      result.header.total_tickets = tickets.length;
+    }
     result.department_can_create_protocol &&
     result.department_can_create_protocol.department
       ? (result.department_can_create_protocol =
@@ -673,10 +682,8 @@ class PhaseController {
       true
     );
     if (result.header.open_tickets != "0") {
-      result.header.percent_open_tickets = (
-        (parseInt(result.header.open_tickets) * 100) /
-        result.header.total_tickets
-      ).toFixed(2);
+
+      result.header.percent_open_tickets = ((parseInt(result.header.open_tickets) * 100) / parseInt(result.header.total_tickets)).toFixed(2);
     } else {
       result.header.percent_open_tickets = 0.0;
     }
@@ -684,20 +691,12 @@ class PhaseController {
     if (result.header.closed_tickets != "0") {
       result.header.percent_closed_tickets = (
         (parseInt(result.header.closed_tickets) * 100) /
-        result.header.total_tickets
+        parseInt(result.header.total_tickets)
       ).toFixed(2);
     } else {
       result.header.percent_closed_tickets = 0;
     }
-    if (!search) {
-      const tickets = await ticketModel.getTicketByPhase(result.id);
 
-      for await (let ticket of tickets) {
-        result.ticket.push(await formatTicketForPhase(result, ticket));
-        // if (ticket) const getByPhaseTicket(id_phase, id_ticket);
-      }
-      result.header.total_tickets = tickets.length;
-    }
 
     result.header.counter_sla = await counter_sla(result.id);
     result.header.counter_sla_closed = await counter_sla(result.id, true);

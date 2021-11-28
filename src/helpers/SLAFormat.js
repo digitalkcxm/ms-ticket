@@ -1,3 +1,4 @@
+const { check } = require("express-validator");
 const moment = require("moment");
 
 const SLAModel = require("../models/SLAModel");
@@ -19,86 +20,92 @@ const counter_sla = async function (phase_id, closed = false) {
   let obj = {
     emdia: 0,
     atrasado: 0,
+    sem_sla: 0,
   };
   const slas = await slaModel.getSLASettings(phase_id);
   if (slas && slas.length > 0) {
     const sla_ticket = await slaModel.getToCountSLA(phase_id, closed);
-    for await (const sla of sla_ticket.rows) {
-      switch (sla.id_sla_type) {
-        case 1:
-          if (sla.active) {
-            if (sla.id_sla_status == 1) {
-              obj.emdia = obj.emdia + 1;
-            } else if (sla.id_sla_status == 2) {
-              obj.atrasado = obj.atrasado + 1;
-            }
-          } else {
-            const nextSLA = sla_ticket.rows.filter(
-              (x) => x.id_sla_type === 2 || x.id_sla_type === 3
-            );
-            if (sla.id_phase === "75885e90-1632-11ec-aff3-85a136a45cec")
-              console.log(nextSLA);
-              
-            if (nextSLA.length <= 0) {
-              switch (sla.id_status) {
-                case 2:
-                  if (sla.id_sla_status == 1) {
-                    obj.emdia = obj.emdia + 1;
-                  } else if (sla.id_sla_status == 2) {
-                    obj.atrasado = obj.atrasado + 1;
-                  }
-                  break;
-                case 3:
-                  if (sla.id_sla_status == 1) {
-                    obj.emdia = obj.emdia + 1;
-                  } else if (sla.id_sla_status == 2) {
-                    obj.atrasado = obj.atrasado + 1;
-                  }
-                  break;
-                default:
-                  break;
-              }
-            }
-          }
-          break;
-        case 2:
-          if (!sla.interaction_time) {
-            if (sla.id_sla_status === 1) {
-              obj.emdia = obj.emdia + 1;
-            } else {
-              obj.atrasado = obj.atrasado + 1;
-            }
-          } else {
-            const nextSLA = sla_ticket.rows.filter(
-              (x) => x.id_sla_type === 3 && x.active
-            );
-            nextSLA;
-            if (nextSLA.length > 0) {
-              if (nextSLA[0].id_sla_status === 2) {
-                obj.atrasado = obj.atrasado + 1;
-              } else {
+    if (sla_ticket && sla_ticket.rows && sla_ticket.rows.length > 0) {
+      for await (const sla of sla_ticket.rows) {
+        switch (sla.id_sla_type) {
+          case 1:
+            if (sla.active) {
+              if (sla.id_sla_status == 1) {
                 obj.emdia = obj.emdia + 1;
+              } else if (sla.id_sla_status == 2) {
+                obj.atrasado = obj.atrasado + 1;
+              }
+            } else {
+              const nextSLA = sla_ticket.rows.filter(
+                (x) => x.id_sla_type === 2 || x.id_sla_type === 3
+              );
+              if (nextSLA.length <= 0) {
+                switch (sla.id_status) {
+                  case 2:
+                    if (sla.id_sla_status == 1) {
+                      obj.emdia = obj.emdia + 1;
+                    } else if (sla.id_sla_status == 2) {
+                      obj.atrasado = obj.atrasado + 1;
+                    }
+                    break;
+                  case 3:
+                    if (sla.id_sla_status == 1) {
+                      obj.emdia = obj.emdia + 1;
+                    } else if (sla.id_sla_status == 2) {
+                      obj.atrasado = obj.atrasado + 1;
+                    }
+                    break;
+                  default:
+                    break;
+                }
               }
             }
-          }
-          break;
-        case 3:
-          if (!sla.active) {
-            const nextSLA = sla_ticket.rows.filter(
-              (x) => x.id_sla_type === 2 && x.interaction_time
-            );
-            if (nextSLA.length > 0) {
+            break;
+          case 2:
+            if (!sla.interaction_time) {
               if (sla.id_sla_status === 1) {
                 obj.emdia = obj.emdia + 1;
-              } else if (sla.id_sla_status === 2) {
+              } else {
                 obj.atrasado = obj.atrasado + 1;
               }
+            } else {
+              const nextSLA = sla_ticket.rows.filter(
+                (x) => x.id_sla_type === 3 && x.active
+              );
+              nextSLA;
+              if (nextSLA.length > 0) {
+                if (nextSLA[0].id_sla_status === 2) {
+                  obj.atrasado = obj.atrasado + 1;
+                } else {
+                  obj.emdia = obj.emdia + 1;
+                }
+              }
             }
-          }
-          break;
+            break;
+          case 3:
+            if (!sla.active) {
+              const nextSLA = sla_ticket.rows.filter(
+                (x) => x.id_sla_type === 2 && x.interaction_time
+              );
+              if (nextSLA.length > 0) {
+                if (sla.id_sla_status === 1) {
+                  obj.emdia = obj.emdia + 1;
+                } else if (sla.id_sla_status === 2) {
+                  obj.atrasado = obj.atrasado + 1;
+                }
+              }
+            }
+            break;
 
-        default:
-          break;
+          default:
+            break;
+        }
+      }
+    } else {
+      const check_sla = await slaModel.getToCountSLA(phase_id, !closed);
+
+      if (check_sla && check_sla.rows && check_sla.rows.length <= 0) {
+        obj.sem_sla = obj.sem_sla + 1;
       }
     }
   }
