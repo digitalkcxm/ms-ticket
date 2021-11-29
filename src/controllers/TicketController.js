@@ -1120,7 +1120,9 @@ class TicketController {
           .status(400)
           .send({ error: "There is no ticket with this ID " });
 
-      if (ticket[0].id_status === 3)
+          ticket = await formatTicketForPhase(ticket, ticket[0]);
+
+      if (ticket.id_status === 3)
         return res
           .status(400)
           .send({ error: "Impossivel atualizar um ticket finalizado!" });
@@ -1136,8 +1138,8 @@ class TicketController {
       if (!phase || phase.length <= 0)
         return res.status(400).send({ error: "Invalid id_phase uuid" });
 
-      await updateSLA(ticket[0].id, ticket[0].phase_id);
-      if (ticket[0].phase_id != phase[0].id) {
+      await updateSLA(ticket.id, ticket.phase_id);
+      if (ticket.phase_id != phase[0].id) {
         await phaseModel.disablePhaseTicket(req.params.id);
         await slaModel.disableSLA(req.params.id);
 
@@ -1176,9 +1178,9 @@ class TicketController {
         await CallbackDigitalk(
           {
             type: "socket",
-            channel: `phase_${ticket[0].phase_id}`,
+            channel: `phase_${ticket.phase_id}`,
             event: "move_ticket_old_phase",
-            obj: { id: ticket[0].id, id_phase: ticket[0].phase_id },
+            obj: { id: ticket.id, id_phase: ticket.phase_id },
           },
           req.company[0].callback
         );
@@ -1188,7 +1190,7 @@ class TicketController {
             type: "socket",
             channel: `phase_${phase[0].id}`,
             event: "move_ticket_new_phase",
-            obj: { ...ticket[0], phase_id: phase[0].id },
+            obj: { ...ticket, phase_id: phase.id },
           },
           req.company[0].callback
         );
@@ -1212,7 +1214,7 @@ class TicketController {
           }
         }
       }
-      if (!ticket[0].start_ticket) {
+      if (!ticket.start_ticket) {
         obj.start_ticket = moment();
         obj.id_status = 2;
       }
@@ -1223,7 +1225,6 @@ class TicketController {
         req.headers.authorization
       );
 
-      ticket = await formatTicketForPhase(ticket, ticket[0]);
       await redis.set(
         `msTicket:ticket:${req.params.id}`,
         JSON.stringify(ticket)

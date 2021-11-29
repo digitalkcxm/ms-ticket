@@ -41,7 +41,8 @@ async function tickets() {
       "pt.id_phase",
       "t.created_at",
       "pss.id_unit_of_time",
-      "pss.time"
+      "pss.time",
+      "t.closed"
     )
     .leftJoin("phase_ticket as pt", "pt.id_ticket", "t.id")
     .leftJoin("phase_sla_settings AS pss", "pss.id_phase", "pt.id_phase")
@@ -50,6 +51,7 @@ async function tickets() {
 
   if (tickets && Array.isArray(tickets) && tickets.length > 0) {
     for (const ticket of tickets) {
+      const active  = ticket.closed ? false: true
       const count = await knex("ticket_sla_control")
         .count()
         .where("id_ticket", ticket.id);
@@ -98,7 +100,7 @@ async function tickets() {
               id_sla_status: 2,
               limit_sla_time: ticket.countSLA,
               interaction_time: activities[0].created_at,
-              active: false,
+              active: active,
             });
           } else if (ticket.countSLA > activities[0].created_at) {
             //Em dia
@@ -109,7 +111,7 @@ async function tickets() {
               id_sla_status: 1,
               limit_sla_time: ticket.countSLA,
               interaction_time: activities[0].created_at,
-              active: true,
+              active: active,
             });
           }
         } else {
@@ -121,7 +123,7 @@ async function tickets() {
               id_sla_type,
               id_sla_status: 2,
               limit_sla_time: ticket.countSLA,
-              active: false,
+              active: active,
             });
           } else if (ticket.countSLA > moment()) {
             //Em dia
@@ -129,9 +131,9 @@ async function tickets() {
               id_ticket: ticket.id,
               id_phase: ticket.id_phase,
               id_sla_type,
-              id_sla_status: 3,
+              id_sla_status: 1,
               limit_sla_time: ticket.countSLA,
-              active: false,
+              active: active,
             });
           }
         }
