@@ -1120,7 +1120,7 @@ class TicketController {
           .status(400)
           .send({ error: "There is no ticket with this ID " });
 
-          ticket = await formatTicketForPhase(ticket, ticket[0]);
+      ticket = await formatTicketForPhase(ticket, ticket[0]);
 
       if (ticket.id_status === 3)
         return res
@@ -1190,7 +1190,31 @@ class TicketController {
             type: "socket",
             channel: `phase_${phase[0].id}`,
             event: "move_ticket_new_phase",
-            obj: { ...ticket, phase_id: phase.id },
+            obj: { ...ticket, phase_id: phase[0].id },
+          },
+          req.company[0].callback
+        );
+
+        await CallbackDigitalk(
+          {
+            type: "socket",
+            channel: `ticket_${ticket.id}`,
+            event: "activity",
+            obj: {
+              type: "move",
+              id_user: req.body.id_user,
+              phase_dest: {
+                id: phase[0].id,
+                name: phase[0].name,
+              },
+              phase_origin: {
+                id: ticket.phase_id,
+                name: ticket.phase,
+              },
+              created_at: moment().format(
+                "DD/MM/YYYY HH:mm:ss"
+              ),
+            },
           },
           req.company[0].callback
         );
