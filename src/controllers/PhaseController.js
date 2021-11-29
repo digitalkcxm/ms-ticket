@@ -682,8 +682,10 @@ class PhaseController {
       true
     );
     if (result.header.open_tickets != "0") {
-
-      result.header.percent_open_tickets = ((parseInt(result.header.open_tickets) * 100) / parseInt(result.header.total_tickets)).toFixed(2);
+      result.header.percent_open_tickets = (
+        (parseInt(result.header.open_tickets) * 100) /
+        parseInt(result.header.total_tickets)
+      ).toFixed(2);
     } else {
       result.header.percent_open_tickets = 0.0;
     }
@@ -696,7 +698,6 @@ class PhaseController {
     } else {
       result.header.percent_closed_tickets = 0;
     }
-
 
     result.header.counter_sla = await counter_sla(result.id);
     result.header.counter_sla_closed = await counter_sla(result.id, true);
@@ -1030,6 +1031,7 @@ class PhaseController {
         sem_sla: 0,
       };
 
+      console.log("TOTAL =>", result.tickets.length);
       for await (const ticket of result.tickets) {
         if (ticket.id_status == 3) {
           console.log(ticket);
@@ -1043,6 +1045,8 @@ class PhaseController {
           for await (const sla of sla_ticket) {
             switch (sla.id_sla_type) {
               case 1:
+                console.log("TESTE", sla);
+
                 if (sla.active) {
                   result.total_tickets_nao_iniciados =
                     result.total_tickets_nao_iniciados + 1;
@@ -1057,7 +1061,11 @@ class PhaseController {
                   const nextSLA = sla_ticket.filter(
                     (x) => x.id_sla_type === 2 || x.id_sla_type === 3
                   );
+
+                  console.log("TESTE 2", nextSLA);
+
                   if (nextSLA.length <= 0) {
+                    console.log("TESTE 3", ticket.id_status);
                     switch (ticket.id_status) {
                       case 2:
                         const firstInteraction =
@@ -1065,13 +1073,13 @@ class PhaseController {
                         if (firstInteraction && firstInteraction.length <= 0) {
                           result.total_tickets_iniciados_sem_resposta =
                             result.total_tickets_iniciados_sem_resposta + 1;
-
+                          console.log("sem sla dentro do for");
                           result.tickets_iniciados_sem_resposta.sem_sla =
                             result.tickets_iniciados_sem_resposta.sem_sla + 1;
                         } else {
                           result.total_tickets_respondidos_sem_conclusao =
                             result.total_tickets_respondidos_sem_conclusao + 1;
-
+                          console.log("sem sla dentro do for2");
                           result.tickets_respondidos_sem_conclusao.sem_sla =
                             result.tickets_respondidos_sem_conclusao.sem_sla +
                             1;
@@ -1139,8 +1147,11 @@ class PhaseController {
             }
           }
         } else {
+          console.log("SEM SLA=>", ticket);
           switch (ticket.id_status) {
             case 1:
+              result.total_tickets_nao_iniciados =
+              result.total_tickets_nao_iniciados + 1;
               result.tickets_nao_iniciados.sem_sla =
                 result.tickets_nao_iniciados.sem_sla + 1;
               break;
@@ -1173,61 +1184,79 @@ class PhaseController {
         }
       }
       const calc_percentual = async function (total, value) {
+        if (total == 0) return 0;
+
         return parseInt((parseInt(value) * 100) / parseInt(total)).toFixed(2);
       };
       result.percentual_nao_iniciado = {
+        total: await calc_percentual(
+          result.total_tickets,
+          result.total_tickets_nao_iniciados
+        ),
         emdia: await calc_percentual(
-          result.total_tickets_nao_iniciados,
+          result.total_tickets,
           result.tickets_nao_iniciados.emdia
         ),
         atrasado: await calc_percentual(
-          result.total_tickets_nao_iniciados,
+          result.total_tickets,
           result.tickets_nao_iniciados.atrasado
         ),
         sem_sla: await calc_percentual(
-          result.total_tickets_nao_iniciados,
+          result.total_tickets,
           result.tickets_nao_iniciados.sem_sla
         ),
       };
       result.percentual_iniciado_sem_resposta = {
+        total: await calc_percentual(
+          result.total_tickets,
+          result.total_tickets_iniciados_sem_resposta
+        ),
         emdia: await calc_percentual(
-          result.total_tickets_iniciados_sem_resposta,
+          result.total_tickets,
           result.tickets_iniciados_sem_resposta.emdia
         ),
         atrasado: await calc_percentual(
-          result.total_tickets_iniciados_sem_resposta,
+          result.total_tickets,
           result.tickets_iniciados_sem_resposta.atrasado
         ),
         sem_sla: await calc_percentual(
-          result.total_tickets_iniciados_sem_resposta,
+          result.total_tickets,
           result.tickets_iniciados_sem_resposta.sem_sla
         ),
       };
       result.percentual_respondido_sem_conclusao = {
+        total: await calc_percentual(
+          result.total_tickets,
+          result.total_tickets_respondidos_sem_conclusao
+        ),
         emdia: await calc_percentual(
-          result.total_tickets_respondidos_sem_conclusao,
+          result.total_tickets,
           result.tickets_respondidos_sem_conclusao.emdia
         ),
         atrasado: await calc_percentual(
-          result.total_tickets_respondidos_sem_conclusao,
+          result.total_tickets,
           result.tickets_respondidos_sem_conclusao.atrasado
         ),
         sem_sla: await calc_percentual(
-          result.total_tickets_respondidos_sem_conclusao,
+          result.total_tickets,
           result.tickets_respondidos_sem_conclusao.sem_sla
         ),
       };
       result.percentual_concluido = {
+        total: await calc_percentual(
+          result.total_tickets,
+          result.total_tickets_fechados
+        ),
         emdia: await calc_percentual(
-          result.total_tickets_fechados,
+          result.total_tickets,
           result.tickets_concluidos.emdia
         ),
         atrasado: await calc_percentual(
-          result.total_tickets_fechados,
+          result.total_tickets,
           result.tickets_concluidos.atrasado
         ),
         sem_sla: await calc_percentual(
-          result.total_tickets_fechados,
+          result.total_tickets,
           result.tickets_concluidos.sem_sla
         ),
       };

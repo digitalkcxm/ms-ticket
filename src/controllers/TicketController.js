@@ -1193,10 +1193,8 @@ class TicketController {
           req.company[0].callback
         );
       } else {
-        console.log("FORM", req.body.form);
         if (req.body.form && Object.keys(req.body.form).length > 0) {
           const firstPhase = await ticketModel.getFirstFormTicket(ticket[0].id);
-          console.log("firstPhase===>", firstPhase);
           if (firstPhase[0].form) {
             let errors = await this._validateUpdate(
               req.app.locals.db,
@@ -1534,8 +1532,8 @@ class TicketController {
             let status = "";
             const keys = Object.keys(sla);
             for (const key of keys) {
-              if (sla[key].status === "Aberto") {
-                return "Aberto";
+              if (sla[key].status === "Em dia") {
+                return "Em dia";
               } else {
                 status = sla[key].status;
               }

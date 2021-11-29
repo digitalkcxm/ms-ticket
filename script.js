@@ -109,7 +109,7 @@ async function tickets() {
               id_sla_status: 1,
               limit_sla_time: ticket.countSLA,
               interaction_time: activities[0].created_at,
-              active: false,
+              active: true,
             });
           }
         } else {
@@ -313,4 +313,4 @@ async function update_status_sla_ticket() {
   console.log("fim");
 }
 
-update_status_sla_ticket();
+// update_status_sla_ticket();
