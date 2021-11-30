@@ -436,6 +436,22 @@ class PhaseModel {
       return false;
     }
   }
+
+  async filter(department, id_company) {
+    const tickets = await database.raw(`
+    SELECT ticket.id, phase_ticket.id_phase, ticket.id_status FROM ticket
+    LEFT JOIN phase_ticket ON phase_ticket.id_ticket = ticket.id
+    LEFT JOIN phase ON phase.id = phase_ticket.id_phase
+    LEFT JOIN department_phase ON department_phase.id_phase = phase.id
+    LEFT JOIN department ON department.id = department_phase.id_department
+    WHERE department.id_department_core = ${department} 
+    AND phase.id_company = '${id_company}'
+    AND phase.active = true
+    AND department_phase.active = true
+    AND phase_ticket.active = true;
+ `);
+    return tickets.rows;
+  }
 }
 
 module.exports = PhaseModel;

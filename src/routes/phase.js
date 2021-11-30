@@ -13,6 +13,7 @@ router.get("/cache/", (req, res) =>
 );
 router.get("/socket/:id", (req, res) => phaseController.getBySocket(req, res));
 router.get("/dash/:id", (req, res) => phaseController.dash(req, res));
+router.get("/filter/", (req, res) => phaseController.filter(req, res));
 router.get("/:id", (req, res) => phaseController.getPhaseByID(req, res));
 router.get("/", (req, res) => phaseController.getAllPhase(req, res));
 

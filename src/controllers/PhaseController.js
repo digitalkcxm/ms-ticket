@@ -1151,7 +1151,7 @@ class PhaseController {
           switch (ticket.id_status) {
             case 1:
               result.total_tickets_nao_iniciados =
-              result.total_tickets_nao_iniciados + 1;
+                result.total_tickets_nao_iniciados + 1;
               result.tickets_nao_iniciados.sem_sla =
                 result.tickets_nao_iniciados.sem_sla + 1;
               break;
@@ -1267,6 +1267,245 @@ class PhaseController {
     } catch (err) {
       console.log(err);
       return res.status(500).send({ error: "Houve algum problema!" });
+    }
+  }
+
+  async filter(req, res) {
+    try {
+      if (!req.query.department)
+        return res.status(500).send({ error: "Houve um erro" });
+
+      const tickets = await phaseModel.filter(
+        req.query.department,
+        req.headers.authorization
+      );
+      let obj = [];
+      if (req.query.type) {
+        switch (req.query.type) {
+          case "tickets_nao_iniciados":
+            for await (const ticket of result.tickets) {
+              if (ticket.id_status == 3) {
+                console.log(ticket);
+              }
+              const phaseSettings = await slaModel.getSLASettings(
+                ticket.id_phase
+              );
+              if (phaseSettings && phaseSettings.length > 0) {
+                const sla_ticket = await slaModel.getForDash(
+                  ticket.id_phase,
+                  ticket.id
+                );
+                for await (const sla of sla_ticket) {
+                  if (sla.id_sla_type === 1) {
+                    if (sla.active) {
+                      if (sla.id_sla_status == 1) {
+                        if (req.params.sla === "emdia" || !req.params.sla)
+                          obj.push(ticket);
+                      } else if (sla.id_sla_status == 2) {
+                        if (req.params.sla === "atrasado" || !req.params.sla)
+                          obj.push(ticket);
+                      }
+                    }
+                  }
+                }
+              } else {
+                console.log("SEM SLA=>", ticket);
+                if (ticket.id_status === 1) {
+                  if (req.params.sla === "sem_sla" || !req.params.sla)
+                    obj.push(ticket);
+                }
+              }
+            }
+            break;
+          case "tickets_iniciados_sem_resposta":
+            for await (const ticket of result.tickets) {
+              const phaseSettings = await slaModel.getSLASettings(
+                ticket.id_phase
+              );
+              if (phaseSettings && phaseSettings.length > 0) {
+                const sla_ticket = await slaModel.getForDash(
+                  ticket.id_phase,
+                  ticket.id
+                );
+                for await (const sla of sla_ticket) {
+                  switch (sla.id_sla_type) {
+                    case 1:
+                      if (!sla.active) {
+                        const nextSLA = sla_ticket.filter(
+                          (x) => x.id_sla_type === 2 || x.id_sla_type === 3
+                        );
+                        if (nextSLA.length <= 0) {
+                          if (ticket.id_status === 2) {
+                            const firstInteraction =
+                              await ticketModel.first_interaction(ticket.id);
+                            if (
+                              firstInteraction &&
+                              firstInteraction.length <= 0
+                            ) {
+                              if (
+                                req.params.sla === "sem_sla" ||
+                                !req.params.sla
+                              )
+                                obj.push(ticket);
+                            }
+                          }
+                        }
+                      }
+                      break;
+                    case 2:
+                      if (!sla.interaction_time) {
+                        if (sla.id_sla_status === 1) {
+                          if (req.params.sla === "emdia" || !req.params.sla)
+                            obj.push(ticket);
+                        } else {
+                          if (req.params.sla === "atrasado" || !req.params.sla)
+                            obj.push(ticket);
+                        }
+                      }
+                  }
+                }
+              } else {
+                if (ticket.id_status === 2) {
+                  const firstInteraction = await ticketModel.first_interaction(
+                    ticket.id
+                  );
+                  if (firstInteraction && firstInteraction.length <= 0) {
+                    if (req.params.sla === "sem_sla" || !req.params.sla)
+                      obj.push(ticket);
+                  }
+                }
+              }
+            }
+            break;
+          case "tickets_respondidos_sem_conclusao":
+            for await (const ticket of result.tickets) {
+              const phaseSettings = await slaModel.getSLASettings(
+                ticket.id_phase
+              );
+              if (phaseSettings && phaseSettings.length > 0) {
+                const sla_ticket = await slaModel.getForDash(
+                  ticket.id_phase,
+                  ticket.id
+                );
+                for await (const sla of sla_ticket) {
+                  switch (sla.id_sla_type) {
+                    case 1:
+                      if (!sla.active) {
+                        const nextSLA = sla_ticket.filter(
+                          (x) => x.id_sla_type === 2 || x.id_sla_type === 3
+                        );
+                        if (nextSLA.length <= 0) {
+                          if (ticket.id_status === 2) {
+                            const firstInteraction =
+                              await ticketModel.first_interaction(ticket.id);
+                            if (
+                              firstInteraction &&
+                              firstInteraction.length > 0
+                            ) {
+                              if (
+                                req.params.sla === "sem_sla" ||
+                                !req.params.sla
+                              )
+                                obj.push(ticket);
+                            }
+                          }
+                        }
+                      }
+                    case 2:
+                      if (sla.interaction_time) {
+                        const nextSLA = sla_ticket.filter(
+                          (x) => x.id_sla_type === 3 && x.active
+                        );
+
+                        if (nextSLA.length > 0) {
+                          if (nextSLA[0].id_sla_status === 2) {
+                            if (
+                              req.params.sla === "atrasado" ||
+                              !req.params.sla
+                            )
+                              obj.push(ticket);
+                          } else {
+                            if (req.params.sla === "emdia" || !req.params.sla)
+                              obj.push(ticket);
+                          }
+                        }
+                      }
+                  }
+                }
+              } else {
+                if (ticket.id_status === 2) {
+                  const firstInteraction = await ticketModel.first_interaction(
+                    ticket.id
+                  );
+                  if (firstInteraction && firstInteraction.length > 0) {
+                    if (req.params.sla === "sem_sla" || !req.params.sla)
+                      obj.push(ticket);
+                  }
+                }
+              }
+            }
+            break;
+          case "tickets_concluidos":
+            for await (const ticket of result.tickets) {
+              const phaseSettings = await slaModel.getSLASettings(
+                ticket.id_phase
+              );
+              if (phaseSettings && phaseSettings.length > 0) {
+                const sla_ticket = await slaModel.getForDash(
+                  ticket.id_phase,
+                  ticket.id
+                );
+                for await (const sla of sla_ticket) {
+                  if (sla.id_sla_type === 1) {
+                    console.log("TESTE", sla);
+
+                    if (!sla.active) {
+                      const nextSLA = sla_ticket.filter(
+                        (x) => x.id_sla_type === 2 || x.id_sla_type === 3
+                      );
+
+                      if (nextSLA.length <= 0) {
+                        if (ticket.id_status === 3) {
+                          if (req.params.sla === "sem_sla" || !req.params.sla)
+                            obj.push(ticket);
+                        }
+                      }
+                    } else if (sla.id_sla_type === 3) {
+                      if (!sla.active) {
+                        const nextSLA = sla_ticket.filter(
+                          (x) => x.id_sla_type === 2 && x.interaction_time
+                        );
+                        if (nextSLA.length > 0) {
+                          if (sla.id_sla_status === 1) {
+                            if (req.params.sla === "emdia" || !req.params.sla)
+                              obj.push(ticket);
+                          } else if (sla.id_sla_status === 2) {
+                            if (
+                              req.params.sla === "atrasado" ||
+                              !req.params.sla
+                            )
+                              obj.push(ticket);
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              } else {
+                if (ticket.id_status === 3) {
+                  if (req.params.sla === "sem_sla" || !req.params.sla)
+                    obj.push(ticket);
+                }
+              }
+            }
+            break;
+          default:
+            break;
+        }
+      }
+    } catch (err) {
+      console.log("Erro ao filtrar os dados");
+      return res.status(500).send({ error: "Houve um erro" });
     }
   }
 }
