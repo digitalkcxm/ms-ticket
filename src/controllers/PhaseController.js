@@ -1283,7 +1283,7 @@ class PhaseController {
       if (req.query.type) {
         switch (req.query.type) {
           case "tickets_nao_iniciados":
-            for await (const ticket of result.tickets) {
+            for await (const ticket of tickets) {
               if (ticket.id_status == 3) {
                 console.log(ticket);
               }
@@ -1318,7 +1318,7 @@ class PhaseController {
             }
             break;
           case "tickets_iniciados_sem_resposta":
-            for await (const ticket of result.tickets) {
+            for await (const ticket of tickets) {
               const phaseSettings = await slaModel.getSLASettings(
                 ticket.id_phase
               );
@@ -1378,7 +1378,7 @@ class PhaseController {
             }
             break;
           case "tickets_respondidos_sem_conclusao":
-            for await (const ticket of result.tickets) {
+            for await (const ticket of tickets) {
               const phaseSettings = await slaModel.getSLASettings(
                 ticket.id_phase
               );
@@ -1446,7 +1446,7 @@ class PhaseController {
             }
             break;
           case "tickets_concluidos":
-            for await (const ticket of result.tickets) {
+            for await (const ticket of tickets) {
               const phaseSettings = await slaModel.getSLASettings(
                 ticket.id_phase
               );
