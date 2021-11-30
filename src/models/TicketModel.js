@@ -684,7 +684,7 @@ class TicketModel {
   async searchTicket(id_company, search, id_phase,status) {
     try {
       if (typeof search === "string") search = search.toLowerCase();
-      const default_where = `ticket.id_company = '${id_company}' AND phase.id = '${id_phase}' AND  AND ticket.closed IN(${status
+      const default_where = `ticket.id_company = '${id_company}' AND phase.id = '${id_phase}'  AND ticket.closed IN(${status
         .replace("[", "")
         .replace("]", "")
         .replace(/\"/g, "'")}) AND`;
@@ -695,7 +695,8 @@ class TicketModel {
         ${default_where} users.name ILIKE '%${search}%' OR 
         ${default_where} customer.name ILIKE '%${search}%' OR 
         ${default_where} customer.email ILIKE '%${search}%' OR 
-        ${default_where} customer.identification_document ILIKE '%${search}%'`;
+        ${default_where} customer.identification_document ILIKE '%${search}%' OR
+        ${default_where} ticket.display_name ILIKE '%${search}%'`;
       } else {
         query = `
         ${default_where} ticket.id_seq ILIKE '%${search}%' OR 
@@ -721,7 +722,7 @@ class TicketModel {
         ticket.created_at,
         ticket.updated_at,
         ticket.display_name,
-        status_ticket.name as status,
+        status_ticket.name as status
       from ticket
       left join users on users.id = ticket.id_user
       left join phase_ticket on phase_ticket.id_ticket = ticket.id
@@ -730,7 +731,7 @@ class TicketModel {
       left join ticket_protocol on ticket_protocol.id_ticket = ticket.id
       left join status_ticket on status_ticket.id = ticket.id_status
       where ${query} order by ticket.created_at desc`);
-
+console.log(result.rows)
       return result.rows;
     } catch (err) {
       console.log("Error when get ticket by id => ", err);

@@ -284,11 +284,13 @@ class PhaseController {
       if (search) {
         const department_id = await departmentModel.getByID(
           req.query.department,
-          authorization
+          req.headers.authorization
         );
         if (department_id && department_id.length <= 0) return false;
-    
-        let result = await phaseModel.getAllPhasesByDepartmentID(department_id[0].id);
+
+        result = await phaseModel.getAllPhasesByDepartmentID(
+          department_id[0].id
+        );
         // result = await phaseModel.getAllPhase(req.headers.authorization);
 
         // if (isNaN(search)) {
@@ -312,6 +314,7 @@ class PhaseController {
         //     result[i] = await this._formatPhase(result[i], req.app.locals.db);
         //   }
         // } else {
+        console.log("====>QUERY ===>", req.query);
         for (let i in result) {
           const tickets = await ticketModel.searchTicket(
             req.headers.authorization,
@@ -358,7 +361,6 @@ class PhaseController {
           JSON.stringify(result)
         );
       }
-
       return res.status(200).send(result);
     } catch (err) {
       console.log("Get all phase => ", err);
@@ -1041,9 +1043,6 @@ class PhaseController {
 
       console.log("TOTAL =>", result.tickets.length);
       for await (const ticket of result.tickets) {
-        if (ticket.id_status == 3) {
-          console.log(ticket);
-        }
         const phaseSettings = await slaModel.getSLASettings(ticket.id_phase);
         if (phaseSettings && phaseSettings.length > 0) {
           const sla_ticket = await slaModel.getForDash(
@@ -1053,8 +1052,6 @@ class PhaseController {
           for await (const sla of sla_ticket) {
             switch (sla.id_sla_type) {
               case 1:
-                console.log("TESTE", sla);
-
                 if (sla.active) {
                   result.total_tickets_nao_iniciados =
                     result.total_tickets_nao_iniciados + 1;
@@ -1070,10 +1067,7 @@ class PhaseController {
                     (x) => x.id_sla_type === 2 || x.id_sla_type === 3
                   );
 
-                  console.log("TESTE 2", nextSLA);
-
                   if (nextSLA.length <= 0) {
-                    console.log("TESTE 3", ticket.id_status);
                     switch (ticket.id_status) {
                       case 2:
                         const firstInteraction =
@@ -1081,13 +1075,11 @@ class PhaseController {
                         if (firstInteraction && firstInteraction.length <= 0) {
                           result.total_tickets_iniciados_sem_resposta =
                             result.total_tickets_iniciados_sem_resposta + 1;
-                          console.log("sem sla dentro do for");
                           result.tickets_iniciados_sem_resposta.sem_sla =
                             result.tickets_iniciados_sem_resposta.sem_sla + 1;
                         } else {
                           result.total_tickets_respondidos_sem_conclusao =
                             result.total_tickets_respondidos_sem_conclusao + 1;
-                          console.log("sem sla dentro do for2");
                           result.tickets_respondidos_sem_conclusao.sem_sla =
                             result.tickets_respondidos_sem_conclusao.sem_sla +
                             1;
@@ -1155,7 +1147,6 @@ class PhaseController {
             }
           }
         } else {
-          console.log("SEM SLA=>", ticket);
           switch (ticket.id_status) {
             case 1:
               result.total_tickets_nao_iniciados =
@@ -1306,10 +1297,16 @@ class PhaseController {
                   if (sla.id_sla_type === 1) {
                     if (sla.active) {
                       if (sla.id_sla_status == 1) {
-                        if (req.query.sla === "emdia" || req.query.sla === 'undefined')
+                        if (
+                          req.query.sla === "emdia" ||
+                          req.query.sla === "undefined"
+                        )
                           obj.push(ticket);
                       } else if (sla.id_sla_status == 2) {
-                        if (req.query.sla === "atrasado" || req.query.sla === 'undefined')
+                        if (
+                          req.query.sla === "atrasado" ||
+                          req.query.sla === "undefined"
+                        )
                           obj.push(ticket);
                       }
                     }
@@ -1318,7 +1315,10 @@ class PhaseController {
               } else {
                 console.log("SEM SLA=>", ticket);
                 if (ticket.id_status === 1) {
-                  if (req.query.sla === "sem_sla" || req.query.sla === 'undefined')
+                  if (
+                    req.query.sla === "sem_sla" ||
+                    req.query.sla === "undefined"
+                  )
                     obj.push(ticket);
                 }
               }
@@ -1349,7 +1349,10 @@ class PhaseController {
                               firstInteraction &&
                               firstInteraction.length <= 0
                             ) {
-                              if (req.query.sla === "sem_sla" || req.query.sla === 'undefined')
+                              if (
+                                req.query.sla === "sem_sla" ||
+                                req.query.sla === "undefined"
+                              )
                                 obj.push(ticket);
                             }
                           }
@@ -1359,10 +1362,16 @@ class PhaseController {
                     case 2:
                       if (!sla.interaction_time) {
                         if (sla.id_sla_status === 1) {
-                          if (req.query.sla === "emdia" || req.query.sla === 'undefined')
+                          if (
+                            req.query.sla === "emdia" ||
+                            req.query.sla === "undefined"
+                          )
                             obj.push(ticket);
                         } else {
-                          if (req.query.sla === "atrasado" || req.query.sla === 'undefined')
+                          if (
+                            req.query.sla === "atrasado" ||
+                            req.query.sla === "undefined"
+                          )
                             obj.push(ticket);
                         }
                       }
@@ -1374,7 +1383,10 @@ class PhaseController {
                     ticket.id
                   );
                   if (firstInteraction && firstInteraction.length <= 0) {
-                    if (req.query.sla === "sem_sla" || req.query.sla === 'undefined')
+                    if (
+                      req.query.sla === "sem_sla" ||
+                      req.query.sla === "undefined"
+                    )
                       obj.push(ticket);
                   }
                 }
@@ -1406,7 +1418,10 @@ class PhaseController {
                               firstInteraction &&
                               firstInteraction.length > 0
                             ) {
-                              if (req.query.sla === "sem_sla" || req.query.sla === 'undefined')
+                              if (
+                                req.query.sla === "sem_sla" ||
+                                req.query.sla === "undefined"
+                              )
                                 obj.push(ticket);
                             }
                           }
@@ -1420,10 +1435,16 @@ class PhaseController {
 
                         if (nextSLA.length > 0) {
                           if (nextSLA[0].id_sla_status === 2) {
-                            if (req.query.sla === "atrasado" || req.query.sla === 'undefined')
+                            if (
+                              req.query.sla === "atrasado" ||
+                              req.query.sla === "undefined"
+                            )
                               obj.push(ticket);
                           } else {
-                            if (req.query.sla === "emdia" || req.query.sla === 'undefined')
+                            if (
+                              req.query.sla === "emdia" ||
+                              req.query.sla === "undefined"
+                            )
                               obj.push(ticket);
                           }
                         }
@@ -1436,7 +1457,10 @@ class PhaseController {
                     ticket.id
                   );
                   if (firstInteraction && firstInteraction.length > 0) {
-                    if (req.query.sla === "sem_sla" || req.query.sla === 'undefined')
+                    if (
+                      req.query.sla === "sem_sla" ||
+                      req.query.sla === "undefined"
+                    )
                       obj.push(ticket);
                   }
                 }
@@ -1455,7 +1479,6 @@ class PhaseController {
                 );
                 for await (const sla of sla_ticket) {
                   if (sla.id_sla_type === 1) {
-
                     if (!sla.active) {
                       const nextSLA = sla_ticket.filter(
                         (x) => x.id_sla_type === 2 || x.id_sla_type === 3
@@ -1463,7 +1486,10 @@ class PhaseController {
 
                       if (nextSLA.length <= 0) {
                         if (ticket.id_status === 3) {
-                          if (req.query.sla === "sem_sla" || req.query.sla === 'undefined')
+                          if (
+                            req.query.sla === "sem_sla" ||
+                            req.query.sla === "undefined"
+                          )
                             obj.push(ticket);
                         }
                       }
@@ -1474,10 +1500,16 @@ class PhaseController {
                         );
                         if (nextSLA.length > 0) {
                           if (sla.id_sla_status === 1) {
-                            if (req.query.sla === "emdia" || req.query.sla === 'undefined')
+                            if (
+                              req.query.sla === "emdia" ||
+                              req.query.sla === "undefined"
+                            )
                               obj.push(ticket);
                           } else if (sla.id_sla_status === 2) {
-                            if (req.query.sla === "atrasado" || req.query.sla === 'undefined')
+                            if (
+                              req.query.sla === "atrasado" ||
+                              req.query.sla === "undefined"
+                            )
                               obj.push(ticket);
                           }
                         }
@@ -1487,7 +1519,10 @@ class PhaseController {
                 }
               } else {
                 if (ticket.id_status === 3) {
-                  if (req.query.sla === "sem_sla" || req.query.sla === 'undefined')
+                  if (
+                    req.query.sla === "sem_sla" ||
+                    req.query.sla === "undefined"
+                  )
                     obj.push(ticket);
                 }
               }
@@ -1512,7 +1547,7 @@ class PhaseController {
       }
       return res.status(200).send(obj);
     } catch (err) {
-      console.log("Erro ao filtrar os dados",err);
+      console.log("Erro ao filtrar os dados", err);
       return res.status(500).send({ error: "Houve um erro" });
     }
   }
