@@ -1194,15 +1194,15 @@ class PhaseController {
           result.total_tickets_nao_iniciados
         ),
         emdia: await calc_percentual(
-          result.total_tickets,
+          result.total_tickets_nao_iniciados,
           result.tickets_nao_iniciados.emdia
         ),
         atrasado: await calc_percentual(
-          result.total_tickets,
+          result.total_tickets_nao_iniciados,
           result.tickets_nao_iniciados.atrasado
         ),
         sem_sla: await calc_percentual(
-          result.total_tickets,
+          result.total_tickets_nao_iniciados,
           result.tickets_nao_iniciados.sem_sla
         ),
       };
@@ -1212,15 +1212,15 @@ class PhaseController {
           result.total_tickets_iniciados_sem_resposta
         ),
         emdia: await calc_percentual(
-          result.total_tickets,
+          result.total_tickets_iniciados_sem_resposta,
           result.tickets_iniciados_sem_resposta.emdia
         ),
         atrasado: await calc_percentual(
-          result.total_tickets,
+          result.total_tickets_iniciados_sem_resposta,
           result.tickets_iniciados_sem_resposta.atrasado
         ),
         sem_sla: await calc_percentual(
-          result.total_tickets,
+          result.total_tickets_iniciados_sem_resposta,
           result.tickets_iniciados_sem_resposta.sem_sla
         ),
       };
@@ -1230,15 +1230,15 @@ class PhaseController {
           result.total_tickets_respondidos_sem_conclusao
         ),
         emdia: await calc_percentual(
-          result.total_tickets,
+          result.total_tickets_respondidos_sem_conclusao,
           result.tickets_respondidos_sem_conclusao.emdia
         ),
         atrasado: await calc_percentual(
-          result.total_tickets,
+          result.total_tickets_respondidos_sem_conclusao,
           result.tickets_respondidos_sem_conclusao.atrasado
         ),
         sem_sla: await calc_percentual(
-          result.total_tickets,
+          result.total_tickets_respondidos_sem_conclusao,
           result.tickets_respondidos_sem_conclusao.sem_sla
         ),
       };
@@ -1248,15 +1248,15 @@ class PhaseController {
           result.total_tickets_fechados
         ),
         emdia: await calc_percentual(
-          result.total_tickets,
+          result.total_tickets_fechados,
           result.tickets_concluidos.emdia
         ),
         atrasado: await calc_percentual(
-          result.total_tickets,
+          result.total_tickets_fechados,
           result.tickets_concluidos.atrasado
         ),
         sem_sla: await calc_percentual(
-          result.total_tickets,
+          result.total_tickets_fechados,
           result.tickets_concluidos.sem_sla
         ),
       };
