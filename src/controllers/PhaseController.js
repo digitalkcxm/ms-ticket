@@ -282,7 +282,14 @@ class PhaseController {
     let result;
     try {
       if (search) {
-        result = await phaseModel.getAllPhase(req.headers.authorization);
+        const department_id = await departmentModel.getByID(
+          req.query.department,
+          authorization
+        );
+        if (department_id && department_id.length <= 0) return false;
+    
+        let result = await phaseModel.getAllPhasesByDepartmentID(department_id[0].id);
+        // result = await phaseModel.getAllPhase(req.headers.authorization);
 
         // if (isNaN(search)) {
         //   const searchMongo = await new FormDocuments(
@@ -309,7 +316,8 @@ class PhaseController {
           const tickets = await ticketModel.searchTicket(
             req.headers.authorization,
             search,
-            result[i].id
+            result[i].id,
+            req.query.status
           );
           result[i].header = {};
           result[i].ticket = [];

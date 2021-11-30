@@ -681,10 +681,13 @@ class TicketModel {
     }
   }
 
-  async searchTicket(id_company, search, id_phase) {
+  async searchTicket(id_company, search, id_phase,status) {
     try {
       if (typeof search === "string") search = search.toLowerCase();
-      const default_where = `ticket.id_company = '${id_company}' AND phase.id = '${id_phase}' AND`;
+      const default_where = `ticket.id_company = '${id_company}' AND phase.id = '${id_phase}' AND  AND ticket.closed IN(${status
+        .replace("[", "")
+        .replace("]", "")
+        .replace(/\"/g, "'")}) AND`;
       let query;
       if (isNaN(search)) {
         search = search.replace('"', "").replace('"', "");

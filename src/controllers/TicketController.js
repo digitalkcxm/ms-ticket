@@ -593,7 +593,14 @@ class TicketController {
             type: "socket",
             channel: `ticket_${ticket[0].id}`,
             event: "activity",
-            obj: obj,
+            obj: {
+              created_at:obj.created_at,
+              id: obj.id,
+              id_user : obj.id_user,
+              updated_at: obj.updated_at,
+              type : 'note',
+              message:req.body.text
+            },
           },
           req.company[0].callback
         );
@@ -1422,10 +1429,12 @@ class TicketController {
         case 1:
           for (const ticket of tickets) {
             if (!ticket.interaction_time && ticket.limit_sla_time < moment()) {
-              slaModel.updateTicketSLA(
+              console.log("1")
+              await slaModel.updateTicketSLA(
                 ticket.id_ticket,
                 { id_sla_status: sla_status.atrasado },
-                ticket.id_sla_type
+                ticket.id_sla_type,
+                ticket.id_phase
               );
             }
           }
@@ -1436,10 +1445,11 @@ class TicketController {
               ticket.interaction_time < ticket.limit_sla_time &&
               ticket.limit_sla_time < moment()
             ) {
-              slaModel.updateTicketSLA(
+              await slaModel.updateTicketSLA(
                 ticket.id_ticket,
                 { id_sla_status: sla_status.atrasado },
-                ticket.id_sla_type
+                ticket.id_sla_type,
+                ticket.id_phase
               );
             }
           }
@@ -1447,10 +1457,11 @@ class TicketController {
         case 3:
           for (const ticket of tickets) {
             if (ticket.limit_sla_time < moment()) {
-              slaModel.updateTicketSLA(
+              await slaModel.updateTicketSLA(
                 ticket.id_ticket,
                 { id_sla_status: sla_status.atrasado },
-                ticket.id_sla_type
+                ticket.id_sla_type,
+                ticket.id_phase
               );
             }
           }
