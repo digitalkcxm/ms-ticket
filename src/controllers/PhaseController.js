@@ -1502,7 +1502,10 @@ class PhaseController {
           default:
             break;
         }
+      } else {
+        obj = tickets;
       }
+      return res.status(200).send(obj);
     } catch (err) {
       console.log("Erro ao filtrar os dados");
       return res.status(500).send({ error: "Houve um erro" });
