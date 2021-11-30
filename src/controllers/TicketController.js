@@ -1211,9 +1211,7 @@ class TicketController {
                 id: ticket.phase_id,
                 name: ticket.phase,
               },
-              created_at: moment().format(
-                "DD/MM/YYYY HH:mm:ss"
-              ),
+              created_at: moment().format("DD/MM/YYYY HH:mm:ss"),
             },
           },
           req.company[0].callback
@@ -1892,6 +1890,7 @@ class TicketController {
         id_protocol: ticket[0].id_protocol,
         type: "ticket",
         sla_status: sla_status(slaInfo.sla),
+        customer: await customerModel.getAll(ticket[0].id),
       });
 
       const child_tickets = await ticketModel.getTicketCreatedByTicketFather(
@@ -1925,6 +1924,7 @@ class TicketController {
           display_name: father_ticket[0].display_name,
           id_protocol: father_ticket[0].id_protocol,
           type: "ticket",
+          customer: await customerModel.getAll(father_ticket[0].id),
         });
       }
 
@@ -1954,6 +1954,7 @@ class TicketController {
                   display_name: ticketRelated[0].display_name,
                   id_protocol: ticketRelated[0].id_protocol,
                   type: "ticket",
+                  customer: await customerModel.getAll(ticketRelated[0].id),
                 });
               }
             }

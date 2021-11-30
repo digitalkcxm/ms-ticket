@@ -397,8 +397,9 @@ class TicketModel {
         .leftJoin("phase_ticket", "phase_ticket.id_ticket", `${tableName}.id`)
         .leftJoin("department", "department.id", "ticket.department_origin")
         .leftJoin("phase", "phase.id", "phase_ticket.id_phase")
+        .leftJoin('customer','customer.id_ticket',"ticket.id")
         .where("phase_ticket.active", true)
-        .andWhere("ticket.id_customer", id)
+        .andWhere("customer.crm_contact_id", id)
         .orWhere("ticket.id_protocol", id);
     } catch (err) {
       console.log("===>", err);
