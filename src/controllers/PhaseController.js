@@ -1299,10 +1299,10 @@ class PhaseController {
                   if (sla.id_sla_type === 1) {
                     if (sla.active) {
                       if (sla.id_sla_status == 1) {
-                        if (req.params.sla === "emdia" || !req.params.sla)
+                        if (req.query.sla === "emdia" || !req.query.sla)
                           obj.push(ticket);
                       } else if (sla.id_sla_status == 2) {
-                        if (req.params.sla === "atrasado" || !req.params.sla)
+                        if (req.query.sla === "atrasado" || !req.query.sla)
                           obj.push(ticket);
                       }
                     }
@@ -1311,7 +1311,7 @@ class PhaseController {
               } else {
                 console.log("SEM SLA=>", ticket);
                 if (ticket.id_status === 1) {
-                  if (req.params.sla === "sem_sla" || !req.params.sla)
+                  if (req.query.sla === "sem_sla" || !req.query.sla)
                     obj.push(ticket);
                 }
               }
@@ -1343,8 +1343,8 @@ class PhaseController {
                               firstInteraction.length <= 0
                             ) {
                               if (
-                                req.params.sla === "sem_sla" ||
-                                !req.params.sla
+                                req.query.sla === "sem_sla" ||
+                                !req.query.sla
                               )
                                 obj.push(ticket);
                             }
@@ -1355,10 +1355,10 @@ class PhaseController {
                     case 2:
                       if (!sla.interaction_time) {
                         if (sla.id_sla_status === 1) {
-                          if (req.params.sla === "emdia" || !req.params.sla)
+                          if (req.query.sla === "emdia" || !req.query.sla)
                             obj.push(ticket);
                         } else {
-                          if (req.params.sla === "atrasado" || !req.params.sla)
+                          if (req.query.sla === "atrasado" || !req.query.sla)
                             obj.push(ticket);
                         }
                       }
@@ -1370,7 +1370,7 @@ class PhaseController {
                     ticket.id
                   );
                   if (firstInteraction && firstInteraction.length <= 0) {
-                    if (req.params.sla === "sem_sla" || !req.params.sla)
+                    if (req.query.sla === "sem_sla" || !req.query.sla)
                       obj.push(ticket);
                   }
                 }
@@ -1403,8 +1403,8 @@ class PhaseController {
                               firstInteraction.length > 0
                             ) {
                               if (
-                                req.params.sla === "sem_sla" ||
-                                !req.params.sla
+                                req.query.sla === "sem_sla" ||
+                                !req.query.sla
                               )
                                 obj.push(ticket);
                             }
@@ -1420,12 +1420,12 @@ class PhaseController {
                         if (nextSLA.length > 0) {
                           if (nextSLA[0].id_sla_status === 2) {
                             if (
-                              req.params.sla === "atrasado" ||
-                              !req.params.sla
+                              req.query.sla === "atrasado" ||
+                              !req.query.sla
                             )
                               obj.push(ticket);
                           } else {
-                            if (req.params.sla === "emdia" || !req.params.sla)
+                            if (req.query.sla === "emdia" || !req.query.sla)
                               obj.push(ticket);
                           }
                         }
@@ -1438,7 +1438,7 @@ class PhaseController {
                     ticket.id
                   );
                   if (firstInteraction && firstInteraction.length > 0) {
-                    if (req.params.sla === "sem_sla" || !req.params.sla)
+                    if (req.query.sla === "sem_sla" || !req.query.sla)
                       obj.push(ticket);
                   }
                 }
@@ -1466,7 +1466,7 @@ class PhaseController {
 
                       if (nextSLA.length <= 0) {
                         if (ticket.id_status === 3) {
-                          if (req.params.sla === "sem_sla" || !req.params.sla)
+                          if (req.query.sla === "sem_sla" || !req.query.sla)
                             obj.push(ticket);
                         }
                       }
@@ -1477,12 +1477,12 @@ class PhaseController {
                         );
                         if (nextSLA.length > 0) {
                           if (sla.id_sla_status === 1) {
-                            if (req.params.sla === "emdia" || !req.params.sla)
+                            if (req.query.sla === "emdia" || !req.query.sla)
                               obj.push(ticket);
                           } else if (sla.id_sla_status === 2) {
                             if (
-                              req.params.sla === "atrasado" ||
-                              !req.params.sla
+                              req.query.sla === "atrasado" ||
+                              !req.query.sla
                             )
                               obj.push(ticket);
                           }
@@ -1493,7 +1493,7 @@ class PhaseController {
                 }
               } else {
                 if (ticket.id_status === 3) {
-                  if (req.params.sla === "sem_sla" || !req.params.sla)
+                  if (req.query.sla === "sem_sla" || !req.query.sla)
                     obj.push(ticket);
                 }
               }
