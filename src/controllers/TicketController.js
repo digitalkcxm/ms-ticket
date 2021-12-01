@@ -1353,7 +1353,7 @@ class TicketController {
 
         await this._notify(
           ticket[0].id,
-          ticket[0].id_phase,
+          ticket[0].phase_id,
           req.headers.authorization,
           "close",
           req.company[0].callback
@@ -1362,7 +1362,7 @@ class TicketController {
         await CallbackDigitalk(
           {
             type: "socket",
-            channel: `phase_${ticket[0].id_phase}`,
+            channel: `phase_${ticket[0].phase_id}`,
             event: "update_ticket",
             obj: ticket[0],
           },
