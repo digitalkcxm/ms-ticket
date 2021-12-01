@@ -279,11 +279,14 @@ class TicketController {
 
         if (phase[0].separate && phase[0].separate.separate.length > 0) {
           for (const separate of phase[0].separate.separate) {
+            const email = separate.contact.filter((x) => x.email);
+            const phone = separate.contact.filter((x) => x.phone);
+
             obj = {
               ...obj,
-              notified: "admin",
-              email: separate.contact.filter((x) => x.email),
-              phone: separate.contact.filter((x) => x.phone),
+              notified: "separate",
+              email: email.length > 0 ? email[0].email : "",
+              phone: phone.length > 0 ? phone[0].phone : "",
             };
             await CallbackDigitalk(obj, callback);
           }
