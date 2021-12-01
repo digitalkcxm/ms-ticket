@@ -342,7 +342,7 @@ class TicketController {
         }
 
         break;
-      case ("close", "complete"):
+      case "close":
         obj = {
           ...obj,
           message: `
@@ -1345,7 +1345,7 @@ class TicketController {
           );
         }
 
-        await slaModel.disableSLA(ticket.id_ticket);
+        await slaModel.disableSLA(ticket[0].id);
         ticket[0] = await formatTicketForPhase(
           { id: ticket[0].phase_id },
           ticket[0]
