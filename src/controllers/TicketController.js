@@ -175,6 +175,14 @@ class TicketController {
           },
           req.company[0].callback
         );
+
+        await this._notify(
+          ticket.id,
+          phase[0].id,
+          req.headers.authorization,
+          "open",
+          req.company[0].callback
+        );
         return res.status(200).send(ticket);
       }
 
@@ -235,311 +243,66 @@ class TicketController {
     }
   }
 
-  // async _notify(
-  //   phase_id,
-  //   notify_token,
-  //   ticket_id,
-  //   userResponsibleTicket,
-  //   emailResponsibleTicket,
-  //   id_company,
-  //   type,
-  //   db
-  // ) {
-  //   try {
-  //     let texto = "";
-  //     let register;
-  //     let responsiblePhase = await phaseModel.getResponsiblePhase(phase_id);
-  //     let notifyPhase = await phaseModel.getNotifiedPhase(phase_id);
+  async _notify(id_ticket, id_phase, id_company, action, callback) {
+    const phase = await phaseModel.getPhaseById(id_phase, id_company);
+    const ticket = await ticketModel.getTicketById(id_ticket, id_company);
+    const obj = {
+      type: "notification",
+      id_ticket: ticket[0].id,
+      id_protocol: ticket[0].id_protocol,
+      id_customer: await customerModel.getAll(ticket[0].id),
+      created_at: moment().format("DD/MM/YYYY HH:mm:ss"),
+    };
+    switch (action) {
+      case "open":
+        obj = {
+          ...obj,
+          message: `
+        Atividade criada\n\n
+        Identificador da atividade: ${ticket[0].id}\n
+        ${ticket[0].id_protocol ? `Protocolo: ${ticket[0].id_protocol}\n` : ""}
+        Data de criação: ${moment().format("DD/MM/YYYY")}\n
+        Hora: ${moment().format("HH:mm:ss")}
+        `,
+        };
+        if (phase[0].customer && phase[0].customer.notify_open) {
+          obj = { ...obj, notified: "customer" };
+          await CallbackDigitalk(obj, callback);
+        }
 
-  //     const resultPhase = await phaseModel.getPhaseById(phase_id, id_company);
-  //     // if (resultPhase[0].id_form_template) {
+        if (phase[0].admin && phase[0].admin.notify_open) {
+          if (phase[0].customer && phase[0].customer.notify_open) {
+            obj = { ...obj, notified: "admin" };
+            await CallbackDigitalk(obj, callback);
+          }
+        }
 
-  //     // }
+        if (phase[0].separate && phase[0].separate.separate.length > 0) {
+          for (const separate of phase[0].separate.separate) {
+            obj = {
+              ...obj,
+              notified: "admin",
+              email: separate.contact.filter((x) => x.email),
+              phone: separate.contact.filter((x) => x.phone),
+            };
+            await CallbackDigitalk(obj, callback);
+          }
+        }
 
-  //     const result = await ticketModel.getTicketById(ticket_id, id_company);
-  //     if (result[0].form) {
-  //       result[0].form_data = await new FormDocuments(db).findRegister(
-  //         result[0].id_form
-  //       );
-  //       delete result[0].form;
-  //       delete result[0].id_form;
-
-  //       register = await new FormTemplate(db).findRegistes(
-  //         resultPhase[0].id_form_template
-  //       );
-  //       for (let column of register.column) {
-  //         texto =
-  //           texto +
-  //           `<p><strong>${column.label} : </strong>${
-  //             result[0].form_data[column.column]
-  //               ? result[0].form_data[column.column]
-  //               : ""
-  //           }</p>`;
-  //       }
-  //     }
-
-  //     switch (type) {
-  //       case 3:
-  //         const phaseInfo = await phaseModel.getPhase(phase_id, id_company);
-
-  //         if (phaseInfo[0] && phaseInfo[0].responsible_notify_sla) {
-  //           if (responsiblePhase && responsiblePhase.length > 0) {
-  //             responsiblePhase.map(async (contact) => {
-  //               if (contact.id_user) {
-  //                 await notify(notify_token, {
-  //                   id_user: contact.id_user_core,
-  //                   type: type,
-  //                   id_ticket: ticket_id,
-  //                   id_seq: result[0].id_seq,
-  //                   id_phase: phase_id,
-  //                 });
-  //               } else if (contact.email) {
-  //                 await emailService.sendActiveMenssage(
-  //                   `DIGITALK INFORMA: TICKET #${result[0].id_ticket} EXPIROU`,
-  //                   contact.email,
-  //                   `Um ticket expirou em uma fase de sua responsabilidade <br><br> Fase: ${contact.phase_description}  <br><br>  ${texto}`
-  //                 );
-  //               }
-  //             });
-  //           }
-  //         }
-  //         if (userResponsibleTicket && userResponsibleTicket.length > 0) {
-  //           await this._notifyUser(
-  //             type,
-  //             userResponsibleTicket,
-  //             id_company,
-  //             ticket_id,
-  //             phase_id,
-  //             notify_token,
-  //             result[0].id_seq,
-  //             responsiblePhase,
-  //             notifyPhase
-  //           );
-  //         }
-
-  //         if (emailResponsibleTicket && emailResponsibleTicket.length > 0) {
-  //           for (let i = 0; i < emailResponsibleTicket.length; i++) {
-  //             await responsiblePhase.map((userPhase) => {
-  //               if (userPhase.id_user == emailResponsibleTicket[i]) {
-  //                 delete emailResponsibleTicket[i];
-  //               }
-  //             });
-
-  //             if (emailResponsibleTicket[i]) {
-  //               await notifyPhase.map((userPhase) => {
-  //                 if (userPhase.id_user == emailResponsibleTicket[i] > 0) {
-  //                   delete emailResponsibleTicket[i];
-  //                 }
-  //               });
-  //             }
-  //             if (emailResponsibleTicket[i]) {
-  //               let infoUser = await emailModel.getEmailById(
-  //                 emailResponsibleTicket[i],
-  //                 id_company
-  //               );
-  //               await emailService.sendActiveMenssage(
-  //                 `DIGITALK INFORMA: TICKET #${result[0].id_ticket} `,
-  //                 infoUser[0].email,
-  //                 `Você foi alertado em um dos seus tickets <br><br>  ${texto}`
-  //               );
-  //             }
-  //           }
-  //         }
-  //         break;
-  //       case 4:
-  //         let body = await emailController.formatEmail(
-  //           result[0].created_at,
-  //           result[0].sla_time,
-  //           result[0].id_seq,
-  //           result[0].name,
-  //           resultPhase[0].name,
-  //           texto,
-  //           result[0].unit_of_time
-  //         );
-  //         let email;
-  //         if (responsiblePhase && responsiblePhase.length > 0) {
-  //           responsiblePhase.map(async (contact) => {
-  //             if (contact.id_user) {
-  //               let resultNotify = await notify(notify_token, {
-  //                 id_user: contact.id_user_core,
-  //                 type: type,
-  //                 id_ticket: ticket_id,
-  //                 id_seq: result[0].id_seq,
-  //                 id_phase: phase_id,
-  //               });
-  //             } else if (contact.email) {
-  //               email = await emailService.sendActiveMenssage(
-  //                 `Ticket ID:${result[0].id_seq}`,
-  //                 contact.email,
-  //                 body
-  //               );
-  //               await emailModel.createLinkedEmailWithChatId(
-  //                 email.data.chatId,
-  //                 contact.id_email,
-  //                 ticket_id
-  //               );
-  //             }
-  //           });
-  //         }
-  //         if (notifyPhase && notifyPhase.length > 0) {
-  //           notifyPhase.map(async (contact) => {
-  //             if (contact.id_user) {
-  //               let resultNotify = await notify(notify_token, {
-  //                 id_user: contact.id_user_core,
-  //                 type: type,
-  //                 id_ticket: ticket_id,
-  //                 id_seq: result[0].id_seq,
-  //                 id_phase: phase_id,
-  //               });
-  //             } else if (contact.email) {
-  //               email = await emailService.sendActiveMenssage(
-  //                 `Ticket ID:${result[0].id_seq}`,
-  //                 contact.email,
-  //                 body
-  //               );
-  //               await emailModel.createLinkedEmailWithChatId(
-  //                 email.data.chatId,
-  //                 contact.id_email,
-  //                 ticket_id
-  //               );
-  //             }
-  //           });
-  //         }
-
-  //         if (userResponsibleTicket && userResponsibleTicket.length > 0) {
-  //           await this._notifyUser(
-  //             type,
-  //             userResponsibleTicket,
-  //             id_company,
-  //             ticket_id,
-  //             phase_id,
-  //             notify_token,
-  //             result[0].id_seq,
-  //             responsiblePhase,
-  //             notifyPhase
-  //           );
-  //         }
-  //         if (emailResponsibleTicket && emailResponsibleTicket.length > 0) {
-  //           for (let i = 0; i < emailResponsibleTicket.length; i++) {
-  //             await responsiblePhase.map((userPhase) => {
-  //               if (userPhase.id_user == emailResponsibleTicket[i]) {
-  //                 delete emailResponsibleTicket[i];
-  //               }
-  //             });
-
-  //             if (emailResponsibleTicket[i]) {
-  //               await notifyPhase.map((userPhase) => {
-  //                 if (userPhase.id_user == emailResponsibleTicket[i] > 0) {
-  //                   delete emailResponsibleTicket[i];
-  //                 }
-  //               });
-  //             }
-
-  //             if (emailResponsibleTicket[i]) {
-  //               let infoUser = await emailModel.getEmailById(
-  //                 emailResponsibleTicket[i],
-  //                 id_company
-  //               );
-  //               email = await emailService.sendActiveMenssage(
-  //                 `Ticket ID:${result[0].id_seq}`,
-  //                 infoUser[0].email,
-  //                 body
-  //               );
-  //               await emailModel.createLinkedEmailWithChatId(
-  //                 email.data.chatId,
-  //                 emailResponsibleTicket[i],
-  //                 ticket_id
-  //               );
-  //             }
-  //           }
-  //         }
-  //         break;
-  //       case 5:
-  //         if (userResponsibleTicket && userResponsibleTicket.length > 0) {
-  //           await this._notifyUser(
-  //             type,
-  //             userResponsibleTicket,
-  //             id_company,
-  //             ticket_id,
-  //             phase_id,
-  //             notify_token,
-  //             result[0].id_seq
-  //           );
-  //         }
-
-  //         if (emailResponsibleTicket && emailResponsibleTicket.length > 0) {
-  //           for (let i = 0; i < emailResponsibleTicket.length; i++) {
-  //             if (emailResponsibleTicket[i]) {
-  //               let infoUser = await emailModel.getEmailById(
-  //                 emailResponsibleTicket[i],
-  //                 id_company
-  //               );
-  //               await emailService.sendActiveMenssage(
-  //                 `Ticket ID:${result[0].id_seq}`,
-  //                 infoUser[0].email,
-  //                 `Você foi alertado em um dos seus tickets  <br><br> ${texto}`
-  //               );
-  //             }
-  //           }
-  //         }
-  //         break;
-  //       default:
-  //         console.log("Default");
-  //         break;
-  //     }
-  //     return true;
-  //   } catch (err) {
-  //     console.log("Error when notify responsibles ==> ", err);
-  //     return false;
-  //   }
-  // }
-
-  // async _notifyUser(
-  //   type,
-  //   user,
-  //   id_company,
-  //   id_ticket,
-  //   id_phase,
-  //   notify_token,
-  //   id_seq,
-  //   responsiblePhase = null,
-  //   notifyPhase = null
-  // ) {
-  //   try {
-  //     for (let i = 0; i < user.length; i++) {
-  //       if (user[i] && responsiblePhase) {
-  //         await responsiblePhase.map((userPhase) => {
-  //           if (userPhase.id_user == user[i]) {
-  //             delete user[i];
-  //           }
-  //         });
-  //       }
-
-  //       if (user[i] && notifyPhase) {
-  //         await notifyPhase.map((userPhase) => {
-  //           if (userPhase.id_user == user[i] > 0) {
-  //             delete user[i];
-  //           }
-  //         });
-  //       }
-  //       if (user[i]) {
-  //         let infoUser = await userModel.getById(user[i], id_company);
-  //         let resultNotify = await notify(notify_token, {
-  //           id_user: infoUser[0].id_users_core,
-  //           type: type,
-  //           id_ticket: id_ticket,
-  //           id_seq: id_seq,
-  //           id_phase: id_phase,
-  //         });
-  //       }
-  //     }
-
-  //     return true;
-  //   } catch (err) {
-  //     console.log("Error notify user => ", err);
-  //     return err;
-  //   }
-  // }
+        break;
+      case "progress":
+        break;
+      case ("close", "complete"):
+        break;
+      case "start_activity":
+        break;
+      case "first_reply":
+        break;
+      default:
+        console.log("action unmapped");
+        break;
+    }
+  }
 
   async createActivities(req, res) {
     try {
@@ -594,12 +357,12 @@ class TicketController {
             channel: `ticket_${ticket[0].id}`,
             event: "activity",
             obj: {
-              created_at:obj.created_at,
+              created_at: obj.created_at,
               id: obj.id,
-              id_user : obj.id_user,
+              id_user: obj.id_user,
               updated_at: obj.updated_at,
-              type : 'note',
-              message:req.body.text
+              type: "note",
+              message: req.body.text,
             },
           },
           req.company[0].callback
@@ -1429,7 +1192,7 @@ class TicketController {
         case 1:
           for (const ticket of tickets) {
             if (!ticket.interaction_time && ticket.limit_sla_time < moment()) {
-              console.log("1")
+              console.log("1");
               await slaModel.updateTicketSLA(
                 ticket.id_ticket,
                 { id_sla_status: sla_status.atrasado },

@@ -422,7 +422,7 @@ class PhaseController {
       const usersNotify = [];
 
       const dpt = [];
-
+console.log("req.body.separate  ===>",req.body.separate )
       let obj = {
         icon: req.body.icon,
         name: req.body.name,
@@ -444,7 +444,7 @@ class PhaseController {
         create_ticket: req.body.create_ticket,
       };
 
-      const oldPhase = await phaseModel.getPhaseById(req.params.id);
+      const oldPhase = await phaseModel.getPhaseById(req.params.id,req.headers.authorization);
       if (!oldPhase || oldPhase.length <= 0)
         return res
           .status(400)

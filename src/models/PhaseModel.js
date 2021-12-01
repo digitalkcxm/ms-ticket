@@ -101,27 +101,6 @@ class PhaseModel {
     }
   }
 
-  async getResponsiblePhase(phase_id) {
-    try {
-      return await database("phase")
-        .select({
-          phase: "phase.id",
-          phase_description: "phase.name",
-          id_user_core: "users.id_users_core",
-          id_user: "users.id",
-          email: "email.email",
-          id_email: "email.id",
-        })
-        .leftJoin("responsible_phase", "responsible_phase.id_phase", "phase.id")
-        .leftJoin("users", "users.id", "responsible_phase.id_user")
-        .leftJoin("email", "email.id", "responsible_phase.id_email")
-        .where("phase.id", phase_id);
-    } catch (err) {
-      console.log("Error when get notified phase =>", err);
-      return err;
-    }
-  }
-
   async getNotifiedPhase(phase_id) {
     try {
       return await database("phase")
@@ -143,59 +122,6 @@ class PhaseModel {
     }
   }
 
-  async getResponsiblePhaseByIdUser(id_user, id_phase) {
-    try {
-      return await database("responsible_phase")
-        .where("id_user", id_user)
-        .andWhere("id_phase", id_phase);
-    } catch (err) {
-      console.log("Error when get responsible phase by id User => ", err);
-      return err;
-    }
-  }
-
-  async getNotifyPhaseByIdUser(id_user, id_phase) {
-    try {
-      return await database("notify_phase")
-        .where("id_user", id_user)
-        .andWhere("id_phase", id_phase);
-    } catch (err) {
-      console.log("Error when get notify by id user ==>", err);
-      return err;
-    }
-  }
-
-  async getResponsiblePhaseByIdPhase(id_phase) {
-    try {
-      return await database("responsible_phase")
-        .select({
-          email: "email.email",
-          user: "users.id_users_core",
-        })
-        .leftJoin("email", "email.id", "responsible_phase.id_email")
-        .leftJoin("users", "users.id", "responsible_phase.id_user")
-        .where("responsible_phase.id_phase", id_phase);
-    } catch (err) {
-      console.log("Error when get responsible phase by id User => ", err);
-      return err;
-    }
-  }
-
-  async getNotifyPhaseByIdPhase(id_phase) {
-    try {
-      return await database("notify_phase")
-        .select({
-          email: "email.email",
-          user: "users.id_users_core",
-        })
-        .leftJoin("email", "email.id", "notify_phase.id_email")
-        .leftJoin("users", "users.id", "notify_phase.id_user")
-        .where("notify_phase.id_phase", id_phase);
-    } catch (err) {
-      console.log("Error when get notify by id user ==>", err);
-      return err;
-    }
-  }
 
   async getDepartmentPhase(id_phase) {
     try {
