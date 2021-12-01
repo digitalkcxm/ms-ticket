@@ -351,7 +351,6 @@ class PhaseController {
         for (let i in result) {
           result[i].ticket = [];
           result[i].header = {};
-          result[i].header.total_tickets = tickets.length;
 
           result[i] = await this._formatPhase(result[i], req.app.locals.db);
         }
