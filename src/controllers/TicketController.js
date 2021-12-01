@@ -246,21 +246,25 @@ class TicketController {
   async _notify(id_ticket, id_phase, id_company, action, callback) {
     const phase = await phaseModel.getPhaseById(id_phase, id_company);
     const ticket = await ticketModel.getTicketById(id_ticket, id_company);
-    const obj = {
+
+    let obj = {
       type: "notification",
-      id_ticket: ticket[0].id,
+      id_ticket: ticket[0].id_seq,
       id_protocol: ticket[0].id_protocol,
-      id_customer: await customerModel.getAll(ticket[0].id),
+      customer: await customerModel.getAll(ticket[0].id),
       created_at: moment().format("DD/MM/YYYY HH:mm:ss"),
     };
+
     switch (action) {
       case "open":
         obj = {
           ...obj,
           message: `
         Atividade criada\n\n
-        Identificador da atividade: ${ticket[0].id}\n
-        ${ticket[0].id_protocol ? `Protocolo: ${ticket[0].id_protocol}\n` : ""}
+        Identificador da atividade: ${ticket[0].id_seq}\n${
+            ticket[0].id_protocol ? `Protocolo: ${ticket[0].id_protocol}\n` : ""
+          }
+        Fase: ${phase[0].name}\n
         Data de criação: ${moment().format("DD/MM/YYYY")}\n
         Hora: ${moment().format("HH:mm:ss")}
         `,
@@ -279,27 +283,194 @@ class TicketController {
 
         if (phase[0].separate && phase[0].separate.separate.length > 0) {
           for (const separate of phase[0].separate.separate) {
-            const email = separate.contact.filter((x) => x.email);
-            const phone = separate.contact.filter((x) => x.phone);
+            if (separate.notify_open) {
+              const email = separate.contact.filter((x) => x.email);
+              const phone = separate.contact.filter((x) => x.phone);
 
-            obj = {
-              ...obj,
-              notified: "separate",
-              email: email.length > 0 ? email[0].email : "",
-              phone: phone.length > 0 ? phone[0].phone : "",
-            };
-            await CallbackDigitalk(obj, callback);
+              obj = {
+                ...obj,
+                notified: "separate",
+                email: email.length > 0 ? email[0].email : "",
+                phone: phone.length > 0 ? phone[0].phone : "",
+              };
+              await CallbackDigitalk(obj, callback);
+            }
           }
         }
 
         break;
       case "progress":
+        obj = {
+          ...obj,
+          message: `
+        Atividade Atualizada\n\n
+        Identificador da atividade: ${ticket[0].id_seq}\n${
+            ticket[0].id_protocol ? `Protocolo: ${ticket[0].id_protocol}\n` : ""
+          }
+        Fase: ${phase[0].name}\n
+        Data de Atualização: ${moment().format("DD/MM/YYYY")}\n
+        Hora: ${moment().format("HH:mm:ss")}
+        `,
+        };
+        if (phase[0].customer && phase[0].customer.notify_progress) {
+          obj = { ...obj, notified: "customer" };
+          await CallbackDigitalk(obj, callback);
+        }
+
+        if (phase[0].admin && phase[0].admin.notify_progress) {
+          if (phase[0].customer && phase[0].customer.notify_open) {
+            obj = { ...obj, notified: "admin" };
+            await CallbackDigitalk(obj, callback);
+          }
+        }
+
+        if (phase[0].separate && phase[0].separate.separate.length > 0) {
+          for (const separate of phase[0].separate.separate) {
+            if (separate.notify_open) {
+              const email = separate.contact.filter((x) => x.email);
+              const phone = separate.contact.filter((x) => x.phone);
+
+              obj = {
+                ...obj,
+                notified: "separate",
+                email: email.length > 0 ? email[0].email : "",
+                phone: phone.length > 0 ? phone[0].phone : "",
+              };
+              await CallbackDigitalk(obj, callback);
+            }
+          }
+        }
+
         break;
       case ("close", "complete"):
+        obj = {
+          ...obj,
+          message: `
+        Atividade Finalizada\n\n
+        Identificador da atividade: ${ticket[0].id_seq}\n${
+            ticket[0].id_protocol ? `Protocolo: ${ticket[0].id_protocol}\n` : ""
+          }
+        Fase: ${phase[0].name}\n
+        Data de Abertura:${moment(ticket[0].created_at).format("DD/MM/YYYY")}\n
+        Hora de Abertura:${moment(ticket[0].created_at).format("HH:mm:ss")}\n
+        Data de Finalização: ${moment().format("DD/MM/YYYY")}\n
+        Hora: ${moment().format("HH:mm:ss")}
+        `,
+        };
+        if (phase[0].customer && phase[0].customer.notify_close) {
+          obj = { ...obj, notified: "customer" };
+          await CallbackDigitalk(obj, callback);
+        }
+
+        if (phase[0].admin && phase[0].admin.notify_close) {
+          if (phase[0].customer && phase[0].customer.notify_open) {
+            obj = { ...obj, notified: "admin" };
+            await CallbackDigitalk(obj, callback);
+          }
+        }
+
+        if (phase[0].separate && phase[0].separate.separate.length > 0) {
+          for (const separate of phase[0].separate.separate) {
+            if (separate.notify_close) {
+              const email = separate.contact.filter((x) => x.email);
+              const phone = separate.contact.filter((x) => x.phone);
+
+              obj = {
+                ...obj,
+                notified: "separate",
+                email: email.length > 0 ? email[0].email : "",
+                phone: phone.length > 0 ? phone[0].phone : "",
+              };
+              await CallbackDigitalk(obj, callback);
+            }
+          }
+        }
         break;
       case "start_activity":
+        obj = {
+          ...obj,
+          message: `
+        Atividade Iniciada\n\n
+        Identificador da atividade: ${ticket[0].id_seq}\n${
+            ticket[0].id_protocol ? `Protocolo: ${ticket[0].id_protocol}\n` : ""
+          }
+        Fase: ${phase[0].name}\n
+        Data de Abertura:${moment(ticket[0].created_at).format("DD/MM/YYYY")}\n
+        Hora de Abertura:${moment(ticket[0].created_at).format("HH:mm:ss")}\n
+        Data de Inicialização: ${moment().format("DD/MM/YYYY")}\n
+        Hora: ${moment().format("HH:mm:ss")}
+        `,
+        };
+        if (phase[0].customer && phase[0].customer.notify_start_activity) {
+          obj = { ...obj, notified: "customer" };
+          await CallbackDigitalk(obj, callback);
+        }
+
+        if (phase[0].admin && phase[0].admin.notify_start_activity) {
+          if (phase[0].customer && phase[0].customer.notify_open) {
+            obj = { ...obj, notified: "admin" };
+            await CallbackDigitalk(obj, callback);
+          }
+        }
+
+        if (phase[0].separate && phase[0].separate.separate.length > 0) {
+          for (const separate of phase[0].separate.separate) {
+            if (separate.notify_start_activity) {
+              const email = separate.contact.filter((x) => x.email);
+              const phone = separate.contact.filter((x) => x.phone);
+
+              obj = {
+                ...obj,
+                notified: "separate",
+                email: email.length > 0 ? email[0].email : "",
+                phone: phone.length > 0 ? phone[0].phone : "",
+              };
+              await CallbackDigitalk(obj, callback);
+            }
+          }
+        }
         break;
       case "first_reply":
+        obj = {
+          ...obj,
+          message: `
+        Atividade Respondida\n\n
+        Identificador da atividade: ${ticket[0].id_seq}\n${
+            ticket[0].id_protocol ? `Protocolo: ${ticket[0].id_protocol}\n` : ""
+          }
+        Fase: ${phase[0].name}\n
+        Data de Inicialização: ${moment().format("DD/MM/YYYY")}\n
+        Hora: ${moment().format("HH:mm:ss")}
+        `,
+        };
+        if (phase[0].customer && phase[0].customer.notify_first_reply) {
+          obj = { ...obj, notified: "customer" };
+          await CallbackDigitalk(obj, callback);
+        }
+
+        if (phase[0].admin && phase[0].admin.notify_first_reply) {
+          if (phase[0].customer && phase[0].customer.notify_open) {
+            obj = { ...obj, notified: "admin" };
+            await CallbackDigitalk(obj, callback);
+          }
+        }
+
+        if (phase[0].separate && phase[0].separate.separate.length > 0) {
+          for (const separate of phase[0].separate.separate) {
+            if (separate.notify_first_reply) {
+              const email = separate.contact.filter((x) => x.email);
+              const phone = separate.contact.filter((x) => x.phone);
+
+              obj = {
+                ...obj,
+                notified: "separate",
+                email: email.length > 0 ? email[0].email : "",
+                phone: phone.length > 0 ? phone[0].phone : "",
+              };
+              await CallbackDigitalk(obj, callback);
+            }
+          }
+        }
         break;
       default:
         console.log("action unmapped");
@@ -328,6 +499,14 @@ class TicketController {
         return res.status(400).send({ error: "ID ticket is invalid" });
 
       if (!ticket[0].start_ticket) {
+        await this._notify(
+          ticket[0].id,
+          ticket[0].phase_id,
+          req.headers.authorization,
+          "start_activity",
+          req.company[0].callback
+        );
+
         await ticketModel.updateTicket(
           { start_ticket: moment(), id_status: 2 },
           req.body.id_ticket,
@@ -370,6 +549,14 @@ class TicketController {
           },
           req.company[0].callback
         );
+
+        await this._notify(
+          ticket[0].id,
+          ticket[0].phase_id,
+          req.headers.authorization,
+          "first_reply",
+          req.company[0].callback
+        );
         return res.status(200).send(obj);
       }
 
@@ -401,6 +588,14 @@ class TicketController {
         return res.status(400).send({ error: "ID ticket is invalid" });
 
       if (!ticket[0].start_ticket) {
+        await this._notify(
+          ticket[0].id,
+          ticket[0].phase_id,
+          req.headers.authorization,
+          "start_activity",
+          req.company[0].callback
+        );
+
         await ticketModel.updateTicket(
           { start_ticket: moment(), id_status: 2 },
           req.body.id_ticket,
@@ -441,6 +636,14 @@ class TicketController {
             event: "activity",
             obj: obj,
           },
+          req.company[0].callback
+        );
+
+        await this._notify(
+          ticket[0].id,
+          ticket[0].phase_id,
+          req.headers.authorization,
+          "first_reply",
           req.company[0].callback
         );
         return res.status(200).send(obj);
@@ -1009,7 +1212,23 @@ class TicketController {
           }
         }
       }
+      
+      await this._notify(
+        ticket.id,
+        phase[0].id,
+        req.headers.authorization,
+        "progress",
+        req.company[0].callback
+      );
       if (!ticket.start_ticket) {
+        await this._notify(
+          ticket.id,
+          phase[0].id,
+          req.headers.authorization,
+          "start_activity",
+          req.company[0].callback
+        );
+
         obj.start_ticket = moment();
         obj.id_status = 2;
       }
@@ -1130,6 +1349,14 @@ class TicketController {
         ticket[0] = await formatTicketForPhase(
           { id: ticket[0].phase_id },
           ticket[0]
+        );
+
+        await this._notify(
+          ticket[0].id,
+          ticket[0].id_phase,
+          req.headers.authorization,
+          "close",
+          req.company[0].callback
         );
 
         await CallbackDigitalk(
@@ -1465,7 +1692,13 @@ class TicketController {
 
           await updateSLA(req.body.id_ticket, ticket[0].phase_id);
         }
-
+        await this._notify(
+          ticket[0].id,
+          ticket[0].id_phase,
+          req.headers.authorization,
+          "start_activity",
+          req.company[0].callback
+        );
         await CallbackDigitalk(
           {
             type: "socket",
