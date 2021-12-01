@@ -348,7 +348,7 @@ class TicketController {
           message: `
         Atividade Finalizada\n\n
         Identificador da atividade: ${ticket[0].id_seq}\n${
-            ticket[0].id_protocol ? `Protocolo: ${ticket[0].id_protocol}\n` : ""
+            ticket[0].id_protocol ? `        Protocolo: ${ticket[0].id_protocol}\n` : ""
           }
         Fase: ${phase[0].name}\n
         Data de Abertura:${moment(ticket[0].created_at).format("DD/MM/YYYY")}\n
@@ -392,7 +392,7 @@ class TicketController {
           message: `
         Atividade Iniciada\n\n
         Identificador da atividade: ${ticket[0].id_seq}\n${
-            ticket[0].id_protocol ? `Protocolo: ${ticket[0].id_protocol}\n` : ""
+            ticket[0].id_protocol ? `        Protocolo: ${ticket[0].id_protocol}\n` : ""
           }
         Fase: ${phase[0].name}\n
         Data de Abertura:${moment(ticket[0].created_at).format("DD/MM/YYYY")}\n
@@ -436,7 +436,7 @@ class TicketController {
           message: `
         Atividade Respondida\n\n
         Identificador da atividade: ${ticket[0].id_seq}\n${
-            ticket[0].id_protocol ? `Protocolo: ${ticket[0].id_protocol}\n` : ""
+            ticket[0].id_protocol ? `        Protocolo: ${ticket[0].id_protocol}\n` : ""
           }
         Fase: ${phase[0].name}\n
         Data de Inicialização: ${moment().format("DD/MM/YYYY")}\n

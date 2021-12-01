@@ -1185,7 +1185,7 @@ console.log("req.body.separate  ===>",req.body.separate )
       const calc_percentual = async function (total, value) {
         if (total == 0) return 0;
 
-        return parseInt((parseInt(value) * 100) / parseInt(total)).toFixed(2);
+        return parseInt((parseInt(value) * 100) / parseInt(total));
       };
       result.percentual_nao_iniciado = {
         total: await calc_percentual(
