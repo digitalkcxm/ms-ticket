@@ -339,6 +339,7 @@ class PhaseController {
         }
         // }
       } else if (req.query.department) {
+        console.log("teste");
         result = await this._queryDepartment(
           req.query.department,
           req.headers.authorization,
@@ -407,7 +408,7 @@ class PhaseController {
 
       phase.sla = await settingsSLA(phase.id);
 
-      phase = await this._formatPhase(phase, db);
+      phase = await this._formatPhase(phase, db, false, status);
     }
 
     return result;
@@ -421,7 +422,7 @@ class PhaseController {
       const usersNotify = [];
 
       const dpt = [];
-console.log("req.body.separate  ===>",req.body.separate )
+      console.log("req.body.separate  ===>", req.body.separate);
       let obj = {
         icon: req.body.icon,
         name: req.body.name,
@@ -443,7 +444,10 @@ console.log("req.body.separate  ===>",req.body.separate )
         create_ticket: req.body.create_ticket,
       };
 
-      const oldPhase = await phaseModel.getPhaseById(req.params.id,req.headers.authorization);
+      const oldPhase = await phaseModel.getPhaseById(
+        req.params.id,
+        req.headers.authorization
+      );
       if (!oldPhase || oldPhase.length <= 0)
         return res
           .status(400)
@@ -633,7 +637,7 @@ console.log("req.body.separate  ===>",req.body.separate )
     return register;
   }
 
-  async _formatPhase(result, mongodb, search = false) {
+  async _formatPhase(result, mongodb, search = false, status) {
     const department = await phaseModel.getDepartmentPhase(result.id);
 
     department.length > 0
@@ -658,8 +662,13 @@ console.log("req.body.separate  ===>",req.body.separate )
       }
     }
     if (!search) {
-      const tickets = await ticketModel.getTicketByPhase(result.id);
-
+      let tickets = ''
+      if(status){
+        tickets = await ticketModel.getTicketByPhaseAndStatus(result.id,status)
+      }else{ 
+         tickets = await ticketModel.getTicketByPhase(result.id);
+      }
+      
       for await (let ticket of tickets) {
         result.ticket.push(await formatTicketForPhase(result, ticket));
         // if (ticket) const getByPhaseTicket(id_phase, id_ticket);
@@ -1041,34 +1050,40 @@ console.log("req.body.separate  ===>",req.body.separate )
       };
 
       console.log("TOTAL =>", result.tickets.length);
-      let n_iniciado = 0
-      let iniciados = 0
-      let concluidos = 0
+      let n_iniciado = 0;
+      let iniciados = 0;
+      let concluidos = 0;
       for await (const ticket of result.tickets) {
-
-        if(ticket.id_status === 2){
-          iniciados = iniciados + 1
+        if (ticket.id_status === 2) {
+          iniciados = iniciados + 1;
         }
-        if(ticket.id_status === 3){
-          concluidos = concluidos + 1
+        if (ticket.id_status === 3) {
+          concluidos = concluidos + 1;
         }
 
-        const phaseSettings = await slaModel.getSLASettings(ticket.id_phase);         
+        const phaseSettings = await slaModel.getSLASettings(ticket.id_phase);
 
         if (phaseSettings && phaseSettings.length > 0) {
           const sla_ticket = await slaModel.getForDash(
             ticket.id_phase,
             ticket.id
           );
-          if(ticket.id_status === 1){
-            console.log("LOG --->",ticket,"settings===>,", phaseSettings, "SLA ==>",sla_ticket)
-            n_iniciado = n_iniciado + 1
+          if (ticket.id_status === 1) {
+            console.log(
+              "LOG --->",
+              ticket,
+              "settings===>,",
+              phaseSettings,
+              "SLA ==>",
+              sla_ticket
+            );
+            n_iniciado = n_iniciado + 1;
           }
-          if(sla_ticket && sla_ticket.length> 0){
+          if (sla_ticket && sla_ticket.length > 0) {
             for await (const sla of sla_ticket) {
               switch (sla.id_sla_type) {
                 case 1:
-                  console.log("sla===>",sla.active, ticket.id_status, sla.id)
+                  console.log("sla===>", sla.active, ticket.id_status, sla.id);
                   if (sla.active) {
                     result.total_tickets_nao_iniciados =
                       result.total_tickets_nao_iniciados + 1;
@@ -1083,25 +1098,29 @@ console.log("req.body.separate  ===>",req.body.separate )
                     const nextSLA = sla_ticket.filter(
                       (x) => x.id_sla_type === 2 || x.id_sla_type === 3
                     );
-  
+
                     if (nextSLA.length <= 0) {
                       switch (ticket.id_status) {
                         case 2:
                           const firstInteraction =
                             await ticketModel.first_interaction(ticket.id);
-                          if (firstInteraction && firstInteraction.length <= 0) {
+                          if (
+                            firstInteraction &&
+                            firstInteraction.length <= 0
+                          ) {
                             result.total_tickets_iniciados_sem_resposta =
                               result.total_tickets_iniciados_sem_resposta + 1;
                             result.tickets_iniciados_sem_resposta.sem_sla =
                               result.tickets_iniciados_sem_resposta.sem_sla + 1;
                           } else {
                             result.total_tickets_respondidos_sem_conclusao =
-                              result.total_tickets_respondidos_sem_conclusao + 1;
+                              result.total_tickets_respondidos_sem_conclusao +
+                              1;
                             result.tickets_respondidos_sem_conclusao.sem_sla =
                               result.tickets_respondidos_sem_conclusao.sem_sla +
                               1;
                           }
-  
+
                           break;
                         case 3:
                           result.tickets_concluidos.sem_sla =
@@ -1158,12 +1177,12 @@ console.log("req.body.separate  ===>",req.body.separate )
                     }
                   }
                   break;
-  
+
                 default:
                   break;
               }
             }
-          }else{
+          } else {
             switch (ticket.id_status) {
               case 1:
                 result.total_tickets_nao_iniciados =
@@ -1178,17 +1197,17 @@ console.log("req.body.separate  ===>",req.body.separate )
                 if (firstInteraction && firstInteraction.length <= 0) {
                   result.total_tickets_iniciados_sem_resposta =
                     result.total_tickets_iniciados_sem_resposta + 1;
-  
+
                   result.tickets_iniciados_sem_resposta.sem_sla =
                     result.tickets_iniciados_sem_resposta.sem_sla + 1;
                 } else {
                   result.total_tickets_respondidos_sem_conclusao =
                     result.total_tickets_respondidos_sem_conclusao + 1;
-  
+
                   result.tickets_respondidos_sem_conclusao.sem_sla =
                     result.tickets_respondidos_sem_conclusao.sem_sla + 1;
                 }
-  
+
                 break;
               case 3:
                 result.tickets_concluidos.sem_sla =
@@ -1198,7 +1217,6 @@ console.log("req.body.separate  ===>",req.body.separate )
                 break;
             }
           }
-
         } else {
           switch (ticket.id_status) {
             case 1:
@@ -1235,9 +1253,9 @@ console.log("req.body.separate  ===>",req.body.separate )
           }
         }
       }
-      console.log("n_iniciado",n_iniciado)
-      console.log("iniciados",iniciados)
-      console.log("concluidos",concluidos)
+      console.log("n_iniciado", n_iniciado);
+      console.log("iniciados", iniciados);
+      console.log("concluidos", concluidos);
 
       const calc_percentual = async function (total, value) {
         if (total == 0) return 0;
