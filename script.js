@@ -30,6 +30,7 @@ async function phases() {
       });
     }
   }
+  console.log('fim')
 }
 
 async function tickets() {
@@ -70,6 +71,7 @@ async function tickets() {
           .where("id_ticket", ticket.id)
           .orderBy("created_at", "asc")
           .limit(1);
+
         switch (ticket.id_unit_of_time) {
           case 1:
             ticket.unit_of_time = "seconds";
@@ -100,7 +102,7 @@ async function tickets() {
               id_sla_status: 2,
               limit_sla_time: ticket.countSLA,
               interaction_time: activities[0].created_at,
-              active: active,
+              active: false,
             });
           } else if (ticket.countSLA > activities[0].created_at) {
             //Em dia
@@ -111,7 +113,7 @@ async function tickets() {
               id_sla_status: 1,
               limit_sla_time: ticket.countSLA,
               interaction_time: activities[0].created_at,
-              active: active,
+              active: false,
             });
           }
         } else {
@@ -126,7 +128,7 @@ async function tickets() {
               active: active,
             });
           } else if (ticket.countSLA > moment()) {
-            //Em dia
+            //Em dia 
             await knex("ticket_sla_control").insert({
               id_ticket: ticket.id,
               id_phase: ticket.id_phase,
@@ -260,7 +262,7 @@ async function update_status_ticket() {
 }
 //update_status_ticket();
 // phases();
-// tickets();
+tickets();
 
 async function update_status_sla_ticket() {
   const SLAModel = require("./src/models/SLAModel");
