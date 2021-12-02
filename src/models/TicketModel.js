@@ -397,7 +397,7 @@ class TicketModel {
         .leftJoin("phase_ticket", "phase_ticket.id_ticket", `${tableName}.id`)
         .leftJoin("department", "department.id", "ticket.department_origin")
         .leftJoin("phase", "phase.id", "phase_ticket.id_phase")
-        .leftJoin('customer','customer.id_ticket',"ticket.id")
+        .leftJoin("customer", "customer.id_ticket", "ticket.id")
         .where("phase_ticket.active", true)
         .andWhere("customer.crm_contact_id", id)
         .orWhere("ticket.id_protocol", id);
@@ -537,9 +537,8 @@ class TicketModel {
         )
         .leftJoin("phase", "phase.id", "phase_ticket.id_phase")
         .where("phase_ticket.id_ticket", id_ticket)
-        .andWhere("phase_ticket.active",true)
+        .andWhere("phase_ticket.active", true)
         .orderBy("phase_ticket.created_at", "asc");
-
     } catch (err) {
       console.log("Error Get First Form Ticket ==>", err);
       return err;
@@ -681,7 +680,7 @@ class TicketModel {
     }
   }
 
-  async searchTicket(id_company, search, id_phase,status) {
+  async searchTicket(id_company, search, id_phase, status) {
     try {
       if (typeof search === "string") search = search.toLowerCase();
       const default_where = `ticket.id_company = '${id_company}' AND phase.id = '${id_phase}'  AND ticket.closed IN(${status
@@ -731,7 +730,7 @@ class TicketModel {
       left join ticket_protocol on ticket_protocol.id_ticket = ticket.id
       left join status_ticket on status_ticket.id = ticket.id_status
       where ${query} order by ticket.created_at desc`);
-console.log(result.rows)
+      console.log(result.rows);
       return result.rows;
     } catch (err) {
       console.log("Error when get ticket by id => ", err);
