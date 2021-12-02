@@ -10,19 +10,40 @@ class UnitOfTimeModel {
         }
     }
     async checkUnitOfTime(id_unit_of_time){
-        let type = ""
+        
         switch (id_unit_of_time) {
             case 1:
-                type = "seconds"
+                return "seconds"
                 break;
             case 2:
-                type = "minutes"
+                return "minutes"
                 break;
             case 3:
-                type = "hours"
+                return "hours"
                 break;
             case 4:
-                type = "days"
+                return "days"
+                break;
+            default:
+                break;
+        }
+
+    }
+
+    async checkUnitOfTimeByName(unit_of_time){
+        let type = ""
+        switch (unit_of_time) {
+            case 'seconds':
+                type = 1
+                break;
+            case 'minutes':
+                type = 2
+                break;
+            case 'hours':
+                type = 3
+                break;
+            case 'days':
+                type = 4
                 break;
             default:
                 break;
