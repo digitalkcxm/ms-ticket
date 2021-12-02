@@ -47,7 +47,7 @@ class CustomerController {
       obj.created_at = moment(obj.created_at).format("DD/MM/YYYY HH:mm:ss");
       obj.updated_at = moment(obj.updated_at).format("DD/MM/YYYY HH:mm:ss");
       let ticket = await ticketModel.getTicketById(
-        req.params.id,
+        req.body.id_ticket,
         req.headers.authorization
       );
       ticket = await formatTicketForPhase({id: ticket[0].phase_id}, ticket[0]);
