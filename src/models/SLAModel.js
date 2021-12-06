@@ -46,7 +46,7 @@ class SLAModel {
     }
   }
 
-  async getTicketControl(id_phase, id_status, id_sla_type) {
+  async getTicketControl(id_phase, id_status, id_sla_type, status = true) {
     try {
       const result = await database("ticket_sla_control as tsc")
         .count()
@@ -55,7 +55,8 @@ class SLAModel {
         .where("pt.id_phase", id_phase)
         .andWhere("tsc.id_sla_status", id_status)
         .andWhere("pt.active", true)
-        .andWhere("tsc.id_sla_type",id_sla_type);
+        .andWhere("tsc.id_sla_type", id_sla_type)
+        .andWhere("tsc.active", status);
       return result[0].count;
     } catch (err) {
       console.log("error when get sla's =>", err);
@@ -65,10 +66,9 @@ class SLAModel {
 
   async getByPhaseTicket(id_phase, id_ticket, id_sla_type) {
     try {
-      console.log(id_phase, id_ticket, id_sla_type);
       return await database("ticket_sla_control as tsc")
-        .leftJoin("phase_ticket as pt", "pt.id_phase", "tsc.id_phase")
-        .leftJoin("sla_status as ss", "ss.id", "tsc.id_sla_type")
+        .leftJoin("phase_ticket as pt", "pt.id_ticket", "tsc.id_ticket")
+        .leftJoin("sla_status as ss", "ss.id", "tsc.id_sla_status")
         .where("tsc.id_phase", id_phase)
         .andWhere("tsc.id_ticket", id_ticket)
         .andWhere("pt.active", true)
@@ -92,14 +92,14 @@ class SLAModel {
     }
   }
 
-  async updateTicketSLA(id_ticket, obj, id_type) {
+  async updateTicketSLA(id_ticket, obj, id_type, id_phase) {
     try {
       return await database("ticket_sla_control")
         .update(obj)
         .where("id_ticket", id_ticket)
-        .andWhere("id_sla_type", id_type);
+        .andWhere("id_sla_type", id_type)
+        .andWhere("id_phase", id_phase);
     } catch (err) {
-      console.log("error when updaet sla ticket ==>", err);
       return err;
     }
   }
@@ -112,6 +112,70 @@ class SLAModel {
     } catch (err) {
       console.log("Error when disable sla ticket =>", err);
       return err;
+    }
+  }
+
+  async getSLAControl(id_phase, id_ticket) {
+    try {
+      return await database("ticket_sla_control as tsc")
+        .select(
+          "sla_status.name as status",
+          "sla_type.name as type",
+          "tsc.limit_sla_time",
+          "tsc.interaction_time",
+          "tsc.id_sla_type",
+          "tsc.id_sla_status",
+          "tsc.created_at",
+          "tsc.active"
+        )
+        .leftJoin("sla_type", "sla_type.id", "tsc.id_sla_type")
+        .leftJoin("sla_status", "sla_status.id", "tsc.id_sla_status")
+        .where("tsc.id_phase", id_phase)
+        .andWhere("tsc.id_ticket", id_ticket);
+    } catch (err) {
+      console.log("error when get sla's =>", err);
+      return err;
+    }
+  }
+
+  async getForDash(id_phase, id_ticket) {
+    try {
+      return await database("ticket_sla_control as tsc")
+        .select("tsc.*")
+        .leftJoin("phase_ticket as pt", "pt.id_ticket", "tsc.id_ticket")
+        .leftJoin("sla_status as ss", "ss.id", "tsc.id_sla_status")
+        .where("tsc.id_phase", id_phase)
+        .andWhere("tsc.id_ticket", id_ticket)
+        .andWhere("pt.active", true);
+    } catch (err) {
+      console.log("error when get sla's =>", err);
+      return err;
+    }
+  }
+
+  async getToCountSLA(id_phase, closed = false) {
+    if (closed) {
+      return await database.raw(`
+      select ticket_sla_control.*, ticket.id_status 
+      from ticket_sla_control 
+      left join phase_ticket on phase_ticket.id_ticket = ticket_sla_control.id_ticket 
+      left join ticket on ticket.id = ticket_sla_control.id_ticket 
+      where ticket_sla_control.id_phase = '${id_phase}'
+      and phase_Ticket.id_phase = '${id_phase}' 
+      and phase_ticket.active = true 
+      and ticket.id_status = 3;
+      `);
+    } else {
+      return await database.raw(`
+      select ticket_sla_control.*, ticket.id_status 
+      from ticket_sla_control 
+      left join phase_ticket on phase_ticket.id_ticket = ticket_sla_control.id_ticket 
+      left join ticket on ticket.id = ticket_sla_control.id_ticket 
+      where ticket_sla_control.id_phase = '${id_phase}' 
+      and phase_Ticket.id_phase = '${id_phase}'
+      and phase_ticket.active = true 
+      and ticket.id_status != 3;
+      `);
     }
   }
 }

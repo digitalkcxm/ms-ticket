@@ -24,7 +24,7 @@ class CompanyModel {
         try {
             return await database(tableName).where("id", id).andWhere("active", true)
         } catch (err) {
-            console.log("Error when get company by id ==>", err)
+            // console.log("Error when get company by id ==>", err)
             return false
         }
     }

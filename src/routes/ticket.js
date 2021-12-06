@@ -23,6 +23,9 @@ router.get("/status", (req, res) =>
 router.get("/count", (req, res) =>
   ticketController.ticketResponsibleCount(req, res)
 );
+
+router.get("/socket/:id", (req, res) => ticketController.getTicket(req, res));
+
 router.get("/:id", (req, res) => ticketController.getTicketByID(req, res));
 
 router.get("/protocol/:id", (req, res) =>

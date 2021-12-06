@@ -38,6 +38,7 @@ class PhaseModel {
           department_can_create_ticket: "phase.department_can_create_ticket",
           create_protocol: "phase.create_protocol",
           create_ticket: "phase.create_ticket",
+          visible_new_ticket: "phase.visible_new_ticket",
         })
         .leftJoin("unit_of_time", "unit_of_time.id", "phase.id_unit_of_time")
         .where("phase.id", id_phase)
@@ -100,27 +101,6 @@ class PhaseModel {
     }
   }
 
-  async getResponsiblePhase(phase_id) {
-    try {
-      return await database("phase")
-        .select({
-          phase: "phase.id",
-          phase_description: "phase.name",
-          id_user_core: "users.id_users_core",
-          id_user: "users.id",
-          email: "email.email",
-          id_email: "email.id",
-        })
-        .leftJoin("responsible_phase", "responsible_phase.id_phase", "phase.id")
-        .leftJoin("users", "users.id", "responsible_phase.id_user")
-        .leftJoin("email", "email.id", "responsible_phase.id_email")
-        .where("phase.id", phase_id);
-    } catch (err) {
-      console.log("Error when get notified phase =>", err);
-      return err;
-    }
-  }
-
   async getNotifiedPhase(phase_id) {
     try {
       return await database("phase")
@@ -142,59 +122,6 @@ class PhaseModel {
     }
   }
 
-  async getResponsiblePhaseByIdUser(id_user, id_phase) {
-    try {
-      return await database("responsible_phase")
-        .where("id_user", id_user)
-        .andWhere("id_phase", id_phase);
-    } catch (err) {
-      console.log("Error when get responsible phase by id User => ", err);
-      return err;
-    }
-  }
-
-  async getNotifyPhaseByIdUser(id_user, id_phase) {
-    try {
-      return await database("notify_phase")
-        .where("id_user", id_user)
-        .andWhere("id_phase", id_phase);
-    } catch (err) {
-      console.log("Error when get notify by id user ==>", err);
-      return err;
-    }
-  }
-
-  async getResponsiblePhaseByIdPhase(id_phase) {
-    try {
-      return await database("responsible_phase")
-        .select({
-          email: "email.email",
-          user: "users.id_users_core",
-        })
-        .leftJoin("email", "email.id", "responsible_phase.id_email")
-        .leftJoin("users", "users.id", "responsible_phase.id_user")
-        .where("responsible_phase.id_phase", id_phase);
-    } catch (err) {
-      console.log("Error when get responsible phase by id User => ", err);
-      return err;
-    }
-  }
-
-  async getNotifyPhaseByIdPhase(id_phase) {
-    try {
-      return await database("notify_phase")
-        .select({
-          email: "email.email",
-          user: "users.id_users_core",
-        })
-        .leftJoin("email", "email.id", "notify_phase.id_email")
-        .leftJoin("users", "users.id", "notify_phase.id_user")
-        .where("notify_phase.id_phase", id_phase);
-    } catch (err) {
-      console.log("Error when get notify by id user ==>", err);
-      return err;
-    }
-  }
 
   async getDepartmentPhase(id_phase) {
     try {
@@ -226,7 +153,8 @@ class PhaseModel {
         })
         .leftJoin("phase", "phase.id", "department_phase.id_phase")
         .where("department_phase.id_department", id_department)
-        .andWhere("phase.active", true);
+        .andWhere("phase.active", true)
+        .andWhere("department_phase.active", true);
     } catch (err) {
       console.log("Error when catch department id ==>", err);
       return err;
@@ -355,6 +283,100 @@ class PhaseModel {
       console.log("Erro ao captar as ordens dos tickets =>", err);
       return err;
     }
+  }
+
+  async dash(department, id_company) {
+    try {
+      const total_fases = await database.raw(`
+    SELECT COUNT(phase.id) 
+    FROM department_phase 
+    LEFT JOIN department ON department.id = department_phase.id_department 
+    LEFT JOIN phase ON phase.id = department_phase.id_phase 
+    WHERE department_phase.active = true 
+    AND phase.active = true 
+    AND department.id_department_core = ${department} 
+    AND phase.id_company = '${id_company}'
+    `);
+
+      const total_tickets = await database.raw(`
+    SELECT COUNT(ticket.id) FROM ticket
+    LEFT JOIN phase_ticket ON phase_ticket.id_ticket = ticket.id
+    LEFT JOIN phase ON phase.id = phase_ticket.id_phase
+    LEFT JOIN department_phase ON department_phase.id_phase = phase.id
+    LEFT JOIN department ON department.id = department_phase.id_department
+    WHERE department.id_department_core = ${department} 
+    AND phase.id_company = '${id_company}'
+    AND phase.active = true
+    AND department_phase.active = true
+    AND phase_ticket.active = true;
+    `);
+
+      const tickets = await database.raw(`
+    SELECT ticket.id, phase_ticket.id_phase, ticket.id_status FROM ticket
+    LEFT JOIN phase_ticket ON phase_ticket.id_ticket = ticket.id
+    LEFT JOIN phase ON phase.id = phase_ticket.id_phase
+    LEFT JOIN department_phase ON department_phase.id_phase = phase.id
+    LEFT JOIN department ON department.id = department_phase.id_department
+    WHERE department.id_department_core = ${department} 
+    AND phase.id_company = '${id_company}'
+    AND phase.active = true
+    AND department_phase.active = true
+    AND phase_ticket.active = true;
+ `);
+
+      const total_tickets_fechados = await database.raw(`   
+    SELECT COUNT(ticket.id) FROM ticket
+    LEFT JOIN phase_ticket ON phase_ticket.id_ticket = ticket.id
+    LEFT JOIN phase ON phase.id = phase_ticket.id_phase
+    LEFT JOIN department_phase ON department_phase.id_phase = phase.id
+    LEFT JOIN department ON department.id = department_phase.id_department
+    WHERE department.id_department_core = ${department} 
+    AND phase.id_company = '${id_company}'
+    AND phase.active = true
+    AND department_phase.active = true
+    AND phase_ticket.active = true
+    AND ticket.closed = true
+    AND ticket.id_status = 3
+    `);
+
+      const phases = await database.raw(`   
+    SELECT phase.id FROM phase
+    LEFT JOIN department_phase ON department_phase.id_phase = phase.id
+    LEFT JOIN department ON department.id = department_phase.id_department
+    WHERE department.id_department_core = ${department} 
+    AND phase.id_company = '${id_company}'
+    AND phase.active = true
+    AND department_phase.active = true
+    `);
+
+      return {
+        total_fases: total_fases.rows[0].count,
+        total_tickets: total_tickets.rows[0].count,
+        total_tickets_fechados: total_tickets_fechados.rows[0].count,
+        tickets: tickets.rows,
+        phases: phases.rows,
+        // total_tickets_atendimento: total_tickets_atendimento.rows[0].count,
+      };
+    } catch (err) {
+      console.log("dashs =>", err);
+      return false;
+    }
+  }
+
+  async filter(department, id_company) {
+    const tickets = await database.raw(`
+    SELECT ticket.id, phase_ticket.id_phase, ticket.id_status FROM ticket
+    LEFT JOIN phase_ticket ON phase_ticket.id_ticket = ticket.id
+    LEFT JOIN phase ON phase.id = phase_ticket.id_phase
+    LEFT JOIN department_phase ON department_phase.id_phase = phase.id
+    LEFT JOIN department ON department.id = department_phase.id_department
+    WHERE department.id_department_core = ${department} 
+    AND phase.id_company = '${id_company}'
+    AND phase.active = true
+    AND department_phase.active = true
+    AND phase_ticket.active = true;
+ `);
+    return tickets.rows;
   }
 }
 

@@ -36,7 +36,11 @@ async function formatTicketForPhase(phase, ticket) {
   //       ticket.last_message.created_at
   //     ).format("DD/MM/YYYY HH:mm:ss");
   //   }
-
+  ticket.start_ticket
+    ? (ticket.start_ticket = moment(ticket.start_ticket).format(
+        "DD/MM/YYYY HH:mm:ss"
+      ))
+    : "";
   ticket.created_at = moment(ticket.created_at).format("DD/MM/YYYY HH:mm:ss");
   ticket.updated_at = moment(ticket.updated_at).format("DD/MM/YYYY HH:mm:ss");
   delete ticket.id_company;

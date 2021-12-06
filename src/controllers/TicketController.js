@@ -1,14 +1,4 @@
-const TicketModel = require("../models/TicketModel");
-const UserController = require("./UserController");
-const DepartmentController = require("./DepartmentController");
-const PhaseModel = require("../models/PhaseModel");
-const EmailController = require("./EmailController");
-const UserModel = require("../models/UserModel");
-const CompanyModel = require("../models/CompanyModel");
-const EmailService = require("../services/EmailService");
-const EmailModel = require("../models/EmailModel");
 const FormTemplate = require("../documents/FormTemplate");
-const CustomerModel = require("../models/CustomerModel");
 const FormDocuments = require("../documents/FormDocuments");
 const asyncRedis = require("async-redis");
 const redis = asyncRedis.createClient(
@@ -16,30 +6,36 @@ const redis = asyncRedis.createClient(
   process.env.REDIS_HOST
 );
 const { formatTicketForPhase } = require("../helpers/FormatTicket");
-const AttachmentsModel = require("../models/AttachmentsModel");
 const { validationResult } = require("express-validator");
 
 const moment = require("moment");
 const { v1 } = require("uuid");
-const notify = require("../helpers/Notify");
 
-const ticketModel = new TicketModel();
+const UserController = require("./UserController");
 const userController = new UserController();
+
+const PhaseModel = require("../models/PhaseModel");
 const phaseModel = new PhaseModel();
-const emailController = new EmailController();
-const userModel = new UserModel();
+
+const CustomerModel = require("../models/CustomerModel");
 const customerModel = new CustomerModel();
-const companyModel = new CompanyModel();
-const emailService = new EmailService();
-const emailModel = new EmailModel();
-const attachmentsModel = new AttachmentsModel();
+
+const TicketModel = require("../models/TicketModel");
+const ticketModel = new TicketModel();
+
+const DepartmentController = require("./DepartmentController");
 const departmentController = new DepartmentController();
+
+const AttachmentsModel = require("../models/AttachmentsModel");
+const attachmentsModel = new AttachmentsModel();
 
 const ActivitiesModel = require("../models/ActivitiesModel");
 const activitiesModel = new ActivitiesModel();
 
 const SLAModel = require("../models/SLAModel");
 const slaModel = new SLAModel();
+
+const CallbackDigitalk = require("../services/CallbackDigitalk");
 
 const { createSLAControl, updateSLA } = require("../helpers/SLAFormat");
 const sla_status = {
@@ -57,21 +53,10 @@ class TicketController {
       return res.status(400).json({ errors: errors.array() });
 
     try {
-      // let userResponsible = [];
       let id_user = await userController.checkUserCreated(
         req.body.id_user,
         req.headers.authorization
       );
-
-      // req.body.responsible.map(async (responsible) => {
-      //   let result;
-      //   result = await userController.checkUserCreated(
-      //     responsible,
-      //     req.headers.authorization,
-      //     responsible.name
-      //   );
-      //   userResponsible.push(result.id);
-      // });
 
       let obj = {
         id: v1(),
@@ -131,7 +116,7 @@ class TicketController {
       }
 
       if (req.body.id_protocol) {
-        obj.id_protocol = id_protocol;
+        obj.id_protocol = req.body.id_protocol;
         obj.created_by_protocol = true;
       }
 
@@ -148,7 +133,6 @@ class TicketController {
       // await this._createResponsibles(userResponsible, obj.id);
 
       if (req.body.customer) {
-        console.log("customer ==> ", req.body.customer);
         await this._createCustomers(req.body.customer, obj.id);
       }
       if (!phase || phase.length <= 0)
@@ -181,6 +165,24 @@ class TicketController {
         ticket = await formatTicketForPhase({ id: phase[0].id }, ticket[0]);
 
         // delete ticket[0].id_company
+
+        await CallbackDigitalk(
+          {
+            type: "socket",
+            channel: `phase_${phase[0].id}`,
+            event: "new_ticket",
+            obj: ticket,
+          },
+          req.company[0].callback
+        );
+
+        await this._notify(
+          ticket.id,
+          phase[0].id,
+          req.headers.authorization,
+          "open",
+          req.company[0].callback
+        );
         return res.status(200).send(ticket);
       }
 
@@ -217,23 +219,23 @@ class TicketController {
 
   async _createCustomers(customer = null, ticket_id) {
     try {
-      await customerModel.delCustomerTicket(ticket_id);
-      if (customer.length > 0) {
-        for (let c of customer) {
-          await customerModel.create({
-            id_core: c.id_core,
-            id_ticket: ticket_id,
-            name: c.name,
-            email: c.email,
-            phone: c.phone,
-            identification_document: c.identification_document,
-            crm_ids: c.crm_ids,
-            crm_contact_id: c.crm_contact_id,
-            created_at: moment().format(),
-            updated_at: moment().format(),
-          });
-        }
-      }
+      // await customerModel.delCustomerTicket(ticket_id);
+      // if (customer.length > 0) {
+      //   for (let c of customer) {
+      await customerModel.create({
+        id_core: customer.id_core,
+        id_ticket: ticket_id,
+        name: customer.name,
+        email: customer.email,
+        phone: customer.phone,
+        identification_document: customer.identification_document,
+        crm_ids: customer.crm_ids,
+        crm_contact_id: customer.crm_contact_id,
+        created_at: moment().format(),
+        updated_at: moment().format(),
+      });
+      //   }
+      // }
       return true;
     } catch (err) {
       console.log("Error when create responsibles ==> ", err);
@@ -241,311 +243,250 @@ class TicketController {
     }
   }
 
-  // async _notify(
-  //   phase_id,
-  //   notify_token,
-  //   ticket_id,
-  //   userResponsibleTicket,
-  //   emailResponsibleTicket,
-  //   id_company,
-  //   type,
-  //   db
-  // ) {
-  //   try {
-  //     let texto = "";
-  //     let register;
-  //     let responsiblePhase = await phaseModel.getResponsiblePhase(phase_id);
-  //     let notifyPhase = await phaseModel.getNotifiedPhase(phase_id);
+  async _notify(id_ticket, id_phase, id_company, action, callback) {
+    const phase = await phaseModel.getPhaseById(id_phase, id_company);
+    const ticket = await ticketModel.getTicketById(id_ticket, id_company);
 
-  //     const resultPhase = await phaseModel.getPhaseById(phase_id, id_company);
-  //     // if (resultPhase[0].id_form_template) {
+    let obj = {
+      type: "notification",
+      id_ticket: ticket[0].id_seq,
+      id_protocol: ticket[0].id_protocol,
+      customer: await customerModel.getAll(ticket[0].id),
+      created_at: moment().format("DD/MM/YYYY HH:mm:ss"),
+    };
 
-  //     // }
+    switch (action) {
+      case "open":
+        obj = {
+          ...obj,
+          message: `
+        Uma atividade foi criada\n\n
+        Identificador da atividade: ${ticket[0].id_seq}\n${
+            ticket[0].id_protocol
+              ? `\n        Protocolo: ${ticket[0].id_protocol}\n`
+              : ""
+          }
+        Fase: ${phase[0].name}\n
+        Data de criação: ${moment().format("DD/MM/YYYY")}\n
+        Hora: ${moment().format("HH:mm:ss")}
+        `,
+        };
+        if (phase[0].customer && phase[0].customer.notify_open) {
+          obj = { ...obj, notified: "customer" };
+          await CallbackDigitalk(obj, callback);
+        }
 
-  //     const result = await ticketModel.getTicketById(ticket_id, id_company);
-  //     if (result[0].form) {
-  //       result[0].form_data = await new FormDocuments(db).findRegister(
-  //         result[0].id_form
-  //       );
-  //       delete result[0].form;
-  //       delete result[0].id_form;
+        if (phase[0].admin && phase[0].admin.notify_open) {
+          if (phase[0].customer && phase[0].customer.notify_open) {
+            obj = { ...obj, notified: "admin" };
+            await CallbackDigitalk(obj, callback);
+          }
+        }
 
-  //       register = await new FormTemplate(db).findRegistes(
-  //         resultPhase[0].id_form_template
-  //       );
-  //       for (let column of register.column) {
-  //         texto =
-  //           texto +
-  //           `<p><strong>${column.label} : </strong>${
-  //             result[0].form_data[column.column]
-  //               ? result[0].form_data[column.column]
-  //               : ""
-  //           }</p>`;
-  //       }
-  //     }
+        if (phase[0].separate && phase[0].separate.separate.length > 0) {
+          for (const separate of phase[0].separate.separate) {
+            if (separate.notify_open) {
+              const email = separate.contact.filter((x) => x.email);
+              const phone = separate.contact.filter((x) => x.phone);
 
-  //     switch (type) {
-  //       case 3:
-  //         const phaseInfo = await phaseModel.getPhase(phase_id, id_company);
+              obj = {
+                ...obj,
+                notified: "separate",
+                email: email.length > 0 ? email[0].email : "",
+                phone: phone.length > 0 ? phone[0].phone : "",
+              };
+              await CallbackDigitalk(obj, callback);
+            }
+          }
+        }
 
-  //         if (phaseInfo[0] && phaseInfo[0].responsible_notify_sla) {
-  //           if (responsiblePhase && responsiblePhase.length > 0) {
-  //             responsiblePhase.map(async (contact) => {
-  //               if (contact.id_user) {
-  //                 await notify(notify_token, {
-  //                   id_user: contact.id_user_core,
-  //                   type: type,
-  //                   id_ticket: ticket_id,
-  //                   id_seq: result[0].id_seq,
-  //                   id_phase: phase_id,
-  //                 });
-  //               } else if (contact.email) {
-  //                 await emailService.sendActiveMenssage(
-  //                   `DIGITALK INFORMA: TICKET #${result[0].id_ticket} EXPIROU`,
-  //                   contact.email,
-  //                   `Um ticket expirou em uma fase de sua responsabilidade <br><br> Fase: ${contact.phase_description}  <br><br>  ${texto}`
-  //                 );
-  //               }
-  //             });
-  //           }
-  //         }
-  //         if (userResponsibleTicket && userResponsibleTicket.length > 0) {
-  //           await this._notifyUser(
-  //             type,
-  //             userResponsibleTicket,
-  //             id_company,
-  //             ticket_id,
-  //             phase_id,
-  //             notify_token,
-  //             result[0].id_seq,
-  //             responsiblePhase,
-  //             notifyPhase
-  //           );
-  //         }
+        break;
+      case "progress":
+        obj = {
+          ...obj,
+          message: `
+        Uma atividade foi atualizada\n\n
+        Identificador da atividade: ${ticket[0].id_seq}\n${
+            ticket[0].id_protocol
+              ? `\n        Protocolo: ${ticket[0].id_protocol}\n`
+              : ""
+          }
+        Fase: ${phase[0].name}\n
+        Data de Atualização: ${moment().format("DD/MM/YYYY")}\n
+        Hora: ${moment().format("HH:mm:ss")}
+        `,
+        };
+        if (phase[0].customer && phase[0].customer.notify_progress) {
+          obj = { ...obj, notified: "customer" };
+          await CallbackDigitalk(obj, callback);
+        }
 
-  //         if (emailResponsibleTicket && emailResponsibleTicket.length > 0) {
-  //           for (let i = 0; i < emailResponsibleTicket.length; i++) {
-  //             await responsiblePhase.map((userPhase) => {
-  //               if (userPhase.id_user == emailResponsibleTicket[i]) {
-  //                 delete emailResponsibleTicket[i];
-  //               }
-  //             });
+        if (phase[0].admin && phase[0].admin.notify_progress) {
+          if (phase[0].customer && phase[0].customer.notify_open) {
+            obj = { ...obj, notified: "admin" };
+            await CallbackDigitalk(obj, callback);
+          }
+        }
 
-  //             if (emailResponsibleTicket[i]) {
-  //               await notifyPhase.map((userPhase) => {
-  //                 if (userPhase.id_user == emailResponsibleTicket[i] > 0) {
-  //                   delete emailResponsibleTicket[i];
-  //                 }
-  //               });
-  //             }
-  //             if (emailResponsibleTicket[i]) {
-  //               let infoUser = await emailModel.getEmailById(
-  //                 emailResponsibleTicket[i],
-  //                 id_company
-  //               );
-  //               await emailService.sendActiveMenssage(
-  //                 `DIGITALK INFORMA: TICKET #${result[0].id_ticket} `,
-  //                 infoUser[0].email,
-  //                 `Você foi alertado em um dos seus tickets <br><br>  ${texto}`
-  //               );
-  //             }
-  //           }
-  //         }
-  //         break;
-  //       case 4:
-  //         let body = await emailController.formatEmail(
-  //           result[0].created_at,
-  //           result[0].sla_time,
-  //           result[0].id_seq,
-  //           result[0].name,
-  //           resultPhase[0].name,
-  //           texto,
-  //           result[0].unit_of_time
-  //         );
-  //         let email;
-  //         if (responsiblePhase && responsiblePhase.length > 0) {
-  //           responsiblePhase.map(async (contact) => {
-  //             if (contact.id_user) {
-  //               let resultNotify = await notify(notify_token, {
-  //                 id_user: contact.id_user_core,
-  //                 type: type,
-  //                 id_ticket: ticket_id,
-  //                 id_seq: result[0].id_seq,
-  //                 id_phase: phase_id,
-  //               });
-  //             } else if (contact.email) {
-  //               email = await emailService.sendActiveMenssage(
-  //                 `Ticket ID:${result[0].id_seq}`,
-  //                 contact.email,
-  //                 body
-  //               );
-  //               await emailModel.createLinkedEmailWithChatId(
-  //                 email.data.chatId,
-  //                 contact.id_email,
-  //                 ticket_id
-  //               );
-  //             }
-  //           });
-  //         }
-  //         if (notifyPhase && notifyPhase.length > 0) {
-  //           notifyPhase.map(async (contact) => {
-  //             if (contact.id_user) {
-  //               let resultNotify = await notify(notify_token, {
-  //                 id_user: contact.id_user_core,
-  //                 type: type,
-  //                 id_ticket: ticket_id,
-  //                 id_seq: result[0].id_seq,
-  //                 id_phase: phase_id,
-  //               });
-  //             } else if (contact.email) {
-  //               email = await emailService.sendActiveMenssage(
-  //                 `Ticket ID:${result[0].id_seq}`,
-  //                 contact.email,
-  //                 body
-  //               );
-  //               await emailModel.createLinkedEmailWithChatId(
-  //                 email.data.chatId,
-  //                 contact.id_email,
-  //                 ticket_id
-  //               );
-  //             }
-  //           });
-  //         }
+        if (phase[0].separate && phase[0].separate.separate.length > 0) {
+          for (const separate of phase[0].separate.separate) {
+            if (separate.notify_open) {
+              const email = separate.contact.filter((x) => x.email);
+              const phone = separate.contact.filter((x) => x.phone);
 
-  //         if (userResponsibleTicket && userResponsibleTicket.length > 0) {
-  //           await this._notifyUser(
-  //             type,
-  //             userResponsibleTicket,
-  //             id_company,
-  //             ticket_id,
-  //             phase_id,
-  //             notify_token,
-  //             result[0].id_seq,
-  //             responsiblePhase,
-  //             notifyPhase
-  //           );
-  //         }
-  //         if (emailResponsibleTicket && emailResponsibleTicket.length > 0) {
-  //           for (let i = 0; i < emailResponsibleTicket.length; i++) {
-  //             await responsiblePhase.map((userPhase) => {
-  //               if (userPhase.id_user == emailResponsibleTicket[i]) {
-  //                 delete emailResponsibleTicket[i];
-  //               }
-  //             });
+              obj = {
+                ...obj,
+                notified: "separate",
+                email: email.length > 0 ? email[0].email : "",
+                phone: phone.length > 0 ? phone[0].phone : "",
+              };
+              await CallbackDigitalk(obj, callback);
+            }
+          }
+        }
 
-  //             if (emailResponsibleTicket[i]) {
-  //               await notifyPhase.map((userPhase) => {
-  //                 if (userPhase.id_user == emailResponsibleTicket[i] > 0) {
-  //                   delete emailResponsibleTicket[i];
-  //                 }
-  //               });
-  //             }
+        break;
+      case "close":
+        obj = {
+          ...obj,
+          message: `
+        Uma atividade foi finalizada\n\n
+        Identificador da atividade: ${ticket[0].id_seq}\n${
+            ticket[0].id_protocol
+              ? `\n        Protocolo: ${ticket[0].id_protocol}\n`
+              : ""
+          }
+        Fase: ${phase[0].name}\n
+        Data de Abertura:${moment(ticket[0].created_at).format("DD/MM/YYYY")}\n
+        Hora de Abertura:${moment(ticket[0].created_at).format("HH:mm:ss")}\n
+        Data de Finalização: ${moment().format("DD/MM/YYYY")}\n
+        Hora: ${moment().format("HH:mm:ss")}
+        `,
+        };
+        if (phase[0].customer && phase[0].customer.notify_close) {
+          obj = { ...obj, notified: "customer" };
+          await CallbackDigitalk(obj, callback);
+        }
 
-  //             if (emailResponsibleTicket[i]) {
-  //               let infoUser = await emailModel.getEmailById(
-  //                 emailResponsibleTicket[i],
-  //                 id_company
-  //               );
-  //               email = await emailService.sendActiveMenssage(
-  //                 `Ticket ID:${result[0].id_seq}`,
-  //                 infoUser[0].email,
-  //                 body
-  //               );
-  //               await emailModel.createLinkedEmailWithChatId(
-  //                 email.data.chatId,
-  //                 emailResponsibleTicket[i],
-  //                 ticket_id
-  //               );
-  //             }
-  //           }
-  //         }
-  //         break;
-  //       case 5:
-  //         if (userResponsibleTicket && userResponsibleTicket.length > 0) {
-  //           await this._notifyUser(
-  //             type,
-  //             userResponsibleTicket,
-  //             id_company,
-  //             ticket_id,
-  //             phase_id,
-  //             notify_token,
-  //             result[0].id_seq
-  //           );
-  //         }
+        if (phase[0].admin && phase[0].admin.notify_close) {
+          if (phase[0].customer && phase[0].customer.notify_open) {
+            obj = { ...obj, notified: "admin" };
+            await CallbackDigitalk(obj, callback);
+          }
+        }
 
-  //         if (emailResponsibleTicket && emailResponsibleTicket.length > 0) {
-  //           for (let i = 0; i < emailResponsibleTicket.length; i++) {
-  //             if (emailResponsibleTicket[i]) {
-  //               let infoUser = await emailModel.getEmailById(
-  //                 emailResponsibleTicket[i],
-  //                 id_company
-  //               );
-  //               await emailService.sendActiveMenssage(
-  //                 `Ticket ID:${result[0].id_seq}`,
-  //                 infoUser[0].email,
-  //                 `Você foi alertado em um dos seus tickets  <br><br> ${texto}`
-  //               );
-  //             }
-  //           }
-  //         }
-  //         break;
-  //       default:
-  //         console.log("Default");
-  //         break;
-  //     }
-  //     return true;
-  //   } catch (err) {
-  //     console.log("Error when notify responsibles ==> ", err);
-  //     return false;
-  //   }
-  // }
+        if (phase[0].separate && phase[0].separate.separate.length > 0) {
+          for (const separate of phase[0].separate.separate) {
+            if (separate.notify_close) {
+              const email = separate.contact.filter((x) => x.email);
+              const phone = separate.contact.filter((x) => x.phone);
 
-  // async _notifyUser(
-  //   type,
-  //   user,
-  //   id_company,
-  //   id_ticket,
-  //   id_phase,
-  //   notify_token,
-  //   id_seq,
-  //   responsiblePhase = null,
-  //   notifyPhase = null
-  // ) {
-  //   try {
-  //     for (let i = 0; i < user.length; i++) {
-  //       if (user[i] && responsiblePhase) {
-  //         await responsiblePhase.map((userPhase) => {
-  //           if (userPhase.id_user == user[i]) {
-  //             delete user[i];
-  //           }
-  //         });
-  //       }
+              obj = {
+                ...obj,
+                notified: "separate",
+                email: email.length > 0 ? email[0].email : "",
+                phone: phone.length > 0 ? phone[0].phone : "",
+              };
+              await CallbackDigitalk(obj, callback);
+            }
+          }
+        }
+        break;
+      case "start_activity":
+        obj = {
+          ...obj,
+          message: `
+        Uma atividade foi iniciada\n\n
+        Identificador da atividade: ${ticket[0].id_seq}\n${
+            ticket[0].id_protocol
+              ? `\n        Protocolo: ${ticket[0].id_protocol}\n`
+              : ""
+          }
+        Fase: ${phase[0].name}\n
+        Data de Abertura:${moment(ticket[0].created_at).format("DD/MM/YYYY")}\n
+        Hora de Abertura:${moment(ticket[0].created_at).format("HH:mm:ss")}\n
+        Data de Inicialização: ${moment().format("DD/MM/YYYY")}\n
+        Hora: ${moment().format("HH:mm:ss")}
+        `,
+        };
+        if (phase[0].customer && phase[0].customer.notify_start_activity) {
+          obj = { ...obj, notified: "customer" };
+          await CallbackDigitalk(obj, callback);
+        }
 
-  //       if (user[i] && notifyPhase) {
-  //         await notifyPhase.map((userPhase) => {
-  //           if (userPhase.id_user == user[i] > 0) {
-  //             delete user[i];
-  //           }
-  //         });
-  //       }
-  //       if (user[i]) {
-  //         let infoUser = await userModel.getById(user[i], id_company);
-  //         let resultNotify = await notify(notify_token, {
-  //           id_user: infoUser[0].id_users_core,
-  //           type: type,
-  //           id_ticket: id_ticket,
-  //           id_seq: id_seq,
-  //           id_phase: id_phase,
-  //         });
-  //       }
-  //     }
+        if (phase[0].admin && phase[0].admin.notify_start_activity) {
+          if (phase[0].customer && phase[0].customer.notify_open) {
+            obj = { ...obj, notified: "admin" };
+            await CallbackDigitalk(obj, callback);
+          }
+        }
 
-  //     return true;
-  //   } catch (err) {
-  //     console.log("Error notify user => ", err);
-  //     return err;
-  //   }
-  // }
+        if (phase[0].separate && phase[0].separate.separate.length > 0) {
+          for (const separate of phase[0].separate.separate) {
+            if (separate.notify_start_activity) {
+              const email = separate.contact.filter((x) => x.email);
+              const phone = separate.contact.filter((x) => x.phone);
+
+              obj = {
+                ...obj,
+                notified: "separate",
+                email: email.length > 0 ? email[0].email : "",
+                phone: phone.length > 0 ? phone[0].phone : "",
+              };
+              await CallbackDigitalk(obj, callback);
+            }
+          }
+        }
+        break;
+      case "first_reply":
+        obj = {
+          ...obj,
+          message: `
+        Um atividade foi respondida\n\n
+        Identificador da atividade: ${ticket[0].id_seq}\n${
+            ticket[0].id_protocol
+              ? `\n        Protocolo: ${ticket[0].id_protocol}\n`
+              : ""
+          }
+        Fase: ${phase[0].name}\n
+        Data de Inicialização: ${moment().format("DD/MM/YYYY")}\n
+        Hora: ${moment().format("HH:mm:ss")}
+        `,
+        };
+        if (phase[0].customer && phase[0].customer.notify_first_reply) {
+          obj = { ...obj, notified: "customer" };
+          await CallbackDigitalk(obj, callback);
+        }
+
+        if (phase[0].admin && phase[0].admin.notify_first_reply) {
+          if (phase[0].customer && phase[0].customer.notify_open) {
+            obj = { ...obj, notified: "admin" };
+            await CallbackDigitalk(obj, callback);
+          }
+        }
+
+        if (phase[0].separate && phase[0].separate.separate.length > 0) {
+          for (const separate of phase[0].separate.separate) {
+            if (separate.notify_first_reply) {
+              const email = separate.contact.filter((x) => x.email);
+              const phone = separate.contact.filter((x) => x.phone);
+
+              obj = {
+                ...obj,
+                notified: "separate",
+                email: email.length > 0 ? email[0].email : "",
+                phone: phone.length > 0 ? phone[0].phone : "",
+              };
+              await CallbackDigitalk(obj, callback);
+            }
+          }
+        }
+        break;
+      default:
+        console.log("action unmapped");
+        break;
+    }
+  }
 
   async createActivities(req, res) {
     try {
@@ -567,6 +508,22 @@ class TicketController {
       if (!ticket || ticket.length <= 0)
         return res.status(400).send({ error: "ID ticket is invalid" });
 
+      if (!ticket[0].start_ticket) {
+        await this._notify(
+          ticket[0].id,
+          ticket[0].phase_id,
+          req.headers.authorization,
+          "start_activity",
+          req.company[0].callback
+        );
+
+        await ticketModel.updateTicket(
+          { start_ticket: moment(), id_status: 2 },
+          req.body.id_ticket,
+          req.headers.authorization
+        );
+      }
+
       let obj = {
         text: req.body.text,
         id_ticket: req.body.id_ticket,
@@ -578,10 +535,38 @@ class TicketController {
       let result = await activitiesModel.create(obj);
 
       if (result && result.length > 0) {
-        await updateSLA(req.body.id_ticket, ticket[0].phase_id);
+        await updateSLA(req.body.id_ticket, ticket[0].phase_id, true);
 
         obj.id = result[0].id;
 
+        obj.created_at = moment(obj.created_at).format("DD/MM/YYYY HH:mm:ss");
+        obj.updated_at = moment(obj.updated_at).format("DD/MM/YYYY HH:mm:ss");
+        obj.type = "note";
+        obj.id_user = req.body.id_user;
+        await CallbackDigitalk(
+          {
+            type: "socket",
+            channel: `ticket_${ticket[0].id}`,
+            event: "activity",
+            obj: {
+              created_at: obj.created_at,
+              id: obj.id,
+              id_user: obj.id_user,
+              updated_at: obj.updated_at,
+              type: "note",
+              message: req.body.text,
+            },
+          },
+          req.company[0].callback
+        );
+
+        await this._notify(
+          ticket[0].id,
+          ticket[0].phase_id,
+          req.headers.authorization,
+          "first_reply",
+          req.company[0].callback
+        );
         return res.status(200).send(obj);
       }
 
@@ -612,6 +597,22 @@ class TicketController {
       if (!ticket || ticket.length <= 0)
         return res.status(400).send({ error: "ID ticket is invalid" });
 
+      if (!ticket[0].start_ticket) {
+        await this._notify(
+          ticket[0].id,
+          ticket[0].phase_id,
+          req.headers.authorization,
+          "start_activity",
+          req.company[0].callback
+        );
+
+        await ticketModel.updateTicket(
+          { start_ticket: moment(), id_status: 2 },
+          req.body.id_ticket,
+          req.headers.authorization
+        );
+      }
+
       let typeAttachments = await ticketModel.getTypeAttachments(req.body.type);
 
       if (!typeAttachments || typeAttachments.length <= 0)
@@ -629,11 +630,32 @@ class TicketController {
 
       let result = await attachmentsModel.create(obj);
 
-      await updateSLA(req.body.id_ticket, ticket[0].phase_id);
+      await updateSLA(req.body.id_ticket, ticket[0].phase_id, true);
 
       if (result && result.length > 0) {
         obj.id = result[0].id;
 
+        obj.created_at = moment(obj.created_at).format("DD/MM/YYYY HH:mm:ss");
+        obj.updated_at = moment(obj.updated_at).format("DD/MM/YYYY HH:mm:ss");
+        obj.type = "file";
+        obj.id_user = req.body.id_user;
+        await CallbackDigitalk(
+          {
+            type: "socket",
+            channel: `ticket_${ticket[0].id}`,
+            event: "activity",
+            obj: obj,
+          },
+          req.company[0].callback
+        );
+
+        await this._notify(
+          ticket[0].id,
+          ticket[0].phase_id,
+          req.headers.authorization,
+          "first_reply",
+          req.company[0].callback
+        );
         return res.status(200).send(obj);
       }
 
@@ -671,6 +693,7 @@ class TicketController {
         result.id,
         req.headers.authorization
       );
+      console.log("protocols =>", protocols);
 
       if (protocols && Array.isArray(protocols) && protocols.length > 0) {
         result.protocols = protocols;
@@ -700,8 +723,100 @@ class TicketController {
       result.actual_department = department[0].id_department;
 
       const form = await ticketModel.getFormTicket(result.id);
-      console.log("form =====>", form);
-      if (form[0].id_form) {
+
+      if (form && form.length > 0 && form[0].id_form) {
+        const phase = await phaseModel.getPhaseById(
+          form[0].id_phase,
+          req.headers.authorization
+        );
+        if (phase[0].form && phase[0].id_form_template) {
+          const register = await new FormTemplate(
+            req.app.locals.db
+          ).findRegistes(phase[0].id_form_template);
+
+          if (register && register.column) {
+            result.form_template = register.column;
+
+            for (const x of result.form_template) {
+              const type = await typeColumnModel.getTypeByID(x.type);
+
+              type && Array.isArray(type) && type.length > 0
+                ? (x.type = type[0].name)
+                : "";
+            }
+          }
+        }
+        result.form_data = await new FormDocuments(
+          req.app.locals.db
+        ).findRegister(form[0].id_form);
+        delete result.form_data._id;
+      }
+      console.log("result =>", result);
+      return res.status(200).send(result);
+    } catch (err) {
+      console.log("Error when select ticket by id =>", err);
+      return res.status(400).send({ error: "There was an error" });
+    }
+  }
+
+  async getTicket(req, res) {
+    try {
+      let result = await ticketModel.getTicketById(
+        req.params.id,
+        req.headers.authorization
+      );
+      if (result.name && result.name == "error")
+        return res.status(400).send({ error: "There was an error" });
+
+      if (result && result.length <= 0)
+        return res
+          .status(400)
+          .send({ error: "There is no ticket with this ID" });
+
+      result = await formatTicketForPhase(
+        { id: result[0].phase_id },
+        result[0]
+      );
+      const customer = await customerModel.getAll(result.id);
+      if (customer && Array.isArray(customer) && customer.length > 0) {
+        result.customers = customer;
+      }
+
+      const protocols = await ticketModel.getProtocolTicket(
+        result.id,
+        req.headers.authorization
+      );
+      console.log("protocols =>", protocols);
+      if (protocols && Array.isArray(protocols) && protocols.length > 0) {
+        result.protocols = protocols[0];
+      }
+
+      result.activities = await this._activities(
+        result.id,
+        req.app.locals.db,
+        req.headers.authorization
+      );
+
+      result.activities.sort((a, b) => {
+        if (
+          moment(a.created_at, "DD/MM/YYYY HH:mm:ss").format("X") ===
+          moment(b.created_at, "DD/MM/YYYY HH:mm:ss").format("X")
+        ) {
+          return a.id;
+        } else {
+          return (
+            moment(a.created_at, "DD/MM/YYYY HH:mm:ss").format("X") -
+            moment(b.created_at, "DD/MM/YYYY HH:mm:ss").format("X")
+          );
+        }
+      });
+
+      const department = await phaseModel.getDepartmentPhase(result.phase_id);
+      result.actual_department = department[0].id_department;
+
+      const form = await ticketModel.getFormTicket(result.id);
+
+      if (form && form.length > 0 && form[0].id_form) {
         const phase = await phaseModel.getPhaseById(
           form[0].id_phase,
           req.headers.authorization
@@ -735,6 +850,7 @@ class TicketController {
       return res.status(400).send({ error: "There was an error" });
     }
   }
+
   async _activities(id_ticket, db, id_company) {
     const obj = [];
 
@@ -759,7 +875,6 @@ class TicketController {
       index = parseInt(index);
 
       if (history_phase[index + 1]) {
-        console.log("array[index + 1]", history_phase[index + 1]);
         const before = await new FormDocuments(db).findRegister(
           history_phase[index].id_form
         );
@@ -767,7 +882,7 @@ class TicketController {
         const templateBefore = await new FormTemplate(db).findRegistes(
           history_phase[index].template
         );
-
+        console.log("templateBefore =>", templateBefore);
         const after = await new FormDocuments(db).findRegister(
           history_phase[index + 1].id_form
         );
@@ -778,12 +893,12 @@ class TicketController {
         obj.push({
           before: {
             phase: history_phase[index + 1].id_phase,
-            field: templateAfter.column,
+            field: templateAfter ? templateAfter.column : {},
             value: after,
           },
           after: {
             phase: history_phase[index].id_phase,
-            field: templateBefore.column,
+            field: templateBefore ? templateBefore.column : {},
             value: before,
           },
           type: "change_form",
@@ -795,7 +910,6 @@ class TicketController {
             "DD/MM/YYYY HH:mm:ss"
           ),
         });
-        console.log("TESTE ===>", obj);
 
         if (
           history_phase[index].id_phase != history_phase[index + 1].id_phase
@@ -811,11 +925,37 @@ class TicketController {
               id: history_phase[index + 1].id_phase,
               name: history_phase[index + 1].name,
             },
-            created_at: moment(history_phase[index + 1].updated_at).format(
+            created_at: moment(history_phase[index + 1].created_at).format(
               "DD/MM/YYYY HH:mm:ss"
             ),
           });
         }
+      }
+      const slas = await slaModel.getSLAControl(
+        history_phase[index].id_phase,
+        id_ticket
+      );
+      for (const sla of slas) {
+        obj.push({
+          id_phase: history_phase[index].id_phase,
+          name: history_phase[index].name,
+          status: sla.status,
+          id_sla_status: sla.id_sla_status,
+          sla_type: sla.type,
+          id_sla_type: sla.id_sla_type,
+          limit_sla_time: moment(sla.limit_sla_time).format(
+            "DD/MM/YYYY HH:mm:ss"
+          ),
+          interaction_time: sla.interaction_time
+            ? moment(sla.interaction_time).format("DD/MM~/YYYY HH:mm:ss")
+            : "",
+          created_at: sla.created_at
+            ? moment(sla.created_at).format("DD/MM/YYYY HH:mm:ss")
+            : moment(history_phase[index + 1].updated_at).format(
+                "DD/MM/YYYY HH:mm:ss"
+              ),
+          type: "sla",
+        });
       }
     }
 
@@ -921,7 +1061,6 @@ class TicketController {
 
       const tickets = [];
       for (const ticket of result) {
-        console.log;
         const t = [ticket];
         const ticketFormated = await formatTicketForPhase(t, ticket);
         tickets.push(ticketFormated);
@@ -967,6 +1106,12 @@ class TicketController {
           .status(400)
           .send({ error: "There is no ticket with this ID " });
 
+      ticket = await formatTicketForPhase(ticket, ticket[0]);
+
+      if (ticket.id_status === 3)
+        return res
+          .status(400)
+          .send({ error: "Impossivel atualizar um ticket finalizado!" });
       // if (req.body.customer) {
       //   await this._createCustomers(req.body.customer, req.params.id);
       // }
@@ -979,9 +1124,8 @@ class TicketController {
       if (!phase || phase.length <= 0)
         return res.status(400).send({ error: "Invalid id_phase uuid" });
 
-      await updateSLA(ticket[0].id, ticket[0].phase_id);
-
-      if (ticket[0].phase_id != phase[0].id) {
+      await updateSLA(ticket.id, ticket.phase_id);
+      if (ticket.phase_id != phase[0].id) {
         await phaseModel.disablePhaseTicket(req.params.id);
         await slaModel.disableSLA(req.params.id);
 
@@ -1002,7 +1146,6 @@ class TicketController {
             }
           }
         }
-
         const user = await userController.checkUserCreated(
           req.body.id_user,
           req.headers.authorization
@@ -1013,11 +1156,52 @@ class TicketController {
           id_user: user.id,
           id_form: obj.id_form,
         });
-
         if (!phase_id || phase_id.length <= 0)
           return res.status(500).send({ error: "There was an error" });
 
         await createSLAControl(phase[0].id, req.params.id);
+
+        await CallbackDigitalk(
+          {
+            type: "socket",
+            channel: `phase_${ticket.phase_id}`,
+            event: "move_ticket_old_phase",
+            obj: { id: ticket.id, id_phase: ticket.phase_id },
+          },
+          req.company[0].callback
+        );
+
+        await CallbackDigitalk(
+          {
+            type: "socket",
+            channel: `phase_${phase[0].id}`,
+            event: "move_ticket_new_phase",
+            obj: { ...ticket, phase_id: phase[0].id },
+          },
+          req.company[0].callback
+        );
+
+        await CallbackDigitalk(
+          {
+            type: "socket",
+            channel: `ticket_${ticket.id}`,
+            event: "activity",
+            obj: {
+              type: "move",
+              id_user: req.body.id_user,
+              phase_dest: {
+                id: phase[0].id,
+                name: phase[0].name,
+              },
+              phase_origin: {
+                id: ticket.phase_id,
+                name: ticket.phase,
+              },
+              created_at: moment().format("DD/MM/YYYY HH:mm:ss"),
+            },
+          },
+          req.company[0].callback
+        );
       } else {
         if (req.body.form && Object.keys(req.body.form).length > 0) {
           const firstPhase = await ticketModel.getFirstFormTicket(ticket[0].id);
@@ -1026,33 +1210,71 @@ class TicketController {
               req.app.locals.db,
               firstPhase[0].id_form_template,
               req.body.form,
-              ticket[0].id_form
+              firstPhase[0].id_form
             );
             if (errors.length > 0)
               return res.status(400).send({ errors: errors });
 
-            console.log("FORM ====>", req.body.form);
-            obj.id_form = await new FormDocuments(
-              req.app.locals.db
-            ).updateRegister(ticket[0].id_form, req.body.form);
+            await new FormDocuments(req.app.locals.db).updateRegister(
+              firstPhase[0].id_form,
+              req.body.form
+            );
           }
         }
       }
 
+      await this._notify(
+        ticket.id,
+        phase[0].id,
+        req.headers.authorization,
+        "progress",
+        req.company[0].callback
+      );
+      if (!ticket.start_ticket) {
+        await this._notify(
+          ticket.id,
+          phase[0].id,
+          req.headers.authorization,
+          "start_activity",
+          req.company[0].callback
+        );
+
+        obj.start_ticket = moment();
+        obj.id_status = 2;
+      }
+      delete obj.id_form;
       let result = await ticketModel.updateTicket(
         obj,
         req.params.id,
         req.headers.authorization
       );
 
-      ticket = await formatTicketForPhase(ticket, ticket[0]);
       await redis.set(
         `msTicket:ticket:${req.params.id}`,
         JSON.stringify(ticket)
       );
 
+      await CallbackDigitalk(
+        {
+          type: "socket",
+          channel: `phase_${req.body.id_phase}`,
+          event: "update_ticket",
+          obj: ticket,
+        },
+        req.company[0].callback
+      );
+
+      await CallbackDigitalk(
+        {
+          type: "socket",
+          channel: `ticket_${ticket.id}`,
+          event: "update",
+          obj: ticket,
+        },
+        req.company[0].callback
+      );
+
       await redis.del(`ticket:phase:${req.headers.authorization}`);
-      console.log("ticket update", ticket);
       if (result) return res.status(200).send(ticket);
 
       return res.status(400).send({ error: "There was an error" });
@@ -1083,9 +1305,17 @@ class TicketController {
         let obj;
         if (slaTicket && Array.isArray(slaTicket) && slaTicket.length > 0) {
           if (slaTicket[0].limit_sla_time < moment()) {
-            obj = { id_sla_status: sla_status.atrasado, active: false };
+            obj = {
+              id_sla_status: sla_status.atrasado,
+              active: false,
+              interaction_time: moment(),
+            };
           } else if (slaTicket[0].limit_sla_time > moment()) {
-            obj = { id_sla_status: sla_status.emdia, active: false };
+            obj = {
+              id_sla_status: sla_status.emdia,
+              active: false,
+              interaction_time: moment(),
+            };
           }
           await slaModel.updateTicketSLA(
             ticket.id_ticket,
@@ -1101,11 +1331,22 @@ class TicketController {
           2
         );
 
-        if (slaTicket && Array.isArray(slaTicket) && slaTicket.length > 0) {
-          if (slaTicket[0].limit_sla_time < slaTicket[0].interaction_time) {
-            obj = { id_sla_status: sla_status.atrasado, active: false };
+        if (
+          slaTicket &&
+          Array.isArray(slaTicket) &&
+          slaTicket.length > 0 &&
+          !slaTicket[0].interaction_time
+        ) {
+          if (slaTicket[0].limit_sla_time < moment()) {
+            obj = {
+              id_sla_status: sla_status.atrasado,
+              active: false,
+            };
           } else if (slaTicket[0].limit_sla_time > moment()) {
-            obj = { id_sla_status: sla_status.emdia, active: false };
+            obj = {
+              id_sla_status: sla_status.emdia,
+              active: false,
+            };
           }
           await slaModel.updateTicketSLA(
             ticket.id_ticket,
@@ -1114,9 +1355,37 @@ class TicketController {
           );
         }
 
+        await slaModel.disableSLA(ticket[0].id);
         ticket[0] = await formatTicketForPhase(
           { id: ticket[0].phase_id },
           ticket[0]
+        );
+
+        await this._notify(
+          ticket[0].id,
+          ticket[0].phase_id,
+          req.headers.authorization,
+          "close",
+          req.company[0].callback
+        );
+
+        await CallbackDigitalk(
+          {
+            type: "socket",
+            channel: `phase_${ticket[0].phase_id}`,
+            event: "update_ticket",
+            obj: ticket[0],
+          },
+          req.company[0].callback
+        );
+        await CallbackDigitalk(
+          {
+            type: "socket",
+            channel: `ticket_${ticket[0].id}`,
+            event: "update",
+            obj: ticket[0],
+          },
+          req.company[0].callback
         );
 
         return res.status(200).send(ticket[0]);
@@ -1210,10 +1479,12 @@ class TicketController {
         case 1:
           for (const ticket of tickets) {
             if (!ticket.interaction_time && ticket.limit_sla_time < moment()) {
-              slaModel.updateTicketSLA(
+              console.log("1");
+              await slaModel.updateTicketSLA(
                 ticket.id_ticket,
                 { id_sla_status: sla_status.atrasado },
-                ticket.id_sla_type
+                ticket.id_sla_type,
+                ticket.id_phase
               );
             }
           }
@@ -1224,10 +1495,11 @@ class TicketController {
               ticket.interaction_time < ticket.limit_sla_time &&
               ticket.limit_sla_time < moment()
             ) {
-              slaModel.updateTicketSLA(
+              await slaModel.updateTicketSLA(
                 ticket.id_ticket,
                 { id_sla_status: sla_status.atrasado },
-                ticket.id_sla_type
+                ticket.id_sla_type,
+                ticket.id_phase
               );
             }
           }
@@ -1235,10 +1507,11 @@ class TicketController {
         case 3:
           for (const ticket of tickets) {
             if (ticket.limit_sla_time < moment()) {
-              slaModel.updateTicketSLA(
+              await slaModel.updateTicketSLA(
                 ticket.id_ticket,
                 { id_sla_status: sla_status.atrasado },
-                ticket.id_sla_type
+                ticket.id_sla_type,
+                ticket.id_phase
               );
             }
           }
@@ -1286,17 +1559,13 @@ class TicketController {
         id_form_template
       );
       for (let column of form_template.column) {
-        column.required && form[column.column]
-          ? ""
-          : errors.push(`O campo ${column.column} é obrigatório`);
+        column.required && !form[column.column]
+          ? errors.push(`O campo ${column.column} é obrigatório`)
+          : "";
       }
 
       const formColumns = Object.keys(form);
       for (const column of formColumns) {
-        console.log(
-          "==>",
-          form_template.column.filter((x) => x.column === column)
-        );
         form_template.column.filter((x) => x.column === column).length > 0
           ? ""
           : errors.push(`O campo ${column} não faz parte desse template`);
@@ -1339,30 +1608,26 @@ class TicketController {
       let result = await ticketModel.getTicketByCustomerOrProtocol(
         req.params.id
       );
-      console.log("result =====> ", result);
       for (let ticket of result) {
         ticket = await formatTicketForPhase([ticket], ticket);
 
-        ticket.attachments = await attachmentsModel.getAttachments(ticket.id);
-        ticket.attachments.map((value) => {
-          value.created_at = moment(value.created_at).format(
-            "DD/MM/YYYY HH:mm:ss"
-          );
-          value.updated_at = moment(value.updated_at).format(
-            "DD/MM/YYYY HH:mm:ss"
-          );
-        });
-
-        ticket.activities = await activitiesModel.getActivities(ticket.id);
-        ticket.activities.map((value) => {
-          value.created_at = moment(value.created_at).format(
-            "DD/MM/YYYY HH:mm:ss"
-          );
-          value.updated_at = moment(value.updated_at).format(
-            "DD/MM/YYYY HH:mm:ss"
-          );
-        });
-
+        const sla_status = function (sla) {
+          if (sla) {
+            let status = "";
+            const keys = Object.keys(sla);
+            for (const key of keys) {
+              if (sla[key].status === "Em dia") {
+                return "Em dia";
+              } else {
+                status = sla[key].status;
+              }
+            }
+            return status;
+          } else {
+            return "";
+          }
+        };
+        ticket.sla_status = sla_status(ticket.sla);
         ticket.history_phase = await ticketModel.getHistoryTicket(ticket.id);
         ticket.history_phase.map((value) => {
           value.created_at = moment(value.created_at).format(
@@ -1469,6 +1734,46 @@ class TicketController {
             result.id
           );
 
+        const ticket = await ticketModel.getTicketById(
+          req.body.id_ticket,
+          req.headers.authorization
+        );
+        console.log("req.body =>", req.body);
+        if (ticket && ticket.length > 0 && !ticket[0].start_ticket) {
+          ticket[0].start_ticket = time;
+          await ticketModel.updateTicket(
+            { start_ticket: time, id_status: 2 },
+            req.body.id_ticket,
+            req.headers.authorization
+          );
+
+          await updateSLA(req.body.id_ticket, ticket[0].phase_id);
+        }
+        await this._notify(
+          ticket[0].id,
+          ticket[0].id_phase,
+          req.headers.authorization,
+          "start_activity",
+          req.company[0].callback
+        );
+        await CallbackDigitalk(
+          {
+            type: "socket",
+            channel: `phase_${ticket[0].id_phase}`,
+            event: "update_ticket",
+            obj: ticket[0],
+          },
+          req.company[0].callback
+        );
+        await CallbackDigitalk(
+          {
+            type: "socket",
+            channel: `ticket_${ticket[0].id}`,
+            event: "update",
+            obj: ticket[0],
+          },
+          req.company[0].callback
+        );
         if (
           responsibleCheck &&
           Array.isArray(responsibleCheck) &&
@@ -1618,11 +1923,47 @@ class TicketController {
         return res.status(400).send({ error: "Houve algum problema" });
 
       const history = [];
+
+      const slaInfo = await formatTicketForPhase(
+        { id: ticket[0].phase_id },
+        ticket[0]
+      );
+
+      const sla_status = function (sla) {
+        if (sla) {
+          let status = "";
+          const keys = Object.keys(sla);
+          for (const key of keys) {
+            if (sla[key].status === "Aberto") {
+              return "Aberto";
+            } else {
+              status = sla[key].status;
+            }
+          }
+          return status;
+        } else {
+          return "";
+        }
+      };
+
+      history.push({
+        id_seq: ticket[0].id_seq,
+        id_user: ticket[0].id_user,
+        created_at: ticket[0].created_at,
+        closed: ticket[0].closed,
+        department_origin: ticket[0].department_origin,
+        phase_name: ticket[0].phase,
+        display_name: ticket[0].display_name,
+        id_protocol: ticket[0].id_protocol,
+        type: "ticket",
+        sla_status: sla_status(slaInfo.sla),
+        customer: await customerModel.getAll(ticket[0].id),
+      });
+
       const child_tickets = await ticketModel.getTicketCreatedByTicketFather(
         req.params.id,
         req.headers.authorization
       );
-      console.log("child_ticket", child_tickets);
       if (child_tickets && child_tickets.length > 0) {
         for (const child_ticket of child_tickets) {
           child_ticket.created_at = moment(child_ticket.created_at).format(
@@ -1637,7 +1978,6 @@ class TicketController {
         ticket[0].id_ticket_father,
         req.headers.authorization
       );
-      console.log("father_ticket", father_ticket);
       if (father_ticket && father_ticket.length > 0) {
         history.push({
           id_seq: father_ticket[0].id_seq,
@@ -1651,11 +1991,11 @@ class TicketController {
           display_name: father_ticket[0].display_name,
           id_protocol: father_ticket[0].id_protocol,
           type: "ticket",
+          customer: await customerModel.getAll(father_ticket[0].id),
         });
       }
 
       const customers = await customerModel.getAll(req.params.id);
-      console.log("customer", customers);
       if (customers && customers.length > 0) {
         for (const customer of customers) {
           const customersRelated =
@@ -1681,6 +2021,7 @@ class TicketController {
                   display_name: ticketRelated[0].display_name,
                   id_protocol: ticketRelated[0].id_protocol,
                   type: "ticket",
+                  customer: await customerModel.getAll(ticketRelated[0].id),
                 });
               }
             }
@@ -1692,7 +2033,6 @@ class TicketController {
         req.params.id,
         req.headers.authorization
       );
-      console.log("protocols", protocols);
       if (protocols && protocols.length > 0) {
         for (const protocol of protocols) {
           history.push({
@@ -1701,6 +2041,14 @@ class TicketController {
           });
         }
       }
+
+      if (ticket[0].id_protocol) {
+        history.push({
+          id: ticket[0].id_protocol,
+          type: "protocol",
+        });
+      }
+
       return res.status(200).send(history);
     } catch (err) {
       console.log("Error history_ticket =>", err);

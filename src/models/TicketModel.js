@@ -46,20 +46,17 @@ class TicketModel {
           department_origin: "department.id_department_core",
           created_at: `${tableName}.created_at`,
           updated_at: `${tableName}.updated_at`,
-          start_ticket: "responsible_ticket.start_ticket",
+          start_ticket: "ticket.start_ticket",
           display_name: "ticket.display_name",
           id_ticket_father: "ticket.id_ticket_father",
           id_protocol: "ticket.id_protocol",
+          status: "status_ticket.name",
         })
         .leftJoin("users", "users.id", `${tableName}.id_user`)
         .leftJoin("phase_ticket", "phase_ticket.id_ticket", `${tableName}.id`)
         .leftJoin("phase", "phase.id", "phase_ticket.id_phase")
-        .leftJoin(
-          "responsible_ticket",
-          "responsible_ticket.id_ticket",
-          "ticket.id"
-        )
         .leftJoin("department", "department.id", "ticket.department_origin")
+        .leftJoin("status_ticket", "status_ticket.id", "ticket.id_status")
         .where(`${tableName}.id`, id)
         .andWhere(`${tableName}.id_company`, id_company)
         .orderBy("phase_ticket.id", "desc")
@@ -80,7 +77,6 @@ class TicketModel {
           phase: "phase.name",
           id_user: "users.id_users_core",
           name: "users.name",
-          sla_time: "phase.sla_time",
           id_unit_of_time: "phase.id_unit_of_time",
           form: "phase.form",
           closed: `${tableName}.closed`,
@@ -88,20 +84,17 @@ class TicketModel {
           department_origin: "department.id_department_core",
           created_at: `${tableName}.created_at`,
           updated_at: `${tableName}.updated_at`,
-          start_ticket: "responsible_ticket.start_ticket",
+          start_ticket: "ticket.start_ticket",
           display_name: "ticket.display_name",
           id_ticket_father: "ticket.id_ticket_father",
           id_protocol: "ticket.id_protocol",
+          status: "status_ticket.name",
         })
         .leftJoin("users", "users.id", `${tableName}.id_user`)
         .leftJoin("phase_ticket", "phase_ticket.id_ticket", `${tableName}.id`)
         .leftJoin("phase", "phase.id", "phase_ticket.id_phase")
-        .leftJoin(
-          "responsible_ticket",
-          "responsible_ticket.id_ticket",
-          "ticket.id"
-        )
         .leftJoin("department", "department.id", "ticket.department_origin")
+        .leftJoin("status_ticket", "status_ticket.id", "ticket.id_status")
         .where(`${tableName}.id_seq`, id_seq)
         .andWhere(`${tableName}.id_company`, id_company)
         .orderBy("phase_ticket.id", "desc")
@@ -218,6 +211,7 @@ class TicketModel {
         .update({
           closed: true,
           updated_at: moment().format(),
+          id_status: 3,
         })
         .where("id", id_ticket);
     } catch (err) {
@@ -325,9 +319,11 @@ class TicketModel {
           created_at: "ticket.created_at",
           updated_at: "ticket.updated_at",
           display_name: "ticket.display_name",
+          status: "status_ticket.name",
         })
         .leftJoin("ticket", "ticket.id", "phase_ticket.id_ticket")
         .leftJoin("users", "users.id", "ticket.id_user")
+        .leftJoin("status_ticket", "status_ticket.id", "ticket.id_status")
         .where("phase_ticket.id_phase", id_phase)
         .andWhere("phase_ticket.active", true);
     } catch (err) {
@@ -335,6 +331,7 @@ class TicketModel {
       return err;
     }
   }
+
   async getTicketByPhaseAndStatus(id_phase, status) {
     try {
       let newStatus;
@@ -352,9 +349,12 @@ class TicketModel {
           created_at: "ticket.created_at",
           updated_at: "ticket.updated_at",
           display_name: "ticket.display_name",
+          start_ticket: "ticket.start_ticket",
+          status: "status_ticket.name",
         })
         .leftJoin("ticket", "ticket.id", "phase_ticket.id_ticket")
         .leftJoin("users", "users.id", "ticket.id_user")
+        .leftJoin("status_ticket", "status_ticket.id", "ticket.id_status")
         .whereIn("ticket.closed", newStatus)
         .andWhere("phase_ticket.id_phase", id_phase)
         .andWhere("phase_ticket.active", true);
@@ -368,10 +368,19 @@ class TicketModel {
     const result = await database("phase_ticket")
       .count("ticket.id")
       .leftJoin("ticket", "ticket.id", "phase_ticket.id_ticket")
-      .leftJoin("users", "users.id", "ticket.id_user")
       .where("phase_ticket.id_phase", id_phase)
       .andWhere("phase_ticket.active", true)
       .andWhere("ticket.closed", status);
+    return result[0].count;
+  }
+
+  async countAllTicket(id_phase) {
+    const result = await database("phase_ticket")
+      .count("ticket.id")
+      .leftJoin("ticket", "ticket.id", "phase_ticket.id_ticket")
+      .where("phase_ticket.id_phase", id_phase)
+      .andWhere("phase_ticket.active", true)
+      
     return result[0].count;
   }
 
@@ -384,8 +393,6 @@ class TicketModel {
           id_protocol: "ticket.id_protocol",
           id_user: "users.id_users_core",
           closed: "ticket.closed",
-          sla: "ticket.sla",
-          sla_time: "phase.sla_time",
           id_unit_of_time: "phase.id_unit_of_time",
           id_form: "ticket.id_form",
           name: "phase.name",
@@ -399,8 +406,9 @@ class TicketModel {
         .leftJoin("phase_ticket", "phase_ticket.id_ticket", `${tableName}.id`)
         .leftJoin("department", "department.id", "ticket.department_origin")
         .leftJoin("phase", "phase.id", "phase_ticket.id_phase")
+        .leftJoin("customer", "customer.id_ticket", "ticket.id")
         .where("phase_ticket.active", true)
-        .andWhere("ticket.id_customer", id)
+        .andWhere("customer.crm_contact_id", id)
         .orWhere("ticket.id_protocol", id);
     } catch (err) {
       console.log("===>", err);
@@ -533,10 +541,12 @@ class TicketModel {
           "phase.id",
           "phase.id_form_template",
           "phase_ticket.created_at",
-          "phase.form"
+          "phase.form",
+          "phase_ticket.id_form"
         )
         .leftJoin("phase", "phase.id", "phase_ticket.id_phase")
         .where("phase_ticket.id_ticket", id_ticket)
+        .andWhere("phase_ticket.active", true)
         .orderBy("phase_ticket.created_at", "asc");
     } catch (err) {
       console.log("Error Get First Form Ticket ==>", err);
@@ -679,10 +689,13 @@ class TicketModel {
     }
   }
 
-  async searchTicket(id_company, search, id_phase) {
+  async searchTicket(id_company, search, id_phase, status) {
     try {
       if (typeof search === "string") search = search.toLowerCase();
-      const default_where = `ticket.id_company = '${id_company}' AND phase.id = '${id_phase}' AND`;
+      const default_where = `ticket.id_company = '${id_company}' AND phase.id = '${id_phase}'  AND ticket.closed IN(${status
+        .replace("[", "")
+        .replace("]", "")
+        .replace(/\"/g, "'")}) AND`;
       let query;
       if (isNaN(search)) {
         search = search.replace('"', "").replace('"', "");
@@ -690,7 +703,8 @@ class TicketModel {
         ${default_where} users.name ILIKE '%${search}%' OR 
         ${default_where} customer.name ILIKE '%${search}%' OR 
         ${default_where} customer.email ILIKE '%${search}%' OR 
-        ${default_where} customer.identification_document ILIKE '%${search}%'`;
+        ${default_where} customer.identification_document ILIKE '%${search}%' OR
+        ${default_where} ticket.display_name ILIKE '%${search}%'`;
       } else {
         query = `
         ${default_where} ticket.id_seq ILIKE '%${search}%' OR 
@@ -715,15 +729,17 @@ class TicketModel {
         ticket.department_origin,
         ticket.created_at,
         ticket.updated_at,
-        ticket.display_name
+        ticket.display_name,
+        status_ticket.name as status
       from ticket
       left join users on users.id = ticket.id_user
       left join phase_ticket on phase_ticket.id_ticket = ticket.id
       left join phase on phase.id = phase_ticket.id_phase
       left join customer on customer.id_ticket = ticket.id
       left join ticket_protocol on ticket_protocol.id_ticket = ticket.id
+      left join status_ticket on status_ticket.id = ticket.id_status
       where ${query} order by ticket.created_at desc`);
-
+      console.log(result.rows);
       return result.rows;
     } catch (err) {
       console.log("Error when get ticket by id => ", err);
