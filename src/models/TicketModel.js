@@ -368,10 +368,19 @@ class TicketModel {
     const result = await database("phase_ticket")
       .count("ticket.id")
       .leftJoin("ticket", "ticket.id", "phase_ticket.id_ticket")
-      .leftJoin("users", "users.id", "ticket.id_user")
       .where("phase_ticket.id_phase", id_phase)
       .andWhere("phase_ticket.active", true)
       .andWhere("ticket.closed", status);
+    return result[0].count;
+  }
+
+  async countAllTicket(id_phase) {
+    const result = await database("phase_ticket")
+      .count("ticket.id")
+      .leftJoin("ticket", "ticket.id", "phase_ticket.id_ticket")
+      .where("phase_ticket.id_phase", id_phase)
+      .andWhere("phase_ticket.active", true)
+      
     return result[0].count;
   }
 

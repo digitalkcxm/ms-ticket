@@ -7,6 +7,9 @@ const slaModel = new SLAModel();
 const UnitOfTimeModel = require("../models/UnitOfTimeModel");
 const unitOfTimeModel = new UnitOfTimeModel();
 
+const TicketModel = require("../models/TicketModel");
+const ticketModel = new TicketModel();
+
 const { newTime } = require("./ConvertTime");
 
 const sla_status_id = [1, 2, 3];
@@ -102,12 +105,15 @@ const counter_sla = async function (phase_id, closed = false) {
         }
       }
     } else {
-      const check_sla = await slaModel.getToCountSLA(phase_id, !closed);
-
-      if (check_sla && check_sla.rows && check_sla.rows.length <= 0) {
-        obj.sem_sla = obj.sem_sla + 1;
-      }
+      obj.sem_sla = obj.sem_sla + sla_ticket.rows.length;
     }
+  } else {
+    const ticket = await ticketModel.getTicketByPhaseAndStatus(
+      phase_id,
+      JSON.stringify([closed])
+    );
+    console.log("ticket ==>", ticket);
+    obj.sem_sla = obj.sem_sla + ticket.length;
   }
 
   return obj;

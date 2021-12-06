@@ -30,7 +30,7 @@ async function phases() {
       });
     }
   }
-  console.log('fim')
+  console.log("fim");
 }
 
 async function tickets() {
@@ -52,7 +52,7 @@ async function tickets() {
 
   if (tickets && Array.isArray(tickets) && tickets.length > 0) {
     for (const ticket of tickets) {
-      const active  = ticket.closed ? false: true
+      const active = ticket.closed ? false : true;
       const count = await knex("ticket_sla_control")
         .count()
         .where("id_ticket", ticket.id);
@@ -128,7 +128,7 @@ async function tickets() {
               active: active,
             });
           } else if (ticket.countSLA > moment()) {
-            //Em dia 
+            //Em dia
             await knex("ticket_sla_control").insert({
               id_ticket: ticket.id,
               id_phase: ticket.id_phase,
@@ -262,7 +262,7 @@ async function update_status_ticket() {
 }
 //update_status_ticket();
 // phases();
-tickets();
+// tickets();
 
 async function update_status_sla_ticket() {
   const SLAModel = require("./src/models/SLAModel");
@@ -318,3 +318,19 @@ async function update_status_sla_ticket() {
 }
 
 // update_status_sla_ticket();
+
+async function update_customer() {
+  const customers = await knex("customer").select();
+  for (const customer of customers) {
+    console.log("===>", customer);
+    if (customer.name) {
+      await knex("ticket").update({ display_name: customer.name }).where("id", customer.id_ticket);
+    } else if (customer.phone) {
+      await knex("ticket").update({ display_name: customer.phone }).where("id", customer.id_ticket);
+    } else if (customer.email) {
+      await knex("ticket").update({ display_name: customer.email }).where("id", customer.id_ticket);
+    }
+  }
+}
+
+update_customer();
