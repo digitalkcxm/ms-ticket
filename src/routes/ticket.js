@@ -8,6 +8,11 @@ const { body } = require("express-validator");
 const TicketController = require("../controllers/TicketController");
 const ticketController = new TicketController();
 
+router.get("/sla_check/:type", (req, res) => ticketController.cronCheckSLA(req, res));~
+// type: 1 -> /15 * * * * *
+// type: 2 -> /5 * * * * *
+// type: 3 -> /30 * * * * *
+
 router.get("/history/:id", (req, res) =>
   ticketController.history_ticket(req, res)
 );
@@ -53,5 +58,6 @@ router.use(
 
 router.post("/", (req, res) => ticketController.create(req, res));
 router.put("/:id", (req, res) => ticketController.updateTicket(req, res));
+
 
 module.exports = router;

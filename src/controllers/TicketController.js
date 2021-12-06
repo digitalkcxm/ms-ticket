@@ -1425,6 +1425,53 @@ class TicketController {
     });
   }
 
+  async cronCheckSLA(req, res){
+    const tickets = await slaModel.checkSLA(req.params.type);
+    if (tickets && Array.isArray(tickets) && tickets.length > 0) {
+      switch (req.params.type) {
+        case 1:
+          for (const ticket of tickets) {
+            if (!ticket.interaction_time && ticket.limit_sla_time < moment()) {
+              slaModel.updateTicketSLA(
+                ticket.id_ticket,
+                { id_sla_status: sla_status.atrasado },
+                ticket.id_sla_type
+              );
+            }
+          }
+          break;
+        case 2:
+          for (const ticket of tickets) {
+            if (
+              ticket.interaction_time < ticket.limit_sla_time &&
+              ticket.limit_sla_time < moment()
+            ) {
+              slaModel.updateTicketSLA(
+                ticket.id_ticket,
+                { id_sla_status: sla_status.atrasado },
+                ticket.id_sla_type
+              );
+            }
+          }
+          break;
+        case 3:
+          for (const ticket of tickets) {
+            if (ticket.limit_sla_time < moment()) {
+              slaModel.updateTicketSLA(
+                ticket.id_ticket,
+                { id_sla_status: sla_status.atrasado },
+                ticket.id_sla_type
+              );
+            }
+          }
+          break;
+        default:
+          break;
+      }
+    }
+    res.status(200).send(true);
+  }
+
   async checkSLA(type) {
     const tickets = await slaModel.checkSLA(type);
     if (tickets && Array.isArray(tickets) && tickets.length > 0) {
