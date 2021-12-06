@@ -662,18 +662,22 @@ class PhaseController {
       }
     }
     if (!search) {
-      let tickets = ''
-      if(status){
-        tickets = await ticketModel.getTicketByPhaseAndStatus(result.id,status)
-      }else{ 
-         tickets = await ticketModel.getTicketByPhase(result.id);
+      let tickets = "";
+      if (status) {
+        tickets = await ticketModel.getTicketByPhaseAndStatus(
+          result.id,
+          status
+        );
+      } else {
+        tickets = await ticketModel.getTicketByPhase(result.id);
       }
-      
+
       for await (let ticket of tickets) {
         result.ticket.push(await formatTicketForPhase(result, ticket));
         // if (ticket) const getByPhaseTicket(id_phase, id_ticket);
       }
-      result.header.total_tickets = tickets.length;
+
+      result.header.total_tickets = await ticketModel.countAllTicket(result.id);
     }
     result.department_can_create_protocol &&
     result.department_can_create_protocol.department
@@ -709,6 +713,8 @@ class PhaseController {
     }
 
     if (result.header.closed_tickets != "0") {
+      console.log("== FECHADOS=> ", result.header.closed_tickets);
+      console.log("==TOTAL=> ", result.header.total_tickets);
       result.header.percent_closed_tickets = (
         (parseInt(result.header.closed_tickets) * 100) /
         parseInt(result.header.total_tickets)
@@ -1018,6 +1024,7 @@ class PhaseController {
     try {
       if (!req.params.id)
         return res.status(400).send({ error: "Houve algum problema!" });
+      console.time("dash time");
 
       const result = await phaseModel.dash(
         req.params.id,
@@ -1049,10 +1056,13 @@ class PhaseController {
         sem_sla: 0,
       };
 
-      console.log("TOTAL =>", result.tickets.length);
       let n_iniciado = 0;
       let iniciados = 0;
       let concluidos = 0;
+
+      console.timeEnd("dash time");
+
+      console.time("for time");
       for await (const ticket of result.tickets) {
         if (ticket.id_status === 2) {
           iniciados = iniciados + 1;
@@ -1253,9 +1263,13 @@ class PhaseController {
           }
         }
       }
+      console.timeEnd("for time");
+
       console.log("n_iniciado", n_iniciado);
       console.log("iniciados", iniciados);
       console.log("concluidos", concluidos);
+
+      console.time("percentual time");
 
       const calc_percentual = async function (total, value) {
         if (total == 0) return 0;
@@ -1334,6 +1348,7 @@ class PhaseController {
           result.tickets_concluidos.sem_sla
         ),
       };
+      console.timeEnd("percentual time");
 
       delete result.tickets;
       delete result.phases;
