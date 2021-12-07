@@ -20,6 +20,7 @@ module.exports = async (app, callback) => {
       console.log("we are connect to mongodb !!");
 
       app.locals.db = db;
+      global.mongodb = db;
       callback();
     }
   );
