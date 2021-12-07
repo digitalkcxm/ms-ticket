@@ -1,3 +1,17 @@
+In progress: 
+11) criar script para virar a configuração de SLA das fases.
 
 To do list:
 1) Voltar a validar os campos na criação de ticket
+
+Complete: 
+10) Retornar o contador de SLA
+9) Validar no update do ticket
+8) Validar na criação de atividades ou anexos
+7) adjust update phase sla
+6) adjust get phase with sla's
+5) create cron to update sla tickets will delay
+4) adjust ticket creation
+3) adjust phase creation
+2) add more sla types
+

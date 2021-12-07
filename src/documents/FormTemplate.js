@@ -1,6 +1,6 @@
 const ObjectID = require('mongodb').ObjectID
 
-let collection = 'form_template'
+const collection = 'form_template'
 class FormTemplate {
     constructor(db) {
         this._db = db
