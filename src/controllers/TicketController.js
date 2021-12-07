@@ -204,18 +204,20 @@ class TicketController {
     try {
       let userResponsible = [];
 
-      //console.log(data)
-
-      let id_user = await userController.checkUserCreated(
-        data.id_user,
-        data.authorization
-      );
+      console.log("data ==>",data)
 
       const companyVerified = await companyModel.getByIdActive(
         data.authorization
       );
 
       if (!companyVerified || companyVerified.length <= 0) return false;
+
+      let id_user = await userController.checkUserCreated(
+        data.id_user,
+        data.authorization
+      );
+
+
 
       // data.responsible.map(async (responsible) => {
       //   let result;
@@ -300,8 +302,8 @@ class TicketController {
       }
       // await this._createResponsibles(userResponsible, obj.id);
 
-      if (req.body.customer) {
-        await this._createCustomers(req.body.customer, obj.id);
+      if (data.customer) {
+        await this._createCustomers(data.customer, obj.id);
       }
 
       let phase_id = await ticketModel.createPhaseTicket({
