@@ -372,22 +372,21 @@ class PhaseController {
         req.headers.authorization
       );
       if (department_id && department_id.length <= 0) return false;
-  
+
       let result = await phaseModel.getAllPhasesByDepartmentID(
         department_id[0].id
       );
       for (let phase of result) {
         phase.header.total_tickets = tickets.length;
-  
+
         phase.sla = await settingsSLA(phase.id);
-  
+
         phase = await this._formatPhase(phase, req.app.locals.db);
       }
       return res.status(200).send(result);
     } catch (err) {
       console.log("err =>", err);
     }
-
   }
   // departments = JSON.parse(departments)
   async _queryDepartment(department, authorization, status, db) {
@@ -1014,6 +1013,10 @@ class PhaseController {
 
   async dash(req, res) {
     try {
+      const dash = await redis.hgetall(
+        `msTicket:dash:${req.headers.authorization}:department:${req.params.id}`,
+      );
+      console.log("===== dash ===== >", dash);
       if (!req.params.id)
         return res.status(400).send({ error: "Houve algum problema!" });
 
@@ -1050,7 +1053,6 @@ class PhaseController {
       let n_iniciado = 0;
       let iniciados = 0;
       let concluidos = 0;
-
 
       for await (const ticket of result.tickets) {
         if (ticket.id_status === 2) {
@@ -1244,8 +1246,6 @@ class PhaseController {
         }
       }
 
-
-
       const calc_percentual = async function (total, value) {
         if (total == 0) return 0;
 
@@ -1326,6 +1326,11 @@ class PhaseController {
 
       delete result.tickets;
       delete result.phases;
+
+      await redis.set(
+        `msTicket:dash:${req.headers.authorization}:department:${req.params.id}`,
+        JSON.stringify(result)
+      );
       return res.status(200).send(result);
     } catch (err) {
       console.log(err);
