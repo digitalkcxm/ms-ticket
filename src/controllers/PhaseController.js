@@ -209,7 +209,6 @@ class PhaseController {
     if (!formTemplate) return false;
 
     for (const formatcolumn of column) {
-      console.log(formatcolumn);
       const type = await typeColumnModel.getTypeByID(formatcolumn.type);
       formatcolumn.type = type[0].name;
     }
@@ -314,7 +313,6 @@ class PhaseController {
         //     result[i] = await this._formatPhase(result[i], req.app.locals.db);
         //   }
         // } else {
-        console.log("====>QUERY ===>", req.query);
         for (let i in result) {
           const tickets = await ticketModel.searchTicket(
             req.headers.authorization,
@@ -339,7 +337,6 @@ class PhaseController {
         }
         // }
       } else if (req.query.department) {
-        console.log("teste");
         result = await this._queryDepartment(
           req.query.department,
           req.headers.authorization,
@@ -370,26 +367,27 @@ class PhaseController {
 
   async getBySocket(req, res) {
     try {
+      const department_id = await departmentModel.getByID(
+        req.params.id,
+        req.headers.authorization
+      );
+      if (department_id && department_id.length <= 0) return false;
+  
+      let result = await phaseModel.getAllPhasesByDepartmentID(
+        department_id[0].id
+      );
+      for (let phase of result) {
+        phase.header.total_tickets = tickets.length;
+  
+        phase.sla = await settingsSLA(phase.id);
+  
+        phase = await this._formatPhase(phase, req.app.locals.db);
+      }
+      return res.status(200).send(result);
     } catch (err) {
       console.log("err =>", err);
     }
-    const department_id = await departmentModel.getByID(
-      req.params.id,
-      req.headers.authorization
-    );
-    if (department_id && department_id.length <= 0) return false;
 
-    let result = await phaseModel.getAllPhasesByDepartmentID(
-      department_id[0].id
-    );
-    for (let phase of result) {
-      phase.header.total_tickets = tickets.length;
-
-      phase.sla = await settingsSLA(phase.id);
-
-      phase = await this._formatPhase(phase, req.app.locals.db);
-    }
-    return res.status(200).send(result);
   }
   // departments = JSON.parse(departments)
   async _queryDepartment(department, authorization, status, db) {
@@ -422,7 +420,7 @@ class PhaseController {
       const usersNotify = [];
 
       const dpt = [];
-      console.log("req.body.separate  ===>", req.body.separate);
+
       let obj = {
         icon: req.body.icon,
         name: req.body.name,
@@ -594,7 +592,6 @@ class PhaseController {
 
       if (usersNotify.length > 0) {
         usersNotify.map(async (user) => {
-          console.log("User", user);
           await phaseModel.createNotifyPhase({
             id_phase: phase_id,
             id_user: user,
@@ -620,7 +617,6 @@ class PhaseController {
       newTemplate.map((valueB) =>
         valueA.column == valueB.column ? validate++ : ""
       );
-      console.log(validate, valueA.label);
 
       if (validate <= 0)
         errors.push(
@@ -713,8 +709,6 @@ class PhaseController {
     }
 
     if (result.header.closed_tickets != "0") {
-      console.log("== FECHADOS=> ", result.header.closed_tickets);
-      console.log("==TOTAL=> ", result.header.total_tickets);
       result.header.percent_closed_tickets = (
         (parseInt(result.header.closed_tickets) * 100) /
         parseInt(result.header.total_tickets)
@@ -813,7 +807,6 @@ class PhaseController {
       //   req.params.id,
       //   req.headers.authorization
       // );
-      console.log("teste", result[0]);
       await CallbackDigitalk(
         {
           type: "socket",
@@ -835,7 +828,6 @@ class PhaseController {
     try {
       //Verifica se o id do usuario está sendo passado no body da requisição.
       if (!req.body.id_user) {
-        console.log("Error ===> Sem ID do usuário");
         return res.status(400).send({ error: "Whitout id_user" });
       }
 
@@ -1024,7 +1016,6 @@ class PhaseController {
     try {
       if (!req.params.id)
         return res.status(400).send({ error: "Houve algum problema!" });
-      console.time("dash time");
 
       const result = await phaseModel.dash(
         req.params.id,
@@ -1060,9 +1051,7 @@ class PhaseController {
       let iniciados = 0;
       let concluidos = 0;
 
-      console.timeEnd("dash time");
 
-      console.time("for time");
       for await (const ticket of result.tickets) {
         if (ticket.id_status === 2) {
           iniciados = iniciados + 1;
@@ -1079,21 +1068,12 @@ class PhaseController {
             ticket.id
           );
           if (ticket.id_status === 1) {
-            console.log(
-              "LOG --->",
-              ticket,
-              "settings===>,",
-              phaseSettings,
-              "SLA ==>",
-              sla_ticket
-            );
             n_iniciado = n_iniciado + 1;
           }
           if (sla_ticket && sla_ticket.length > 0) {
             for await (const sla of sla_ticket) {
               switch (sla.id_sla_type) {
                 case 1:
-                  console.log("sla===>", sla.active, ticket.id_status, sla.id);
                   if (sla.active) {
                     result.total_tickets_nao_iniciados =
                       result.total_tickets_nao_iniciados + 1;
@@ -1263,13 +1243,8 @@ class PhaseController {
           }
         }
       }
-      console.timeEnd("for time");
 
-      console.log("n_iniciado", n_iniciado);
-      console.log("iniciados", iniciados);
-      console.log("concluidos", concluidos);
 
-      console.time("percentual time");
 
       const calc_percentual = async function (total, value) {
         if (total == 0) return 0;
@@ -1348,7 +1323,6 @@ class PhaseController {
           result.tickets_concluidos.sem_sla
         ),
       };
-      console.timeEnd("percentual time");
 
       delete result.tickets;
       delete result.phases;
@@ -1361,7 +1335,6 @@ class PhaseController {
 
   async filter(req, res) {
     try {
-      console.log("FILTER", req.query);
       if (!req.query.department)
         return res.status(500).send({ error: "Houve um erro" });
 
@@ -1373,7 +1346,6 @@ class PhaseController {
       if (req.query.type) {
         switch (req.query.type) {
           case "tickets_nao_iniciados":
-            console.log("Teste =================");
             for await (const ticket of tickets) {
               const phaseSettings = await slaModel.getSLASettings(
                 ticket.id_phase
@@ -1403,7 +1375,6 @@ class PhaseController {
                   }
                 }
               } else {
-                console.log("SEM SLA=>", ticket);
                 if (ticket.id_status === 1) {
                   if (
                     req.query.sla === "sem_sla" ||
