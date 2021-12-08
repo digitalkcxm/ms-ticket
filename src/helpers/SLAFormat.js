@@ -112,7 +112,6 @@ const counter_sla = async function (phase_id, closed = false) {
       phase_id,
       JSON.stringify([closed])
     );
-    console.log("ticket ==>", ticket);
     obj.sem_sla = obj.sem_sla + ticket.length;
   }
 

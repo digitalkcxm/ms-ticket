@@ -4,7 +4,9 @@ const routes = require("./routes.js")
 const cors = require("cors")
 const app = express()
 const connect = require("../config/database/mongoConnection")
+const { queue } = require('../config/RabbitMQ')
 const moment = require('moment-timezone')
+
 
 // const agent = require('elastic-apm-node').start({
 //     serviceName: 'msticket',
@@ -26,6 +28,8 @@ app.use(bodyParser.urlencoded({ extended: true, limit: "256mb" }))
 moment.tz.setDefault('America/Sao_Paulo')
 
 app.use(routes)
+queue()
+
 connect(app, () => {
     server.listen(process.env.PORT, () => console.log(`Server running in port ${process.env.PORT}`))
 })

@@ -46,7 +46,11 @@ const sla_status = {
 
 const TypeColumnModel = require("../models/TypeColumnModel");
 const typeColumnModel = new TypeColumnModel();
+
+const CompanyModel = require("../models/CompanyModel");
+const companyModel = new CompanyModel();
 class TicketController {
+  //Remover assim que função da fila funcionar direitinho
   async create(req, res) {
     const errors = validationResult(req);
     if (!errors.isEmpty())
@@ -63,7 +67,7 @@ class TicketController {
         id_company: req.headers.authorization,
         // ids_crm: req.body.ids_crm,
         // id_customer: req.body.id_customer,
-        id_protocol: req.body.id_protocol,
+        // id_protocol: req.body.id_protocol,
         id_user: id_user.id,
         created_at: moment().format(),
         updated_at: moment().format(),
@@ -82,6 +86,8 @@ class TicketController {
         req.body.id_phase,
         req.headers.authorization
       );
+      if (!phase || phase.length <= 0)
+        return res.status(400).send({ error: "Invalid id_phase uuid" });
 
       if (req.body.form) {
         if (Object.keys(req.body.form).length > 0) {
@@ -121,6 +127,7 @@ class TicketController {
       }
 
       let result = await ticketModel.create(obj);
+
       if (!req.body.display_name || req.body.display_name === "") {
         await ticketModel.updateTicket(
           {
@@ -135,8 +142,6 @@ class TicketController {
       if (req.body.customer) {
         await this._createCustomers(req.body.customer, obj.id);
       }
-      if (!phase || phase.length <= 0)
-        return res.status(400).send({ error: "Invalid id_phase uuid" });
 
       let phase_id = await ticketModel.createPhaseTicket({
         id_phase: phase[0].id,
@@ -147,8 +152,6 @@ class TicketController {
 
       if (!phase_id || phase_id.length <= 0)
         return res.status(500).send({ error: "There was an error" });
-
-      // await this._notify(phase[0].id, req.company[0].notify_token, obj.id, userResponsible, emailResponsible, req.headers.authorization, 4, req.app.locals.db)
 
       let ticket = await ticketModel.getTicketById(
         obj.id,
@@ -194,6 +197,170 @@ class TicketController {
       return res
         .status(400)
         .send({ error: "Error when generate object to save ticket" });
+    }
+  }
+
+  async queueCreate(data) {
+    try {
+      let userResponsible = [];
+
+      console.log("data =x=>", data);
+
+      const companyVerified = await companyModel.getByIdActive(
+        data.authorization
+      );
+
+      if (!companyVerified || companyVerified.length <= 0) return false;
+
+      let id_user = await userController.checkUserCreated(
+        data.id_user,
+        data.authorization
+      );
+
+      // data.responsible.map(async (responsible) => {
+      //   let result;
+      //   result = await userController.checkUserCreated(
+      //     responsible,
+      //     data.authorization,
+      //     responsible.name
+      //   );
+      //   userResponsible.push(result.id);
+      // });
+
+      let obj = {
+        id: v1(),
+        id_company: data.authorization,
+        // ids_crm: data.ids_crm,
+        // id_customer: data.id_customer,
+        // id_protocol: data.id_protocol,
+        id_user: id_user.id,
+        created_at: moment().format(),
+        updated_at: moment().format(),
+        display_name: data.display_name,
+      };
+
+      if (data.department_origin) {
+        let department = await departmentController.checkDepartmentCreated(
+          data.department_origin,
+          data.authorization
+        );
+        obj.department_origin = department[0].id;
+      }
+
+      let phase = await phaseModel.getPhase(data.id_phase, data.authorization);
+      if (!phase || phase.length <= 0) return false;
+
+      if (data.form) {
+        //console.log(global.mongodb)
+        if (Object.keys(data.form).length > 0) {
+          if (phase[0].form) {
+            let errors = await this._validateForm(
+              global.mongodb,
+              phase[0].id_form_template,
+              data.form
+            );
+            if (errors.length > 0) return false;
+
+            obj.id_form = await new FormDocuments(
+              global.mongodb
+            ).createRegister(data.form);
+          }
+        }
+      }
+
+      if (data.id_ticket_father) {
+        const ticketFather = await ticketModel.getTicketById(
+          data.id_ticket_father
+        );
+        if (
+          ticketFather &&
+          Array.isArray(ticketFather) &&
+          ticketFather.length > 0
+        ) {
+          obj.id_ticket_father = ticketFather[0].id;
+          obj.created_by_ticket = true;
+        }
+      }
+
+      if (data.id_protocol) {
+        obj.id_protocol = data.id_protocol;
+        obj.created_by_protocol = true;
+      }
+
+      let result = await ticketModel.create(obj);
+
+      if (!data.display_name || data.display_name === "") {
+        await ticketModel.updateTicket(
+          {
+            display_name: `ticket#${result[0].id_seq}`,
+          },
+          result[0].id,
+          data.authorization
+        );
+      }
+      // await this._createResponsibles(userResponsible, obj.id);
+
+      if (data.customer) {
+        await this._createCustomers(data.customer, obj.id);
+      }
+
+      let phase_id = await ticketModel.createPhaseTicket({
+        id_phase: phase[0].id,
+        id_ticket: obj.id,
+        id_user: id_user.id,
+        id_form: obj.id_form,
+      });
+
+      if (!phase_id || phase_id.length <= 0) return false;
+
+      let ticket = await ticketModel.getTicketById(obj.id, data.authorization);
+      await redis.set(
+        `msTicket:ticket:${ticket.id}`,
+        JSON.stringify(ticket[0])
+      );
+
+      if (result && result.length > 0 && result[0].id) {
+        ticket = await formatTicketForPhase({id: phase[0].id}, ticket[0]);
+
+        const dashPhase = await phaseModel.getPhaseById(
+          ticket.phase_id,
+          data.authorization
+        );
+
+        const FilaController = require("./FilaController");
+        await new FilaController().sendToQueue(
+          {
+            id: dashPhase[0].id_department,
+            authorization: data.authorization,
+          },
+          "msticket:create_dash"
+        );
+
+        await CallbackDigitalk(
+          {
+            type: "socket",
+            channel: `phase_${phase[0].id}`,
+            event: "new_ticket",
+            obj: ticket,
+          },
+          companyVerified[0].callback
+        );
+        await this._notify(
+          ticket.id,
+          phase[0].id,
+          data.authorization,
+          "open",
+          companyVerified[0].callback
+        );
+        // delete ticket[0].id_company
+        return ticket;
+      }
+      await redis.del(`ticket:phase:${data.authorization}`);
+
+      return false;
+    } catch (err) {
+      console.log("Error when generate object to save ticket => ", err);
+      return false;
     }
   }
 
@@ -487,7 +654,7 @@ class TicketController {
         break;
     }
   }
-
+  //Remover assim que função da fila funcionar direitinho
   async createActivities(req, res) {
     try {
       if (!req.body.id_user)
@@ -577,6 +744,113 @@ class TicketController {
     }
   }
 
+  async queueCreateActivities(data) {
+    try {
+      const companyVerified = await companyModel.getByIdActive(
+        data.authorization
+      );
+
+      if (!companyVerified || companyVerified.length <= 0) return false;
+
+      if (!data.id_user) return false;
+
+      let user = await userController.checkUserCreated(
+        data.id_user,
+        data.authorization
+      );
+
+      if (!user || !user.id) return false;
+
+      let ticket = await ticketModel.getTicketById(
+        data.id_ticket,
+        data.authorization
+      );
+      if (!ticket || ticket.length <= 0) return false;
+
+      if (!ticket[0].start_ticket) {
+        await this._notify(
+          ticket[0].id,
+          ticket[0].phase_id,
+          data.authorization,
+          "start_activity",
+          companyVerified[0].callback
+        );
+
+        await ticketModel.updateTicket(
+          { start_ticket: moment(), id_status: 2 },
+          data.id_ticket,
+          data.authorization
+        );
+      }
+
+      let obj = {
+        text: data.text,
+        id_ticket: data.id_ticket,
+        id_user: user.id,
+        created_at: moment().format(),
+        updated_at: moment().format(),
+      };
+
+      let result = await activitiesModel.create(obj);
+
+      if (result && result.length > 0) {
+        await updateSLA(data.id_ticket, ticket[0].phase_id, true);
+
+        obj.id = result[0].id;
+
+        obj.created_at = moment(obj.created_at).format("DD/MM/YYYY HH:mm:ss");
+        obj.updated_at = moment(obj.updated_at).format("DD/MM/YYYY HH:mm:ss");
+        obj.type = "note";
+        obj.id_user = data.id_user;
+
+        const dashPhase = await phaseModel.getPhaseById(
+          ticket[0].phase_id,
+          data.authorization
+        );
+
+        const FilaController = require("./FilaController");
+        await new FilaController().sendToQueue(
+          {
+            id: dashPhase[0].id_department,
+            authorization: data.authorization,
+          },
+          "msticket:create_dash"
+        );
+
+        await CallbackDigitalk(
+          {
+            type: "socket",
+            channel: `ticket_${ticket[0].id}`,
+            event: "activity",
+            obj: {
+              created_at: obj.created_at,
+              id: obj.id,
+              id_user: obj.id_user,
+              updated_at: obj.updated_at,
+              type: "note",
+              message: data.text,
+            },
+          },
+          companyVerified[0].callback
+        );
+
+        await this._notify(
+          ticket[0].id,
+          ticket[0].phase_id,
+          data.authorization,
+          "first_reply",
+          companyVerified[0].callback
+        );
+        return obj;
+      }
+
+      return false;
+    } catch (err) {
+      console.log("Error manage object to create activities => ", err);
+      return false;
+    }
+  }
+  //Remover assim que função da fila funcionar direitinho
   async createAttachments(req, res) {
     try {
       if (!req.body.id_user)
@@ -660,6 +934,112 @@ class TicketController {
       }
 
       return res.status(400).send({ error: "There was an error" });
+    } catch (err) {
+      console.log("Error manage object to create attachments => ", err);
+      return res.status(400).send({ error: "There was an error" });
+    }
+  }
+
+  async queueCreateAttachments(data) {
+    try {
+      const companyVerified = await companyModel.getByIdActive(
+        data.authorization
+      );
+
+      if (!companyVerified || companyVerified.length <= 0) return false;
+
+      if (!data.id_user) return false;
+
+      let user = await userController.checkUserCreated(
+        data.id_user,
+        data.authorization
+      );
+
+      if (!user || !user.id) return false;
+
+      let ticket = await ticketModel.getTicketById(
+        data.id_ticket,
+        data.authorization
+      );
+      if (!ticket || ticket.length <= 0) return false;
+
+      if (!ticket[0].start_ticket) {
+        await this._notify(
+          ticket[0].id,
+          ticket[0].phase_id,
+          data.authorization,
+          "start_activity",
+          companyVerified[0].callback
+        );
+
+        await ticketModel.updateTicket(
+          { start_ticket: moment(), id_status: 2 },
+          data.id_ticket,
+          data.authorization
+        );
+      }
+
+      let typeAttachments = await ticketModel.getTypeAttachments(data.type);
+
+      if (!typeAttachments || typeAttachments.length <= 0) return false;
+
+      let obj = {
+        id_user: user.id,
+        id_ticket: data.id_ticket,
+        url: data.url,
+        type: typeAttachments[0].id,
+        name: data.name,
+        created_at: moment(),
+        updated_at: moment(),
+      };
+
+      let result = await attachmentsModel.create(obj);
+
+      await updateSLA(data.id_ticket, ticket[0].phase_id, true);
+
+      if (result && result.length > 0) {
+        obj.id = result[0].id;
+
+        obj.created_at = moment(obj.created_at).format("DD/MM/YYYY HH:mm:ss");
+        obj.updated_at = moment(obj.updated_at).format("DD/MM/YYYY HH:mm:ss");
+        obj.type = "file";
+        obj.id_user = data.id_user;
+
+        const dashPhase = await phaseModel.getPhaseById(
+          ticket[0].phase_id,
+          data.authorization
+        );
+
+        const FilaController = require("./FilaController");
+        await new FilaController().sendToQueue(
+          {
+            id: dashPhase[0].id_department,
+            authorization: data.authorization,
+          },
+          "msticket:create_dash"
+        );
+
+        await CallbackDigitalk(
+          {
+            type: "socket",
+            channel: `ticket_${ticket[0].id}`,
+            event: "activity",
+            obj: obj,
+          },
+          companyVerified[0].callback
+        );
+
+        await this._notify(
+          ticket[0].id,
+          ticket[0].phase_id,
+          data.authorization,
+          "first_reply",
+          companyVerified[0].callback
+        );
+        return true;
+      }
+
+      return false;
     } catch (err) {
       console.log("Error manage object to create attachments => ", err);
       return res.status(400).send({ error: "There was an error" });
@@ -1073,6 +1453,7 @@ class TicketController {
     }
   }
 
+  //Remover assim que função da fila funcionar direitinho
   async updateTicket(req, res) {
     try {
       let obj = {
@@ -1286,6 +1667,217 @@ class TicketController {
     }
   }
 
+  async queueUpdateTicket(data) {
+    try {
+      const companyVerified = await companyModel.getByIdActive(
+        data.authorization
+      );
+
+      if (!companyVerified || companyVerified.length <= 0) return false;
+      // let userResponsible = [];
+
+      // data.responsible.map(async (responsible) => {
+      //   let result;
+      //   result = await userController.checkUserCreated(
+      //     responsible,
+      //     data.authorization,
+      //     responsible.name
+      //   );
+      //   userResponsible.push(result.id);
+      // });
+      let ticket = await ticketModel.getTicketById(data.id, data.authorization);
+
+      if (!ticket || ticket.length <= 0) return false;
+
+      let obj = {
+        // ids_crm: data.ids_crm,
+        // id_customer: data.id_customer,
+        // id_protocol: data.id_protocol,
+        updated_at: moment().format(),
+      };
+
+      // let result = await ticketModel.updateTicket(
+      //   obj,
+      //   data.id,
+      //   data.authorization
+      // );
+      ticket = await formatTicketForPhase(ticket, ticket[0]);
+
+      // await this._createResponsibles(userResponsible, data.id);
+
+      let phase = await phaseModel.getPhase(data.id_phase, data.authorization);
+
+      if (!phase || phase.length <= 0) return false;
+
+      await updateSLA(ticket.id, ticket.phase_id);
+      if (ticket.phase_id != phase[0].id) {
+        await phaseModel.disablePhaseTicket(data.id);
+        await slaModel.disableSLA(data.id);
+
+        if (data.form) {
+          if (Object.keys(data.form).length > 0) {
+            if (phase[0].form) {
+              let errors = await this._validateForm(
+                global.mongodb,
+                phase[0].id_form_template,
+                data.form
+              );
+              if (errors.length > 0)
+                return res.status(400).send({ errors: errors });
+
+              obj.id_form = await new FormDocuments(
+                global.mongodb
+              ).createRegister(data.form);
+            }
+          }
+        }
+        const user = await userController.checkUserCreated(
+          data.id_user,
+          data.authorization
+        );
+        let phase_id = await ticketModel.createPhaseTicket({
+          id_phase: phase[0].id,
+          id_ticket: data.id,
+          id_user: user.id,
+          id_form: obj.id_form,
+        });
+        if (!phase_id || phase_id.length <= 0) return false;
+
+        await createSLAControl(phase[0].id, data.id);
+
+        await CallbackDigitalk(
+          {
+            type: "socket",
+            channel: `phase_${ticket.phase_id}`,
+            event: "move_ticket_old_phase",
+            obj: { id: ticket.id, id_phase: ticket.phase_id },
+          },
+          companyVerified[0].callback
+        );
+
+        await CallbackDigitalk(
+          {
+            type: "socket",
+            channel: `phase_${phase[0].id}`,
+            event: "move_ticket_new_phase",
+            obj: { ...ticket, phase_id: phase[0].id },
+          },
+          companyVerified[0].callback
+        );
+
+        await CallbackDigitalk(
+          {
+            type: "socket",
+            channel: `ticket_${ticket.id}`,
+            event: "activity",
+            obj: {
+              type: "move",
+              id_user: data.id_user,
+              phase_dest: {
+                id: phase[0].id,
+                name: phase[0].name,
+              },
+              phase_origin: {
+                id: ticket.phase_id,
+                name: ticket.phase,
+              },
+              created_at: moment().format("DD/MM/YYYY HH:mm:ss"),
+            },
+          },
+          companyVerified[0].callback
+        );
+      } else {
+        if (data.form && Object.keys(data.form).length > 0) {
+          const firstPhase = await ticketModel.getFirstFormTicket(ticket[0].id);
+          if (firstPhase[0].form) {
+            let errors = await this._validateUpdate(
+              global.mongodb,
+              firstPhase[0].id_form_template,
+              data.form,
+              firstPhase[0].id_form
+            );
+            if (errors.length > 0) return false;
+
+            await new FormDocuments(global.mongodb).updateRegister(
+              firstPhase[0].id_form,
+              data.form
+            );
+          }
+        }
+      }
+
+      const dashPhase = await phaseModel.getPhaseById(
+        ticket.phase_id,
+        data.authorization
+      );
+
+      const FilaController = require("./FilaController");
+      await new FilaController().sendToQueue(
+        {
+          id: dashPhase[0].id_department,
+          authorization: data.authorization,
+        },
+        "msticket:create_dash"
+      );
+
+      await this._notify(
+        ticket.id,
+        phase[0].id,
+        data.authorization,
+        "progress",
+        companyVerified[0].callback
+      );
+      if (!ticket.start_ticket) {
+        await this._notify(
+          ticket.id,
+          phase[0].id,
+          data.authorization,
+          "start_activity",
+          companyVerified[0].callback
+        );
+
+        obj.start_ticket = moment();
+        obj.id_status = 2;
+      }
+      delete obj.id_form;
+      let result = await ticketModel.updateTicket(
+        obj,
+        data.id,
+        data.authorization
+      );
+
+      await redis.set(`msTicket:ticket:${data.id}`, JSON.stringify(ticket));
+
+      await CallbackDigitalk(
+        {
+          type: "socket",
+          channel: `phase_${data.id_phase}`,
+          event: "update_ticket",
+          obj: ticket,
+        },
+        companyVerified[0].callback
+      );
+
+      await CallbackDigitalk(
+        {
+          type: "socket",
+          channel: `ticket_${ticket.id}`,
+          event: "update",
+          obj: ticket,
+        },
+        companyVerified[0].callback
+      );
+
+      await redis.del(`ticket:phase:${data.authorization}`);
+      if (result) return true;
+
+      return false;
+    } catch (err) {
+      console.log("Error when generate object to save ticket => ", err);
+      return false;
+    }
+  }
+
   async closedTicket(req, res) {
     try {
       const result = await ticketModel.closedTicket(req.params.id);
@@ -1318,9 +1910,10 @@ class TicketController {
             };
           }
           await slaModel.updateTicketSLA(
-            ticket.id_ticket,
+            ticket[0].id,
             obj,
-            slaTicket.id_sla_type
+            slaTicket.id_sla_type,
+            ticket[0].phase_id
           );
         }
 
@@ -1349,9 +1942,10 @@ class TicketController {
             };
           }
           await slaModel.updateTicketSLA(
-            ticket.id_ticket,
+            ticket[0].id,
             obj,
-            slaTicket.id_sla_type
+            slaTicket.id_sla_type,
+            ticket[0].phase_id
           );
         }
 
@@ -1388,6 +1982,19 @@ class TicketController {
           req.company[0].callback
         );
 
+        const phase = await phaseModel.getPhaseById(
+          ticket[0].phase_id,
+          req.headers.authorization
+        );
+
+        const FilaController = require("./FilaController");
+        await new FilaController().sendToQueue(
+          {
+            id: phase[0].id_department,
+            authorization: req.headers.authorization,
+          },
+          "msticket:create_dash"
+        );
         return res.status(200).send(ticket[0]);
       }
 
@@ -1425,7 +2032,7 @@ class TicketController {
     });
   }
 
-  async cronCheckSLA(req, res){
+  async cronCheckSLA(req, res) {
     const tickets = await slaModel.checkSLA(req.params.type);
     if (tickets && Array.isArray(tickets) && tickets.length > 0) {
       switch (req.params.type) {
@@ -1749,6 +2356,21 @@ class TicketController {
 
           await updateSLA(req.body.id_ticket, ticket[0].phase_id);
         }
+
+        const phase = await phaseModel.getPhaseById(
+          ticket[0].phase_id,
+          req.headers.authorization
+        );
+
+        const FilaController = require("./FilaController");
+        await new FilaController().sendToQueue(
+          {
+            id: phase[0].id_department,
+            authorization: req.headers.authorization,
+          },
+          "msticket:create_dash"
+        );
+
         await this._notify(
           ticket[0].id,
           ticket[0].id_phase,
