@@ -1696,11 +1696,11 @@ class TicketController {
         updated_at: moment().format(),
       };
 
-      let result = await ticketModel.updateTicket(
-        obj,
-        data.id,
-        data.authorization
-      );
+      // let result = await ticketModel.updateTicket(
+      //   obj,
+      //   data.id,
+      //   data.authorization
+      // );
       ticket = await formatTicketForPhase(ticket, ticket[0]);
 
       // await this._createResponsibles(userResponsible, data.id);
