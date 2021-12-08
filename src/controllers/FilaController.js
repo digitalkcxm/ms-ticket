@@ -74,7 +74,7 @@ class FilaController {
     try {
       global.amqpConn.assertQueue(queueName, { durable: true });
       global.amqpConn.consume(queueName, async (msg) => {
-        console.log("Consumindo create attachments");
+        console.log("Consumindo create dash");
         await phaseController._dashGenerate(JSON.parse(msg.content.toString()));
         global.amqpConn.ack(msg);
       });
@@ -85,13 +85,9 @@ class FilaController {
 
   async sendToQueue(data, queue) {
     try {
-      global.amqpConn.createChannel((err, ch) => {
-        if (err) console.log("Erro ao criar fila", err);
-
-        ch.assertQueue(queue, { durable: true });
-        ch.sendToQueue(queue, Buffer.from(JSON.stringify(data)), {
-          persistent: true,
-        });
+      global.amqpConn.assertQueue(queue, { durable: true });
+      global.amqpConn.sendToQueue(queue, Buffer.from(JSON.stringify(data)), {
+        persistent: true,
       });
 
       return true;
