@@ -49,6 +49,9 @@ const typeColumnModel = new TypeColumnModel();
 
 const CompanyModel = require("../models/CompanyModel");
 const companyModel = new CompanyModel();
+
+const UserModel = require("../models/UserModel");
+const userModel = new UserModel();
 class TicketController {
   //Remover assim que função da fila funcionar direitinho
   async create(req, res) {
@@ -320,7 +323,7 @@ class TicketController {
       );
 
       if (result && result.length > 0 && result[0].id) {
-        ticket = await formatTicketForPhase({id: phase[0].id}, ticket[0]);
+        ticket = await formatTicketForPhase({ id: phase[0].id }, ticket[0]);
 
         const dashPhase = await phaseModel.getPhaseById(
           ticket.phase_id,
@@ -1413,6 +1416,15 @@ class TicketController {
         id_user: ticket[0].id_user,
       });
     }
+    if (ticket[0].status === 3) {
+      const user = await userModel.getById(ticket[0].user_closed_ticket, id_company)
+      obj.push({
+        type: "closed",
+        created_at: moment(ticket[0].time_closed_ticket).format("DD/MM/YYYY HH:mm:ss"),
+        id_user: user[0].id_users_core
+      });
+    }
+
     return obj;
   }
 
@@ -1880,7 +1892,12 @@ class TicketController {
 
   async closedTicket(req, res) {
     try {
-      const result = await ticketModel.closedTicket(req.params.id);
+      const user = await userController.checkUserCreated(
+        req.body.id_user,
+        req.headers.authorization
+      );
+      const result = await ticketModel.closedTicket(req.params.id, user.id);
+
       if (result && result[0].id) {
         await redis.del(`msTicket:ticket:${result[0].id}`);
 
