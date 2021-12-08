@@ -204,7 +204,7 @@ class TicketController {
     try {
       let userResponsible = [];
 
-      console.log("data ==>", data);
+      console.log("data =x=>", data);
 
       const companyVerified = await companyModel.getByIdActive(
         data.authorization
@@ -320,7 +320,7 @@ class TicketController {
       );
 
       if (result && result.length > 0 && result[0].id) {
-        ticket = await formatTicketForPhase(ticket, global.mongodb, ticket[0]);
+        ticket = await formatTicketForPhase({id: phase[0].id}, ticket[0]);
 
         const dashPhase = await phaseModel.getPhaseById(
           ticket.phase_id,

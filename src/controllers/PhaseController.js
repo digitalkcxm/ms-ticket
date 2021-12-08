@@ -1415,6 +1415,7 @@ class PhaseController {
   async dashGenerate(data) {
     if (!data.id) return false;
 
+    console.log("DASH GENERATE")
     const result = await phaseModel.dash(data.id, data.authorization);
     result.total_tickets_nao_iniciados = 0;
     result.tickets_nao_iniciados = {

@@ -38,7 +38,7 @@ class FilaController {
   }
 
   async consumerCreateActivity() {
-    const queueName = "msticket:create_activity";
+    const queueName = "msticket:create_activities";
     try {
       global.amqpConn.assertQueue(queueName, { durable: true });
       global.amqpConn.consume(queueName, async (msg) => {
