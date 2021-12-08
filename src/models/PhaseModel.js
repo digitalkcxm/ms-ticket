@@ -39,9 +39,17 @@ class PhaseModel {
           create_protocol: "phase.create_protocol",
           create_ticket: "phase.create_ticket",
           visible_new_ticket: "phase.visible_new_ticket",
+          id_department: "department.id_department_core",
         })
         .leftJoin("unit_of_time", "unit_of_time.id", "phase.id_unit_of_time")
+        .leftJoin("department_phase", "department_phase.id_phase", "phase.id")
+        .leftJoin(
+          "department",
+          "department.id",
+          "department_phase.id_department"
+        )
         .where("phase.id", id_phase)
+        .andWhere("department_phase.active", true)
         .andWhere("phase.id_company", id_company);
     } catch (err) {
       console.log("Error when catch phase and tickets by id phase => ", err);
@@ -121,7 +129,6 @@ class PhaseModel {
       return err;
     }
   }
-
 
   async getDepartmentPhase(id_phase) {
     try {
@@ -221,7 +228,7 @@ class PhaseModel {
           "phase.department_can_create_protocol",
           "phase.department_can_create_ticket",
           "phase.create_protocol",
-          "phase.create_ticket"
+          "phase.create_ticket",
         ])
         .leftJoin("phase", "phase.id", "department_phase.id_phase")
         .where("department_phase.id_department", id_department)

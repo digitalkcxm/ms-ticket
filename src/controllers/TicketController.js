@@ -204,7 +204,7 @@ class TicketController {
     try {
       let userResponsible = [];
 
-      console.log("data ==>",data)
+      console.log("data ==>", data);
 
       const companyVerified = await companyModel.getByIdActive(
         data.authorization
@@ -216,8 +216,6 @@ class TicketController {
         data.id_user,
         data.authorization
       );
-
-
 
       // data.responsible.map(async (responsible) => {
       //   let result;
@@ -323,6 +321,20 @@ class TicketController {
 
       if (result && result.length > 0 && result[0].id) {
         ticket = await formatTicketForPhase(ticket, global.mongodb, ticket[0]);
+
+        const dashPhase = await phaseModel.getPhaseById(
+          ticket.phase_id,
+          data.authorization
+        );
+
+        const FilaController = require("./FilaController");
+        await new FilaController().sendToQueue(
+          {
+            id: dashPhase[0].id_department,
+            authorization: data.authorization,
+          },
+          "msticket:create_dash"
+        );
 
         await CallbackDigitalk(
           {
@@ -790,6 +802,21 @@ class TicketController {
         obj.updated_at = moment(obj.updated_at).format("DD/MM/YYYY HH:mm:ss");
         obj.type = "note";
         obj.id_user = data.id_user;
+
+        const dashPhase = await phaseModel.getPhaseById(
+          ticket[0].phase_id,
+          data.authorization
+        );
+
+        const FilaController = require("./FilaController");
+        await new FilaController().sendToQueue(
+          {
+            id: dashPhase[0].id_department,
+            authorization: data.authorization,
+          },
+          "msticket:create_dash"
+        );
+
         await CallbackDigitalk(
           {
             type: "socket",
@@ -977,6 +1004,21 @@ class TicketController {
         obj.updated_at = moment(obj.updated_at).format("DD/MM/YYYY HH:mm:ss");
         obj.type = "file";
         obj.id_user = data.id_user;
+
+        const dashPhase = await phaseModel.getPhaseById(
+          ticket[0].phase_id,
+          data.authorization
+        );
+
+        const FilaController = require("./FilaController");
+        await new FilaController().sendToQueue(
+          {
+            id: dashPhase[0].id_department,
+            authorization: data.authorization,
+          },
+          "msticket:create_dash"
+        );
+
         await CallbackDigitalk(
           {
             type: "socket",
@@ -1764,6 +1806,20 @@ class TicketController {
         }
       }
 
+      const dashPhase = await phaseModel.getPhaseById(
+        ticket.phase_id,
+        data.authorization
+      );
+
+      const FilaController = require("./FilaController");
+      await new FilaController().sendToQueue(
+        {
+          id: dashPhase[0].id_department,
+          authorization: data.authorization,
+        },
+        "msticket:create_dash"
+      );
+
       await this._notify(
         ticket.id,
         phase[0].id,
@@ -1854,9 +1910,10 @@ class TicketController {
             };
           }
           await slaModel.updateTicketSLA(
-            ticket.id_ticket,
+            ticket[0].id,
             obj,
-            slaTicket.id_sla_type
+            slaTicket.id_sla_type,
+            ticket[0].phase_id
           );
         }
 
@@ -1885,9 +1942,10 @@ class TicketController {
             };
           }
           await slaModel.updateTicketSLA(
-            ticket.id_ticket,
+            ticket[0].id,
             obj,
-            slaTicket.id_sla_type
+            slaTicket.id_sla_type,
+            ticket[0].phase_id
           );
         }
 
@@ -1924,6 +1982,19 @@ class TicketController {
           req.company[0].callback
         );
 
+        const phase = await phaseModel.getPhaseById(
+          ticket[0].phase_id,
+          req.headers.authorization
+        );
+
+        const FilaController = require("./FilaController");
+        await new FilaController().sendToQueue(
+          {
+            id: phase[0].id_department,
+            authorization: req.headers.authorization,
+          },
+          "msticket:create_dash"
+        );
         return res.status(200).send(ticket[0]);
       }
 
@@ -2285,6 +2356,21 @@ class TicketController {
 
           await updateSLA(req.body.id_ticket, ticket[0].phase_id);
         }
+
+        const phase = await phaseModel.getPhaseById(
+          ticket[0].phase_id,
+          req.headers.authorization
+        );
+
+        const FilaController = require("./FilaController");
+        await new FilaController().sendToQueue(
+          {
+            id: phase[0].id_department,
+            authorization: req.headers.authorization,
+          },
+          "msticket:create_dash"
+        );
+
         await this._notify(
           ticket[0].id,
           ticket[0].id_phase,
