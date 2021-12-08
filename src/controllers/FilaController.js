@@ -75,7 +75,7 @@ class FilaController {
       global.amqpConn.assertQueue(queueName, { durable: true });
       global.amqpConn.consume(queueName, async (msg) => {
         console.log("Consumindo create dash");
-        await phaseController._dashGenerate(JSON.parse(msg.content.toString()));
+        await phaseController.dashGenerate(JSON.parse(msg.content.toString()));
         global.amqpConn.ack(msg);
       });
     } catch (err) {
