@@ -700,7 +700,7 @@ class TicketModel {
       const default_where = `ticket.id_company = '${id_company}' AND phase.id = '${id_phase}'  AND ticket.closed IN(${status
         .replace("[", "")
         .replace("]", "")
-        .replace(/\"/g, "'")}) AND`;
+        .replace(/\"/g, "'")}) AND phase_ticket.active = true AND`;
       let query;
       if (isNaN(search)) {
         search = search.replace('"', "").replace('"', "");
@@ -712,12 +712,12 @@ class TicketModel {
         ${default_where} ticket.display_name ILIKE '%${search}%'`;
       } else {
         query = `
-        ${default_where} ticket.id_seq ILIKE '%${search}%' OR 
-        ${default_where} ticket.id_protocol ILIKE '%${search}%' OR
-        ${default_where} ticket.id_user ILIKE '%${search}%' OR
-        ${default_where} ticket_protocol.id_protocol ILIKE '%${search}%' OR
-        ${default_where} customer.phone ILIKE '%${search}%' OR
-        ${default_where} customer.identification_document ILIKE '%${search}%'`;
+        ${default_where} CAST(ticket.id_seq AS TEXT) LIKE '%${search}%' OR 
+        ${default_where} CAST(ticket.id_protocol AS TEXT) LIKE '%${search}%' OR
+        ${default_where} CAST(ticket.id_user AS TEXT) LIKE '%${search}%' OR
+        ${default_where} CAST(ticket_protocol.id_protocol AS TEXT) LIKE '%${search}%' OR
+        ${default_where} CAST(customer.phone AS TEXT) LIKE '%${search}%' OR
+        ${default_where} CAST(customer.identification_document AS TEXT) LIKE '%${search}%'`;
       }
 
       const result = await database.raw(`
