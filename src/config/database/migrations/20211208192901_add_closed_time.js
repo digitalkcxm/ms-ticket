@@ -1,7 +1,7 @@
 exports.up = function (knex, Promise) {
   return knex.schema.alterTable("ticket", (table) => {
     table.timestamp("time_closed_ticket");
-    table.int("user_closed_ticket");
+    table.integer("user_closed_ticket");
 
     table.foreign("user_closed_ticket").references("users.id");
   });
