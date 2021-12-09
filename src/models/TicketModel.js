@@ -720,7 +720,7 @@ class TicketModel {
         ${default_where} CAST(customer.identification_document AS TEXT) LIKE '%${search}%'`;
       }
 
-      const stringQuery = `
+      const result = await database.raw(`
       select 
         ticket.id,
         ticket.id_seq,
@@ -743,9 +743,7 @@ class TicketModel {
       left join customer on customer.id_ticket = ticket.id
       left join ticket_protocol on ticket_protocol.id_ticket = ticket.id
       left join status_ticket on status_ticket.id = ticket.id_status
-      where ${query} order by ticket.created_at desc`
-      console.log("string query =>",stringQuery)
-      const result = await database.raw(stringQuery);
+      where ${query} order by ticket.created_at desc`);
       console.log(result.rows);
       return result.rows;
     } catch (err) {
