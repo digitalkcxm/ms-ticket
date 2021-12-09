@@ -694,9 +694,9 @@ class PhaseController {
         result.ticket.push(await formatTicketForPhase(result, ticket));
         // if (ticket) const getByPhaseTicket(id_phase, id_ticket);
       }
-
-      result.header.total_tickets = await ticketModel.countAllTicket(result.id);
     }
+    result.header.total_tickets = await ticketModel.countAllTicket(result.id);
+
     result.department_can_create_protocol &&
     result.department_can_create_protocol.department
       ? (result.department_can_create_protocol =
