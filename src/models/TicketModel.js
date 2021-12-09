@@ -204,7 +204,7 @@ class TicketModel {
     }
   }
 
-  async closedTicket(id_ticket) {
+  async closedTicket(id_ticket, id_user) {
     try {
       return await database(tableName)
         .returning(["id"])
@@ -212,6 +212,8 @@ class TicketModel {
           closed: true,
           updated_at: moment().format(),
           id_status: 3,
+          time_closed_ticket: moment().format(),
+          user_closed_ticket: id_user,
         })
         .where("id", id_ticket);
     } catch (err) {
@@ -379,8 +381,8 @@ class TicketModel {
       .count("ticket.id")
       .leftJoin("ticket", "ticket.id", "phase_ticket.id_ticket")
       .where("phase_ticket.id_phase", id_phase)
-      .andWhere("phase_ticket.active", true)
-      
+      .andWhere("phase_ticket.active", true);
+
     return result[0].count;
   }
 
@@ -679,6 +681,9 @@ class TicketModel {
           id_protocol: "ticket.id_protocol",
           id_user: "users.id_users_core",
           created_at: "ticket.created_at",
+          status: "ticket.id_status",
+          time_closed_ticket: "ticket.time_closed_ticket",
+          user_closed_ticket: "ticket.user_closed_ticket",
         })
         .leftJoin("users", "users.id", `${tableName}.id_user`)
         .where(`ticket.id`, id)
