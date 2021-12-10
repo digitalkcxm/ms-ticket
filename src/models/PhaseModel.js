@@ -209,7 +209,7 @@ class PhaseModel {
     }
   }
 
-  async getAllPhasesByDepartmentID(id_department) {
+  async getAllPhasesByDepartmentID(id_department, id_company) {
     try {
       return await database("department_phase")
         .select([
@@ -229,11 +229,18 @@ class PhaseModel {
           "phase.department_can_create_ticket",
           "phase.create_protocol",
           "phase.create_ticket",
+          "department.id_department_core as department",
         ])
         .leftJoin("phase", "phase.id", "department_phase.id_phase")
-        .where("department_phase.id_department", id_department)
+        .leftJoin(
+          "department",
+          "department.id",
+          "department_phase.id_department"
+        )
+        .where("department.id_department", id_department)
         .andWhere("department_phase.active", true)
         .andWhere("phase.active", true)
+        .andWhere("department.id_company", id_company)
         .orderBy("phase.order", "asc");
     } catch (err) {
       console.log("Error when catch department id ==>", err);
