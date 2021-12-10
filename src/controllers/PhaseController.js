@@ -598,7 +598,7 @@ class PhaseController {
     result.ticket = [];
     result.header = {};
     console.time("settings_sla");
-    result.sla = await settingsSLA(phase.id);
+    result.sla = await settingsSLA(result.id);
     console.timeEnd("settings_sla");
     // const department = await phaseModel.getDepartmentPhase(result.id);
 
