@@ -1416,7 +1416,7 @@ class TicketController {
         id_user: ticket[0].id_user,
       });
     }
-    if (ticket[0].status === 3) {
+    if (ticket[0].status === 3 && ticket[0].user_closed_ticket) {
       const user = await userModel.getById(ticket[0].user_closed_ticket, id_company)
       obj.push({
         type: "closed",
