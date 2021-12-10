@@ -237,7 +237,7 @@ class PhaseModel {
           "department.id",
           "department_phase.id_department"
         )
-        .where("department.id_department", id_department)
+        .where("department.id_department_core", id_department)
         .andWhere("department_phase.active", true)
         .andWhere("phase.active", true)
         .andWhere("department.id_company", id_company)
