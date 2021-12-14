@@ -2,7 +2,7 @@ module.exports = async function (authorization, department, phase) {
   const FilaController = require("../controllers/FilaController");
   const filaController = new FilaController();
 
-  await new filaController.sendToQueue(
+  await  filaController.sendToQueue(
     {
       id: department,
       authorization: authorization,
@@ -10,7 +10,7 @@ module.exports = async function (authorization, department, phase) {
     "msticket:create_dash"
   );
 
-  await new filaController.sendToQueue(
+  await filaController.sendToQueue(
     {
       id: phase,
       authorization: authorization,
