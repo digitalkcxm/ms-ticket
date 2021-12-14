@@ -585,9 +585,8 @@ class PhaseController {
   async _formatPhase(result, mongodb, search = false, status, authorization) {
     result.ticket = [];
     result.header = {};
-    console.time("settings_sla");
+
     result.sla = await settingsSLA(result.id);
-    console.timeEnd("settings_sla");
     // const department = await phaseModel.getDepartmentPhase(result.id);
 
     // department.length > 0
@@ -645,20 +644,19 @@ class PhaseController {
       ? (result.separate = result.separate.separate)
       : (result.separate = null);
 
-    console.time("header");
     const header = await redis.get(
       `msTicket:header:${authorization}:phase:${result.id}`
     );
     if (header) {
-      result.headers = JSON.parse(header);
+      result.header = JSON.parse(header);
     } else {
-      result.headers = await this.headerGenerate({
+      result.header = await this.headerGenerate({
         id: result.id,
         authorization,
       });
     }
 
-    console.timeEnd("header");
+
 
     result.created_at = moment(result.created_at).format("DD/MM/YYYY HH:mm:ss");
     result.updated_at = moment(result.updated_at).format("DD/MM/YYYY HH:mm:ss");
@@ -1622,7 +1620,7 @@ class PhaseController {
 
   async headerGenerate(data) {
     const header = {};
-    result.header.total_tickets = await ticketModel.countAllTicket(result.id);
+    header.total_tickets = await ticketModel.countAllTicket(data.id);
 
     header.open_tickets = await ticketModel.countTicket(data.id, false);
     header.closed_tickets = await ticketModel.countTicket(data.id, true);
