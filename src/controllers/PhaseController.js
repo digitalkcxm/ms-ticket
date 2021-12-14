@@ -170,7 +170,13 @@ class PhaseController {
       obj.created_at = moment(obj.created_at).format("DD/MM/YYYY HH:mm:ss");
       obj.updated_at = moment(obj.updated_at).format("DD/MM/YYYY HH:mm:ss");
 
-      obj = await this._formatPhase(obj, req.app.locals.db);
+      obj = await this._formatPhase(
+        obj,
+        req.app.locals.db,
+        false,
+        false,
+        req.headers.authorization
+      );
 
       await redis.del(`ticket:phase:${req.headers.authorization}`);
       await CallbackDigitalk(
@@ -268,7 +274,13 @@ class PhaseController {
       const departments = await phaseModel.getDepartmentPhase(result[0].id);
       result[0].department = departments[0].id_department;
 
-      result[0] = await this._formatPhase(result[0], req.app.locals.db);
+      result[0] = await this._formatPhase(
+        result[0],
+        req.app.locals.db,
+        false,
+        false,
+        req.headers.authorization
+      );
       return res.status(200).send(result);
     } catch (err) {
       console.log("PhaseController -> getPhaseByID -> err", err);
@@ -300,7 +312,9 @@ class PhaseController {
           result[i] = await this._formatPhase(
             result[i],
             req.app.locals.db,
-            true
+            true,
+            false,
+            req.headers.authorization
           );
         }
         // }
@@ -315,7 +329,13 @@ class PhaseController {
         result = await phaseModel.getAllPhase(req.headers.authorization);
 
         for (let i in result) {
-          result[i] = await this._formatPhase(result[i], req.app.locals.db);
+          result[i] = await this._formatPhase(
+            result[i],
+            req.app.locals.db,
+            false,
+            false,
+            req.headers.authorization
+          );
         }
 
         await redis.set(
@@ -337,7 +357,13 @@ class PhaseController {
         req.headers.authorization
       );
       for (let phase of result) {
-        phase = await this._formatPhase(phase, req.app.locals.db);
+        phase = await this._formatPhase(
+          phase,
+          req.app.locals.db,
+          false,
+          false,
+          req.headers.authorization
+        );
       }
       return res.status(200).send(result);
     } catch (err) {
@@ -352,7 +378,7 @@ class PhaseController {
     );
 
     for (let phase of result) {
-      phase = await this._formatPhase(phase, db, false, status);
+      phase = await this._formatPhase(phase, db, false, status, authorization);
     }
 
     return result;
@@ -505,9 +531,12 @@ class PhaseController {
         delete phase[0].id_form_template;
       }
 
-      await cache(req.headers.authorization, req.body.department, req.params.id);
+      await cache(
+        req.headers.authorization,
+        req.body.department,
+        req.params.id
+      );
 
-      
       await redis.del(`ticket:phase:${req.headers.authorization}`);
       return res.status(200).send(phase);
     } catch (err) {
@@ -656,8 +685,6 @@ class PhaseController {
       });
     }
 
-
-
     result.created_at = moment(result.created_at).format("DD/MM/YYYY HH:mm:ss");
     result.updated_at = moment(result.updated_at).format("DD/MM/YYYY HH:mm:ss");
     delete result.id_form_template;
@@ -745,7 +772,11 @@ class PhaseController {
       //   req.params.id,
       //   req.headers.authorization
       // );
-      await cache(req.headers.authorization, result[0].department, req.params.id);
+      await cache(
+        req.headers.authorization,
+        result[0].department,
+        req.params.id
+      );
 
       await CallbackDigitalk(
         {
@@ -873,7 +904,11 @@ class PhaseController {
         }
       }
 
-      await cache(req.headers.authorization, phase[0].id_department, req.params.id);
+      await cache(
+        req.headers.authorization,
+        phase[0].id_department,
+        req.params.id
+      );
 
       return res.status(200).send({ msg: "OK" });
     } catch (err) {
@@ -940,7 +975,11 @@ class PhaseController {
         await createSLAControl(req.body.new_phase, ticket.id);
       }
 
-      await cache(req.headers.authorization,  newPhase[0].id_department, req.body.new_phase);
+      await cache(
+        req.headers.authorization,
+        newPhase[0].id_department,
+        req.body.new_phase
+      );
 
       //console.log("Finalizou o laço");
 
