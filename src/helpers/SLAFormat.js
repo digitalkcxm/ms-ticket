@@ -40,7 +40,9 @@ const counter_sla = async function (phase_id, closed = false) {
               }
             } else {
               const nextSLA = sla_ticket.rows.filter(
-                (x) => x.id_sla_type === 2 || x.id_sla_type === 3
+                (x) =>
+                  (x.id_ticket === sla.id_ticket && x.id_sla_type === 2) ||
+                  (x.id_ticket === sla.id_ticket && x.id_sla_type === 3)
               );
               if (nextSLA.length <= 0) {
                 switch (sla.id_status) {
@@ -75,7 +77,7 @@ const counter_sla = async function (phase_id, closed = false) {
               const nextSLA = sla_ticket.rows.filter(
                 (x) => x.id_sla_type === 3 && x.active
               );
-              nextSLA;
+
               if (nextSLA.length > 0) {
                 if (nextSLA[0].id_sla_status === 2) {
                   obj.atrasado = obj.atrasado + 1;
@@ -114,7 +116,8 @@ const counter_sla = async function (phase_id, closed = false) {
     );
     obj.sem_sla = obj.sem_sla + ticket.length;
   }
-
+  if (phase_id === "2f5820a0-4a70-11ec-8101-bf6389e52d08")
+    console.log("==OBJ ===>", obj);
   return obj;
 };
 

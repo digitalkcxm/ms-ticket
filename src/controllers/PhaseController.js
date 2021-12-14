@@ -676,6 +676,7 @@ class PhaseController {
     const header = await redis.get(
       `msTicket:header:${authorization}:phase:${result.id}`
     );
+    
     if (header) {
       result.header = JSON.parse(header);
     } else {
