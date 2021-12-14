@@ -1,7 +1,7 @@
-const FilaController = require("../controllers/FilaController");
-const filaController = new FilaController()
-
 module.exports = async function (authorization, department, phase) {
+  const FilaController = require("../controllers/FilaController");
+  const filaController = new FilaController();
+
   await new filaController.sendToQueue(
     {
       id: department,
