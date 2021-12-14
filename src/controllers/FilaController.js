@@ -83,6 +83,22 @@ class FilaController {
     }
   }
 
+  async consumerCreateHeader() {
+    const queueName = "msticket:create_header";
+    try {
+      global.amqpConn.assertQueue(queueName, { durable: true });
+      global.amqpConn.consume(queueName, async (msg) => {
+        console.log("Consumindo create header");
+        await phaseController.headerGenerate(
+          JSON.parse(msg.content.toString())
+        );
+        global.amqpConn.ack(msg);
+      });
+    } catch (err) {
+      console.log(err);
+    }
+  }
+
   async sendToQueue(data, queue) {
     try {
       global.amqpConn.assertQueue(queue, { durable: true });

@@ -49,6 +49,7 @@ const {
 } = require("../helpers/SLAFormat");
 const CallbackDigitalk = require("../services/CallbackDigitalk");
 
+const cache = require("../helpers/Cache");
 class PhaseController {
   async create(req, res) {
     // Validação do corpo da requisição.
@@ -182,14 +183,7 @@ class PhaseController {
         req.company[0].callback
       );
 
-      const FilaController = require("./FilaController");
-      await new FilaController().sendToQueue(
-        {
-          id: req.body.department,
-          authorization: req.headers.authorization,
-        },
-        "msticket:create_dash"
-      );
+      await cache(req.headers.authorization, req.body.department, obj.id);
 
       return res.status(200).send(obj);
     } catch (err) {
@@ -511,15 +505,9 @@ class PhaseController {
         delete phase[0].id_form_template;
       }
 
-      const FilaController = require("./FilaController");
-      await new FilaController().sendToQueue(
-        {
-          id: req.body.department,
-          authorization: req.headers.authorization,
-        },
-        "msticket:create_dash"
-      );
+      await cache(req.headers.authorization, req.body.department, req.params.id);
 
+      
       await redis.del(`ticket:phase:${req.headers.authorization}`);
       return res.status(200).send(phase);
     } catch (err) {
@@ -594,7 +582,7 @@ class PhaseController {
     return register;
   }
 
-  async _formatPhase(result, mongodb, search = false, status) {
+  async _formatPhase(result, mongodb, search = false, status, authorization) {
     result.ticket = [];
     result.header = {};
     console.time("settings_sla");
@@ -623,6 +611,7 @@ class PhaseController {
         }
       }
     }
+
     if (!search) {
       let tickets = "";
       if (status) {
@@ -639,7 +628,6 @@ class PhaseController {
         // if (ticket) const getByPhaseTicket(id_phase, id_ticket);
       }
     }
-    result.header.total_tickets = await ticketModel.countAllTicket(result.id);
 
     result.department_can_create_protocol &&
     result.department_can_create_protocol.department
@@ -657,38 +645,21 @@ class PhaseController {
       ? (result.separate = result.separate.separate)
       : (result.separate = null);
 
-    result.header.open_tickets = await ticketModel.countTicket(
-      result.id,
-      false
-    );
-    result.header.closed_tickets = await ticketModel.countTicket(
-      result.id,
-      true
-    );
-
     console.time("header");
-
-    if (result.header.open_tickets != "0") {
-      result.header.percent_open_tickets = (
-        (parseInt(result.header.open_tickets) * 100) /
-        parseInt(result.header.total_tickets)
-      ).toFixed(2);
+    const header = await redis.get(
+      `msTicket:header:${authorization}:phase:${result.id}`
+    );
+    if (header) {
+      result.headers = JSON.parse(header);
     } else {
-      result.header.percent_open_tickets = 0.0;
+      result.headers = await this.headerGenerate({
+        id: result.id,
+        authorization,
+      });
     }
 
-    if (result.header.closed_tickets != "0") {
-      result.header.percent_closed_tickets = (
-        (parseInt(result.header.closed_tickets) * 100) /
-        parseInt(result.header.total_tickets)
-      ).toFixed(2);
-    } else {
-      result.header.percent_closed_tickets = 0;
-    }
-
-    result.header.counter_sla = await counter_sla(result.id);
-    result.header.counter_sla_closed = await counter_sla(result.id, true);
     console.timeEnd("header");
+
     result.created_at = moment(result.created_at).format("DD/MM/YYYY HH:mm:ss");
     result.updated_at = moment(result.updated_at).format("DD/MM/YYYY HH:mm:ss");
     delete result.id_form_template;
@@ -776,15 +747,7 @@ class PhaseController {
       //   req.params.id,
       //   req.headers.authorization
       // );
-
-      const FilaController = require("./FilaController");
-      await new FilaController().sendToQueue(
-        {
-          id: result[0].department,
-          authorization: req.headers.authorization,
-        },
-        "msticket:create_dash"
-      );
+      await cache(req.headers.authorization, result[0].department, req.params.id);
 
       await CallbackDigitalk(
         {
@@ -912,14 +875,7 @@ class PhaseController {
         }
       }
 
-      const FilaController = require("./FilaController");
-      await new FilaController().sendToQueue(
-        {
-          id: phase[0].id_department,
-          authorization: req.headers.authorization,
-        },
-        "msticket:create_dash"
-      );
+      await cache(req.headers.authorization, phase[0].id_department, req.params.id);
 
       return res.status(200).send({ msg: "OK" });
     } catch (err) {
@@ -985,14 +941,8 @@ class PhaseController {
 
         await createSLAControl(req.body.new_phase, ticket.id);
       }
-      const FilaController = require("./FilaController");
-      await new FilaController().sendToQueue(
-        {
-          id: newPhase[0].id_department,
-          authorization: req.headers.authorization,
-        },
-        "msticket:create_dash"
-      );
+
+      await cache(req.headers.authorization,  newPhase[0].id_department, req.body.new_phase);
 
       //console.log("Finalizou o laço");
 
@@ -1668,6 +1618,42 @@ class PhaseController {
       JSON.stringify(result)
     );
     return result;
+  }
+
+  async headerGenerate(data) {
+    const header = {};
+    result.header.total_tickets = await ticketModel.countAllTicket(result.id);
+
+    header.open_tickets = await ticketModel.countTicket(data.id, false);
+    header.closed_tickets = await ticketModel.countTicket(data.id, true);
+
+    if (header.open_tickets != "0") {
+      header.percent_open_tickets = (
+        (parseInt(header.open_tickets) * 100) /
+        parseInt(header.total_tickets)
+      ).toFixed(2);
+    } else {
+      header.percent_open_tickets = 0.0;
+    }
+
+    if (header.closed_tickets != "0") {
+      header.percent_closed_tickets = (
+        (parseInt(header.closed_tickets) * 100) /
+        parseInt(header.total_tickets)
+      ).toFixed(2);
+    } else {
+      header.percent_closed_tickets = 0;
+    }
+
+    header.counter_sla = await counter_sla(data.id);
+    header.counter_sla_closed = await counter_sla(data.id, true);
+
+    await redis.set(
+      `msTicket:header:${data.authorization}:phase:${data.id}`,
+      JSON.stringify(header)
+    );
+
+    return header;
   }
 }
 

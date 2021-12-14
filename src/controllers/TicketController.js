@@ -52,6 +52,9 @@ const companyModel = new CompanyModel();
 
 const UserModel = require("../models/UserModel");
 const userModel = new UserModel();
+
+const cache = require("../helpers/Cache");
+
 class TicketController {
   //Remover assim que função da fila funcionar direitinho
   async create(req, res) {
@@ -329,15 +332,7 @@ class TicketController {
           ticket.phase_id,
           data.authorization
         );
-
-        const FilaController = require("./FilaController");
-        await new FilaController().sendToQueue(
-          {
-            id: dashPhase[0].id_department,
-            authorization: data.authorization,
-          },
-          "msticket:create_dash"
-        );
+        await cache(data.authorization, dashPhase[0].id_department, ticket.phase_id);
 
         await CallbackDigitalk(
           {
@@ -810,15 +805,7 @@ class TicketController {
           ticket[0].phase_id,
           data.authorization
         );
-
-        const FilaController = require("./FilaController");
-        await new FilaController().sendToQueue(
-          {
-            id: dashPhase[0].id_department,
-            authorization: data.authorization,
-          },
-          "msticket:create_dash"
-        );
+        await cache(data.authorization, dashPhase[0].id_department, ticket[0].phase_id);
 
         await CallbackDigitalk(
           {
@@ -1012,15 +999,7 @@ class TicketController {
           ticket[0].phase_id,
           data.authorization
         );
-
-        const FilaController = require("./FilaController");
-        await new FilaController().sendToQueue(
-          {
-            id: dashPhase[0].id_department,
-            authorization: data.authorization,
-          },
-          "msticket:create_dash"
-        );
+        await cache(data.authorization, dashPhase[0].id_department, ticket[0].phase_id);
 
         await CallbackDigitalk(
           {
@@ -1823,14 +1802,7 @@ class TicketController {
         data.authorization
       );
 
-      const FilaController = require("./FilaController");
-      await new FilaController().sendToQueue(
-        {
-          id: dashPhase[0].id_department,
-          authorization: data.authorization,
-        },
-        "msticket:create_dash"
-      );
+      await cache(data.authorization, dashPhase[0].id_department, ticket.phase_id);
 
       await this._notify(
         ticket.id,
@@ -2004,14 +1976,8 @@ class TicketController {
           req.headers.authorization
         );
 
-        const FilaController = require("./FilaController");
-        await new FilaController().sendToQueue(
-          {
-            id: phase[0].id_department,
-            authorization: req.headers.authorization,
-          },
-          "msticket:create_dash"
-        );
+        await cache(req.headers.authorization, phase[0].id_department, ticket[0].phase_id);
+
         return res.status(200).send(ticket[0]);
       }
 
@@ -2378,15 +2344,8 @@ class TicketController {
           ticket[0].phase_id,
           req.headers.authorization
         );
+        await cache(req.headers.authorization, phase[0].id_department, ticket[0].phase_id);
 
-        const FilaController = require("./FilaController");
-        await new FilaController().sendToQueue(
-          {
-            id: phase[0].id_department,
-            authorization: req.headers.authorization,
-          },
-          "msticket:create_dash"
-        );
 
         await this._notify(
           ticket[0].id,
