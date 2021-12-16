@@ -16,4 +16,5 @@ setTimeout(() => {
   filaController.consumerUpdateTicket();
   filaController.consumerCreateAttachments();
   filaController.consumerCreateDash();
+  filaController.consumerCreateHeader();
 }, 2000);

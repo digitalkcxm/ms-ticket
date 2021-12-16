@@ -49,6 +49,7 @@ const {
 } = require("../helpers/SLAFormat");
 const CallbackDigitalk = require("../services/CallbackDigitalk");
 
+const cache = require("../helpers/Cache");
 class PhaseController {
   async create(req, res) {
     // Validação do corpo da requisição.
@@ -168,11 +169,14 @@ class PhaseController {
       obj.column = req.body.column;
       obj.created_at = moment(obj.created_at).format("DD/MM/YYYY HH:mm:ss");
       obj.updated_at = moment(obj.updated_at).format("DD/MM/YYYY HH:mm:ss");
-      obj.ticket = [];
-      obj.header = {};
 
-      obj.sla = await settingsSLA(obj.id);
-      obj = await this._formatPhase(obj, req.app.locals.db);
+      obj = await this._formatPhase(
+        obj,
+        req.app.locals.db,
+        false,
+        false,
+        req.headers.authorization
+      );
 
       await redis.del(`ticket:phase:${req.headers.authorization}`);
       await CallbackDigitalk(
@@ -185,15 +189,7 @@ class PhaseController {
         req.company[0].callback
       );
 
-      
-      const FilaController = require("./FilaController");
-      await new FilaController().sendToQueue(
-        {
-          id: req.body.department,
-          authorization: req.headers.authorization,
-        },
-        "msticket:create_dash"
-      );
+      await cache(req.headers.authorization, req.body.department, obj.id);
 
       return res.status(200).send(obj);
     } catch (err) {
@@ -278,11 +274,13 @@ class PhaseController {
       const departments = await phaseModel.getDepartmentPhase(result[0].id);
       result[0].department = departments[0].id_department;
 
-      result[0].ticket = [];
-      result[0].header = {};
-
-      result[0].sla = await settingsSLA(result[0].id);
-      result[0] = await this._formatPhase(result[0], req.app.locals.db);
+      result[0] = await this._formatPhase(
+        result[0],
+        req.app.locals.db,
+        false,
+        false,
+        req.headers.authorization
+      );
       return res.status(200).send(result);
     } catch (err) {
       console.log("PhaseController -> getPhaseByID -> err", err);
@@ -295,38 +293,10 @@ class PhaseController {
     let result;
     try {
       if (search) {
-        const department_id = await departmentModel.getByID(
+        result = await phaseModel.getAllPhasesByDepartmentID(
           req.query.department,
           req.headers.authorization
         );
-        if (department_id && department_id.length <= 0) return false;
-
-        result = await phaseModel.getAllPhasesByDepartmentID(
-          department_id[0].id
-        );
-        // result = await phaseModel.getAllPhase(req.headers.authorization);
-
-        // if (isNaN(search)) {
-        //   const searchMongo = await new FormDocuments(
-        //     req.app.locals.db
-        //   ).searchRegister(search);
-
-        //   for (let i in result) {
-        //     result[i].ticket = [];
-
-        //     for (const mongoResult of searchMongo) {
-        //       let ticket = await ticketModel.getTicketByIDForm(
-        //         mongoResult._id,
-        //         result[i].id
-        //       );
-        //       if (ticket)
-        //         result[i].ticket.push(
-        //           await formatTicketForPhase(result[i], ticket)
-        //         );
-        //     }
-        //     result[i] = await this._formatPhase(result[i], req.app.locals.db);
-        //   }
-        // } else {
         for (let i in result) {
           const tickets = await ticketModel.searchTicket(
             req.headers.authorization,
@@ -334,10 +304,6 @@ class PhaseController {
             result[i].id,
             req.query.status
           );
-          result[i].header = {};
-          result[i].ticket = [];
-          result[i].header.total_tickets = tickets.length;
-
           for await (let ticket of tickets) {
             result[i].ticket.push(
               await formatTicketForPhase(result[i], ticket)
@@ -346,7 +312,9 @@ class PhaseController {
           result[i] = await this._formatPhase(
             result[i],
             req.app.locals.db,
-            true
+            true,
+            false,
+            req.headers.authorization
           );
         }
         // }
@@ -361,10 +329,13 @@ class PhaseController {
         result = await phaseModel.getAllPhase(req.headers.authorization);
 
         for (let i in result) {
-          result[i].ticket = [];
-          result[i].header = {};
-
-          result[i] = await this._formatPhase(result[i], req.app.locals.db);
+          result[i] = await this._formatPhase(
+            result[i],
+            req.app.locals.db,
+            false,
+            false,
+            req.headers.authorization
+          );
         }
 
         await redis.set(
@@ -381,21 +352,18 @@ class PhaseController {
 
   async getBySocket(req, res) {
     try {
-      const department_id = await departmentModel.getByID(
+      let result = await phaseModel.getAllPhasesByDepartmentID(
         req.params.id,
         req.headers.authorization
       );
-      if (department_id && department_id.length <= 0) return false;
-
-      let result = await phaseModel.getAllPhasesByDepartmentID(
-        department_id[0].id
-      );
       for (let phase of result) {
-        phase.header.total_tickets = tickets.length;
-
-        phase.sla = await settingsSLA(phase.id);
-
-        phase = await this._formatPhase(phase, req.app.locals.db);
+        phase = await this._formatPhase(
+          phase,
+          req.app.locals.db,
+          false,
+          false,
+          req.headers.authorization
+        );
       }
       return res.status(200).send(result);
     } catch (err) {
@@ -404,22 +372,13 @@ class PhaseController {
   }
   // departments = JSON.parse(departments)
   async _queryDepartment(department, authorization, status, db) {
-    const department_id = await departmentModel.getByID(
+    let result = await phaseModel.getAllPhasesByDepartmentID(
       department,
       authorization
     );
-    if (department_id && department_id.length <= 0) return false;
 
-    let result = await phaseModel.getAllPhasesByDepartmentID(
-      department_id[0].id
-    );
     for (let phase of result) {
-      phase.ticket = [];
-      phase.header = {};
-
-      phase.sla = await settingsSLA(phase.id);
-
-      phase = await this._formatPhase(phase, db, false, status);
+      phase = await this._formatPhase(phase, db, false, status, authorization);
     }
 
     return result;
@@ -572,13 +531,10 @@ class PhaseController {
         delete phase[0].id_form_template;
       }
 
-      const FilaController = require("./FilaController");
-      await new FilaController().sendToQueue(
-        {
-          id: req.body.department,
-          authorization: req.headers.authorization,
-        },
-        "msticket:create_dash"
+      await cache(
+        req.headers.authorization,
+        req.body.department,
+        req.params.id
       );
 
       await redis.del(`ticket:phase:${req.headers.authorization}`);
@@ -655,12 +611,16 @@ class PhaseController {
     return register;
   }
 
-  async _formatPhase(result, mongodb, search = false, status) {
-    const department = await phaseModel.getDepartmentPhase(result.id);
+  async _formatPhase(result, mongodb, search = false, status, authorization) {
+    result.ticket = [];
+    result.header = {};
 
-    department.length > 0
-      ? (result.department = department[0].id_department)
-      : 0;
+    result.sla = await settingsSLA(result.id);
+    // const department = await phaseModel.getDepartmentPhase(result.id);
+
+    // department.length > 0
+    //   ? (result.department = department[0].id_department)
+    //   : 0;
 
     if (result.id_form_template) {
       const register = await new FormTemplate(mongodb).findRegistes(
@@ -679,6 +639,7 @@ class PhaseController {
         }
       }
     }
+
     if (!search) {
       let tickets = "";
       if (status) {
@@ -695,7 +656,6 @@ class PhaseController {
         // if (ticket) const getByPhaseTicket(id_phase, id_ticket);
       }
     }
-    result.header.total_tickets = await ticketModel.countAllTicket(result.id);
 
     result.department_can_create_protocol &&
     result.department_can_create_protocol.department
@@ -713,34 +673,18 @@ class PhaseController {
       ? (result.separate = result.separate.separate)
       : (result.separate = null);
 
-    result.header.open_tickets = await ticketModel.countTicket(
-      result.id,
-      false
+    const header = await redis.get(
+      `msTicket:header:${authorization}:phase:${result.id}`
     );
-    result.header.closed_tickets = await ticketModel.countTicket(
-      result.id,
-      true
-    );
-    if (result.header.open_tickets != "0") {
-      result.header.percent_open_tickets = (
-        (parseInt(result.header.open_tickets) * 100) /
-        parseInt(result.header.total_tickets)
-      ).toFixed(2);
+    
+    if (header) {
+      result.header = JSON.parse(header);
     } else {
-      result.header.percent_open_tickets = 0.0;
+      result.header = await this.headerGenerate({
+        id: result.id,
+        authorization,
+      });
     }
-
-    if (result.header.closed_tickets != "0") {
-      result.header.percent_closed_tickets = (
-        (parseInt(result.header.closed_tickets) * 100) /
-        parseInt(result.header.total_tickets)
-      ).toFixed(2);
-    } else {
-      result.header.percent_closed_tickets = 0;
-    }
-
-    result.header.counter_sla = await counter_sla(result.id);
-    result.header.counter_sla_closed = await counter_sla(result.id, true);
 
     result.created_at = moment(result.created_at).format("DD/MM/YYYY HH:mm:ss");
     result.updated_at = moment(result.updated_at).format("DD/MM/YYYY HH:mm:ss");
@@ -829,14 +773,10 @@ class PhaseController {
       //   req.params.id,
       //   req.headers.authorization
       // );
-
-      const FilaController = require("./FilaController");
-      await new FilaController().sendToQueue(
-        {
-          id: result[0].department,
-          authorization: req.headers.authorization,
-        },
-        "msticket:create_dash"
+      await cache(
+        req.headers.authorization,
+        result[0].department,
+        req.params.id
       );
 
       await CallbackDigitalk(
@@ -965,13 +905,10 @@ class PhaseController {
         }
       }
 
-      const FilaController = require("./FilaController");
-      await new FilaController().sendToQueue(
-        {
-          id: phase[0].id_department,
-          authorization: req.headers.authorization,
-        },
-        "msticket:create_dash"
+      await cache(
+        req.headers.authorization,
+        phase[0].id_department,
+        req.params.id
       );
 
       return res.status(200).send({ msg: "OK" });
@@ -1038,13 +975,11 @@ class PhaseController {
 
         await createSLAControl(req.body.new_phase, ticket.id);
       }
-      const FilaController = require("./FilaController");
-      await new FilaController().sendToQueue(
-        {
-          id: newPhase[0].id_department,
-          authorization: req.headers.authorization,
-        },
-        "msticket:create_dash"
+
+      await cache(
+        req.headers.authorization,
+        newPhase[0].id_department,
+        req.body.new_phase
       );
 
       //console.log("Finalizou o laço");
@@ -1415,7 +1350,7 @@ class PhaseController {
   async dashGenerate(data) {
     if (!data.id) return false;
 
-    console.log("DASH GENERATE")
+    console.log("DASH GENERATE");
     const result = await phaseModel.dash(data.id, data.authorization);
     result.total_tickets_nao_iniciados = 0;
     result.tickets_nao_iniciados = {
@@ -1721,6 +1656,42 @@ class PhaseController {
       JSON.stringify(result)
     );
     return result;
+  }
+
+  async headerGenerate(data) {
+    const header = {};
+    header.total_tickets = await ticketModel.countAllTicket(data.id);
+
+    header.open_tickets = await ticketModel.countTicket(data.id, false);
+    header.closed_tickets = await ticketModel.countTicket(data.id, true);
+
+    if (header.open_tickets != "0") {
+      header.percent_open_tickets = (
+        (parseInt(header.open_tickets) * 100) /
+        parseInt(header.total_tickets)
+      ).toFixed(2);
+    } else {
+      header.percent_open_tickets = 0.0;
+    }
+
+    if (header.closed_tickets != "0") {
+      header.percent_closed_tickets = (
+        (parseInt(header.closed_tickets) * 100) /
+        parseInt(header.total_tickets)
+      ).toFixed(2);
+    } else {
+      header.percent_closed_tickets = 0;
+    }
+
+    header.counter_sla = await counter_sla(data.id);
+    header.counter_sla_closed = await counter_sla(data.id, true);
+
+    await redis.set(
+      `msTicket:header:${data.authorization}:phase:${data.id}`,
+      JSON.stringify(header)
+    );
+
+    return header;
   }
 }
 
