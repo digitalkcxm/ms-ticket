@@ -1264,7 +1264,7 @@ class TicketController {
             value: before,
           },
           type: "change_form",
-          id_user: history_phase[index + 1].id_user,
+          id_user: history_phase[index].id_user,
           created_at: moment(history_phase[index + 1].created_at).format(
             "DD/MM/YYYY HH:mm:ss"
           ),
@@ -1278,7 +1278,7 @@ class TicketController {
         ) {
           obj.push({
             type: "move",
-            id_user: history_phase[index + 1].id_user,
+            id_user: history_phase[index].id_user,
             phase_dest: {
               id: history_phase[index].id_phase,
               name: history_phase[index].name,
