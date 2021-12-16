@@ -768,11 +768,11 @@ class PhaseController {
       result[0].header = {};
 
       result[0].sla = await settingsSLA(result[0].id);
-      // await phaseModel.updatePhase(
-      //   { active: req.body.active },
-      //   req.params.id,
-      //   req.headers.authorization
-      // );
+      await phaseModel.updatePhase(
+        { active: req.body.active },
+        req.params.id,
+        req.headers.authorization
+      );
       await cache(
         req.headers.authorization,
         result[0].department,
