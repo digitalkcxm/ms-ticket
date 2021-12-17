@@ -295,7 +295,8 @@ class PhaseController {
       if (search) {
         result = await phaseModel.getAllPhasesByDepartmentID(
           req.query.department,
-          req.headers.authorization
+          req.headers.authorization,
+          req.query.enable
         );
         for (let i in result) {
           const tickets = await ticketModel.searchTicket(
@@ -323,10 +324,11 @@ class PhaseController {
           req.query.department,
           req.headers.authorization,
           req.query.status,
-          req.app.locals.db
+          req.app.locals.db,
+          req.query.enable
         );
       } else {
-        result = await phaseModel.getAllPhase(req.headers.authorization);
+        result = await phaseModel.getAllPhase(req.headers.authorization,req.query.enable);
 
         for (let i in result) {
           result[i] = await this._formatPhase(
@@ -371,10 +373,11 @@ class PhaseController {
     }
   }
   // departments = JSON.parse(departments)
-  async _queryDepartment(department, authorization, status, db) {
+  async _queryDepartment(department, authorization, status, db,enable) {
     let result = await phaseModel.getAllPhasesByDepartmentID(
       department,
-      authorization
+      authorization,
+      enable
     );
 
     for (let phase of result) {
