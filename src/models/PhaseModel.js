@@ -179,7 +179,7 @@ class PhaseModel {
     }
   }
 
-  async getAllPhase(id_company) {
+  async getAllPhase(id_company, enable) {
     try {
       return await database(tableName)
         .select([
@@ -203,13 +203,14 @@ class PhaseModel {
           "phase.create_ticket",
         ])
         .where("id_company", id_company)
+        .andWhere("phase.active", enable)
         .orderBy("order", "asc");
     } catch (err) {
       return err;
     }
   }
 
-  async getAllPhasesByDepartmentID(id_department, id_company) {
+  async getAllPhasesByDepartmentID(id_department, id_company, enable) {
     try {
       return await database("department_phase")
         .select([
@@ -239,7 +240,7 @@ class PhaseModel {
         )
         .where("department.id_department_core", id_department)
         .andWhere("department_phase.active", true)
-        .andWhere("phase.active", true)
+        .andWhere("phase.active", enable)
         .andWhere("department.id_company", id_company)
         .orderBy("phase.order", "asc");
     } catch (err) {
