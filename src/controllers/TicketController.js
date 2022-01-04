@@ -332,7 +332,11 @@ class TicketController {
           ticket.phase_id,
           data.authorization
         );
-        await cache(data.authorization, dashPhase[0].id_department, ticket.phase_id);
+        await cache(
+          data.authorization,
+          dashPhase[0].id_department,
+          ticket.phase_id
+        );
 
         await CallbackDigitalk(
           {
@@ -588,7 +592,7 @@ class TicketController {
 
         if (phase[0].separate && phase[0].separate.separate.length > 0) {
           for (const separate of phase[0].separate.separate) {
-            if (separate.notify_start_activity) {
+            if (separate.contact.length > 0 && separate.notify_start_activity) {
               const email = separate.contact.filter((x) => x.email);
               const phone = separate.contact.filter((x) => x.phone);
 
@@ -805,7 +809,11 @@ class TicketController {
           ticket[0].phase_id,
           data.authorization
         );
-        await cache(data.authorization, dashPhase[0].id_department, ticket[0].phase_id);
+        await cache(
+          data.authorization,
+          dashPhase[0].id_department,
+          ticket[0].phase_id
+        );
 
         await CallbackDigitalk(
           {
@@ -999,7 +1007,11 @@ class TicketController {
           ticket[0].phase_id,
           data.authorization
         );
-        await cache(data.authorization, dashPhase[0].id_department, ticket[0].phase_id);
+        await cache(
+          data.authorization,
+          dashPhase[0].id_department,
+          ticket[0].phase_id
+        );
 
         await CallbackDigitalk(
           {
@@ -1396,11 +1408,16 @@ class TicketController {
       });
     }
     if (ticket[0].status === 3 && ticket[0].user_closed_ticket) {
-      const user = await userModel.getById(ticket[0].user_closed_ticket, id_company)
+      const user = await userModel.getById(
+        ticket[0].user_closed_ticket,
+        id_company
+      );
       obj.push({
         type: "closed",
-        created_at: moment(ticket[0].time_closed_ticket).format("DD/MM/YYYY HH:mm:ss"),
-        id_user: user[0].id_users_core
+        created_at: moment(ticket[0].time_closed_ticket).format(
+          "DD/MM/YYYY HH:mm:ss"
+        ),
+        id_user: user[0].id_users_core,
       });
     }
 
@@ -1802,7 +1819,11 @@ class TicketController {
         data.authorization
       );
 
-      await cache(data.authorization, dashPhase[0].id_department, ticket.phase_id);
+      await cache(
+        data.authorization,
+        dashPhase[0].id_department,
+        ticket.phase_id
+      );
 
       await this._notify(
         ticket.id,
@@ -1976,7 +1997,11 @@ class TicketController {
           req.headers.authorization
         );
 
-        await cache(req.headers.authorization, phase[0].id_department, ticket[0].phase_id);
+        await cache(
+          req.headers.authorization,
+          phase[0].id_department,
+          ticket[0].phase_id
+        );
 
         return res.status(200).send(ticket[0]);
       }
@@ -2344,8 +2369,11 @@ class TicketController {
           ticket[0].phase_id,
           req.headers.authorization
         );
-        await cache(req.headers.authorization, phase[0].id_department, ticket[0].phase_id);
-
+        await cache(
+          req.headers.authorization,
+          phase[0].id_department,
+          ticket[0].phase_id
+        );
 
         await this._notify(
           ticket[0].id,
