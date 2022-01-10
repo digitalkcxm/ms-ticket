@@ -421,6 +421,8 @@ class TicketController {
       id_ticket: ticket[0].id_seq,
       id_protocol: ticket[0].id_protocol,
       customer: await customerModel.getAll(ticket[0].id),
+      id_phase,
+      id_department:phase[0].id_department,
       created_at: moment().format("DD/MM/YYYY HH:mm:ss"),
     };
 
