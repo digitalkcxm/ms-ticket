@@ -13,6 +13,8 @@ const TicketModel = require("../models/TicketModel");
 const ticketModel = new TicketModel();
 
 const CallbackDigitalk = require("../services/CallbackDigitalk");
+const { ticketSLA, settingsSLA } = require("../helpers/SLAFormat");
+
 
 class CustomerController {
   async create(req, res) {
@@ -50,7 +52,10 @@ class CustomerController {
         req.body.id_ticket,
         req.headers.authorization
       );
-      ticket = await formatTicketForPhase({id: ticket[0].phase_id}, ticket[0]);
+      ticket = await formatTicketForPhase(
+        { id: ticket[0].phase_id },
+        ticket[0]
+      );
 
       await CallbackDigitalk(
         {
@@ -72,21 +77,77 @@ class CustomerController {
 
   async getByID(req, res) {
     try {
-      const result = await customerModel.getByID(
-        req.body.id_ticket,
+      const result = await customerModel.getTicketByIDCRMCustomer(
+        req.query.status,
         req.params.id
       );
       if (result.length <= 0)
-        return res.status(400).send({ error: "Error when get company info" });
+        return res.status(400).send({ error: "Without customer with this ID" });
 
-      result[0].created_at = moment(result[0].created_at).format(
-        "DD/MM/YYYY HH:mm:ss"
-      );
-      result[0].updated_at = moment(result[0].updated_at).format(
-        "DD/MM/YYYY HH:mm:ss"
-      );
-
-      return res.status(200).send(result);
+      const phases = [];
+      for await (const x of result) {
+        console.log();
+        if (phases.filter((y) => y.id === x.id).length <= 0) {
+          x.phase_sla = await settingsSLA(x.id);
+          x.sla = await ticketSLA(x.id, x.id_ticket);
+          phases.push({
+            id: x.id,
+            department: x.id_department_core,
+            emoji: phases.icon,
+            sla: x.phase_sla,
+            name: x.name,
+            order: x.order,
+            created_at: x.created_at,
+            updated_at: x.updated_at,
+            ticket: [
+              {
+                closed: x.closed,
+                sla: x.sla,
+                department_origin: x.department_origin,
+                display_name: x.display_name,
+                id: x.id,
+                id_seq: x.id_seq,
+                id_user: x.id_user,
+                status: x.status,
+                start_ticket: x.start_ticket
+                  ? moment(x.start_ticket).format("DD/MM/YYYY HH:mm:ss")
+                  : "",
+                created_at: moment(x.created_at_ticket).format(
+                  "DD/MM/YYYY HH:mm:ss"
+                ),
+                updated_at: moment(x.updated_at_ticket).format(
+                  "DD/MM/YYYY HH:mm:ss"
+                ),
+              },
+            ],
+          });
+        } else {
+          phases.filter((y) => {
+            if (y.id === x.id) {
+              y.ticket.push({
+                closed: x.closed,
+                department_origin: x.department_origin,
+                display_name: x.display_name,
+                id: x.id,
+                sla: x.sla,
+                id_seq: x.id_seq,
+                id_user: x.id_user,
+                status: x.status,
+                start_ticket: x.start_ticket
+                  ? moment(x.start_ticket).format("DD/MM/YYYY HH:mm:ss")
+                  : "",
+                created_at: moment(x.created_at_ticket).format(
+                  "DD/MM/YYYY HH:mm:ss"
+                ),
+                updated_at: moment(x.updated_at_ticket).format(
+                  "DD/MM/YYYY HH:mm:ss"
+                ),
+              });
+            }
+          });
+        }
+      }
+      return res.status(200).send(phases);
     } catch (err) {
       console.log("Error when get company info => ", err);
       return res.status(400).send({ error: "Error when get company info" });

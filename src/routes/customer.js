@@ -1,11 +1,8 @@
-    const express = require("express")
-const CompanyController = require("../controllers/CompanyController")
-const { body } = require('express-validator');
+const express = require("express")
 const { verifyCompany } = require("../middlewares/VerifyCompany");
 const CustomerController = require("../controllers/CustomerController");
 
 const router = express.Router()
-const companyController = new CompanyController()
 const customerController = new CustomerController()
 
 router.use(verifyCompany);
