@@ -59,7 +59,7 @@ class CustomerModel {
     }
   }
 
-  async getByID(ticketId, id) {
+  async getByID(id) {
     try {
       return await database(tableName)
         .select(
@@ -75,10 +75,61 @@ class CustomerModel {
           "created_at",
           "updated_at"
         )
-        .where("id", id)
-        .andWhere("id_ticket", ticketId);
+        .where("crm_contact_id", id);
     } catch (err) {
       console.log("Error =<", err);
+      return err;
+    }
+  }
+
+  async getTicketByIDCRMCustomer(status,id) {
+    try {
+     
+      let newStatus =  JSON.parse(status).length > 0 ? status.replace('[', '').replace(']', '') : '0'
+      console.log(status,id)
+      const query =  await database.raw(`
+      SELECT DISTINCT ticket.id_seq,
+        phase.id,
+        department.id_department_core,
+        phase.icon,
+        phase.name,
+        phase.order,
+        phase.created_at,
+        phase.updated_at,
+        ticket.closed,
+        ticket.department_origin,
+        ticket.display_name,
+        ticket.id as id_ticket,
+        ticket.id_user,
+        ticket.id_status,
+        ticket.start_ticket,
+        ticket.id_seq,
+        ticket.created_at as created_at_ticket,
+        ticket.updated_at as updated_at_ticket,
+        status_ticket.name as status
+      FROM customer
+      LEFT JOIN ticket ON ticket.id = customer.id_ticket
+      LEFT JOIN phase_ticket ON phase_ticket.id_ticket = ticket.id
+      LEFT JOIN phase ON phase.id = phase_ticket.id_phase
+      LEFT JOIN department_phase ON department_phase.id_phase = phase.id
+      LEFT JOIN department ON department.id = department_phase.id_department
+      LEFT JOIN status_ticket ON status_ticket.id = ticket.id_status
+      WHERE ticket.closed IN (${newStatus})
+      AND phase_ticket.active = true
+      AND phase.active = true
+      AND customer.crm_contact_id = '${id}'
+      `)
+      return query.rows
+      // ("customer").select(['DISTINCT ticket.id_seq'])
+      //   .leftJoin("ticket", "ticket.id", "customer.id_ticket")
+      //   .leftJoin("phase_ticket", "phase_ticket.id_ticket", "ticket.id")
+      //   .leftJoin("phase",'phase.id','phase_ticket.id_phase')
+      //   .whereIn('ticket.closed',newStatus)
+      //   .andWhere("phase_ticket.active",true)
+      //   .andWhere("phase.active", true)
+      //   .andWhere('customer.crm_contact_id', id)
+    } catch (err) {
+      console.log("Error when get ticket by id crm contact id", err);
       return err;
     }
   }
