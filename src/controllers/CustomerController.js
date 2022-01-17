@@ -78,8 +78,10 @@ class CustomerController {
   async getByID(req, res) {
     try {
       const result = await customerModel.getTicketByIDCRMCustomer(
+        
         req.query.status,
-        req.params.id
+        req.params.id,
+        req.query.department
       );
       if (result.length <= 0)
         return res.status(400).send({ error: "Without customer with this ID" });
