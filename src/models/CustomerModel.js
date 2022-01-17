@@ -82,10 +82,12 @@ class CustomerModel {
     }
   }
 
-  async getTicketByIDCRMCustomer(status,id) {
+  async getTicketByIDCRMCustomer(status,id,department) {
     try {
      
       let newStatus =  JSON.parse(status).length > 0 ? status.replace('[', '').replace(']', '') : '0'
+      
+ 
       console.log(status,id)
       const query =  await database.raw(`
       SELECT DISTINCT ticket.id_seq,
@@ -115,6 +117,7 @@ class CustomerModel {
       LEFT JOIN department ON department.id = department_phase.id_department
       LEFT JOIN status_ticket ON status_ticket.id = ticket.id_status
       WHERE ticket.closed IN (${newStatus})
+      AND department.id_department_core = ${department}
       AND phase_ticket.active = true
       AND phase.active = true
       AND customer.crm_contact_id = '${id}'
