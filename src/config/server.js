@@ -7,19 +7,6 @@ const connect = require("../config/database/mongoConnection")
 const { queue } = require('../config/RabbitMQ')
 const moment = require('moment-timezone')
 
-
-// const agent = require('elastic-apm-node').start({
-//     serviceName: 'msticket',
-//     serverUrl: process.env.APM
-// })
-
-// const Tracer = require('elastic-apm-node-opentracing')
-
-// const tracer = new Tracer(agent)
-
-// const span = tracer.startSpan('http_request');
-// span.finish();
-
 const server = require("http").createServer(app)
 app.use(cors())
 app.use(bodyParser.json({ limit: "256mb", extended: true }))
