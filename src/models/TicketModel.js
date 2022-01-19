@@ -108,7 +108,7 @@ class TicketModel {
   async getAllTickets(id_company, obj) {
     console.log("TicketModel -> getAllTickets -> id_company", id_company);
     try {
-      let stringWhere = `${tableName}.id_company = '${id_company}'`;
+      let stringWhere = `${tableName}.id_company = '${id_company}' AND phase_ticket.active = true `;
 
       if (obj.department && obj.department.length > 0) {
         stringWhere =
@@ -121,9 +121,6 @@ class TicketModel {
       }
       if (obj.closed && obj.closed.length > 0) {
         stringWhere = stringWhere + ` AND ticket.closed in (${obj.closed}) `;
-      }
-      if (obj.sla && obj.sla.length > 0) {
-        stringWhere = stringWhere + ` AND ticket.sla in (${obj.sla}) `;
       }
       if (obj.range && obj.range.length > 0) {
         stringWhere =
@@ -142,8 +139,6 @@ class TicketModel {
           phase: "phase.name",
           id_user: "users.id_users_core",
           name: "users.name",
-          sla_time: "phase.sla_time",
-          id_unit_of_time: "phase.id_unit_of_time",
           form: "phase.form",
           closed: `${tableName}.closed`,
           id_form: `${tableName}.id_form`,
@@ -151,12 +146,7 @@ class TicketModel {
           created_at: `${tableName}.created_at`,
           updated_at: `${tableName}.updated_at`,
         })
-        .leftJoin(
-          "responsible_ticket",
-          "responsible_ticket.id_ticket",
-          `${tableName}.id`
-        )
-        .leftJoin("users", "users.id", "responsible_ticket.id_user")
+        .leftJoin("users", "users.id", "ticket.id_user")
         .leftJoin("phase_ticket", "phase_ticket.id_ticket", `${tableName}.id`)
         .leftJoin("phase", "phase.id", "phase_ticket.id_phase")
         .leftJoin("department_phase", "department_phase.id_phase", "phase.id")
