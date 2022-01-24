@@ -3,7 +3,7 @@ exports.up = async function (knex) {
       table.increments();
       table.string("name");
     });
-    const tipos = ["Core", "Landing Page"];
+    const tipos = ["operator", "customer"];
     return await Promise.all(
       tipos.map((name) => knex("type_user").insert({ name }))
     );

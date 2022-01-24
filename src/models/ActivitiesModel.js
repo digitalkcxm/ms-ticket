@@ -19,7 +19,8 @@ class ActivitiesModel {
                 "id": `${tableName}.id`,
                 "message": `${tableName}.text`,
                 "id_user": "users.id_users",
-                "type_user": "type_user.name",
+                "name": "users.name",
+                "source": "type_user.name",
                 "created_at": `${tableName}.created_at`,
             })
                 .leftJoin("users", "users.id", `${tableName}.id_user`)
