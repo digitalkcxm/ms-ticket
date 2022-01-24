@@ -15,27 +15,7 @@ const { ticketSLA } = require("./SLAFormat");
 
 async function formatTicketForPhase(phase, ticket) {
   ticket.sla = await ticketSLA(phase.id, ticket.id);
-  //   let first_interaction = await ticketModel.first_interaction(ticket.id);
-  //   first_interaction.length
-  //     ? (ticket.first_message = moment(first_interaction[0].created_at).format(
-  //         "DD/MM/YYYY HH:mm:ss"
-  //       ))
-  //     : (ticket.first_message = null);
 
-  //   ticket.count_attachments = await attachmentsModel.getCountAttachments(
-  //     ticket.id
-  //   );
-  //   ticket.count_activities = await activitiesModel.getCountActivities(ticket.id);
-
-  ticket.last_interaction = await ticketModel.last_interaction_ticket(
-    ticket.id
-  );
-  //   if (last_interaction && last_interaction.length) {
-  //     ticket.last_message = last_interaction[0];
-  //     ticket.last_message.created_at = moment(
-  //       ticket.last_message.created_at
-  //     ).format("DD/MM/YYYY HH:mm:ss");
-  //   }
   ticket.start_ticket
     ? (ticket.start_ticket = moment(ticket.start_ticket).format(
         "DD/MM/YYYY HH:mm:ss"
