@@ -7,7 +7,7 @@ class UserModel {
     try {
       return await database(tableName)
         .select("id")
-        .where("id_users_core", id)
+        .where("id_users", id)
         .andWhere("id_company", company_id);
     } catch (err) {
       console.log("Error when catch user info by id => ", err);

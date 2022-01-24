@@ -65,7 +65,11 @@ class TicketController {
     try {
       let id_user = await userController.checkUserCreated(
         req.body.id_user,
-        req.headers.authorization
+        req.headers.authorization,
+        req.body.name ? req.body.name : "",
+        req.body.phone ? req.body.phone : "",
+        req.body.email ? req.body.email : "",
+        req.body.type_user ? req.body.type_user : 1
       );
 
       let obj = {
@@ -220,18 +224,12 @@ class TicketController {
 
       let id_user = await userController.checkUserCreated(
         data.id_user,
-        data.authorization
+        data.authorization,
+        data.name ? data.name : "",
+        data.phone ? data.phone : "",
+        data.email ? data.email : "",
+        data.type_user ? data.type_user : 1
       );
-
-      // data.responsible.map(async (responsible) => {
-      //   let result;
-      //   result = await userController.checkUserCreated(
-      //     responsible,
-      //     data.authorization,
-      //     responsible.name
-      //   );
-      //   userResponsible.push(result.id);
-      // });
 
       let obj = {
         id: v1(),
@@ -422,7 +420,7 @@ class TicketController {
       id_protocol: ticket[0].id_protocol,
       customer: await customerModel.getAll(ticket[0].id),
       id_phase,
-      id_department:phase[0].id_department,
+      id_department: phase[0].id_department,
       created_at: moment().format("DD/MM/YYYY HH:mm:ss"),
     };
 
@@ -666,7 +664,11 @@ class TicketController {
 
       let user = await userController.checkUserCreated(
         req.body.id_user,
-        req.headers.authorization
+        req.headers.authorization,
+        req.body.name ? req.body.name : "",
+        req.body.phone ? req.body.phone : "",
+        req.body.email ? req.body.email : "",
+        req.body.type_user ? req.body.type_user : 1
       );
 
       if (!user || !user.id)
@@ -760,7 +762,11 @@ class TicketController {
 
       let user = await userController.checkUserCreated(
         data.id_user,
-        data.authorization
+        data.authorization,
+        data.name ? data.name : "",
+        data.phone ? data.phone : "",
+        data.email ? data.email : "",
+        data.type_user ? data.type_user : 1
       );
 
       if (!user || !user.id) return false;
@@ -858,7 +864,11 @@ class TicketController {
 
       let user = await userController.checkUserCreated(
         req.body.id_user,
-        req.headers.authorization
+        req.headers.authorization,
+        req.body.name ? req.body.name : "",
+        req.body.phone ? req.body.phone : "",
+        req.body.email ? req.body.email : "",
+        req.body.type_user ? req.body.type_user : 1
       );
 
       if (!user || !user.id)
@@ -952,7 +962,11 @@ class TicketController {
 
       let user = await userController.checkUserCreated(
         data.id_user,
-        data.authorization
+        data.authorization,
+        data.name ? data.name : "",
+        data.phone ? data.phone : "",
+        data.email ? data.email : "",
+        data.type_user ? data.type_user : 1
       );
 
       if (!user || !user.id) return false;
@@ -1419,7 +1433,7 @@ class TicketController {
         created_at: moment(ticket[0].time_closed_ticket).format(
           "DD/MM/YYYY HH:mm:ss"
         ),
-        id_user: user[0].id_users_core,
+        id_user: user[0].id_users,
       });
     }
 
@@ -1473,19 +1487,6 @@ class TicketController {
         updated_at: moment().format(),
         display_name: req.body.display_name,
       };
-      // let userResponsible = [];
-      // if (req.body.responsible) {
-      //   req.body.responsible.map(async (responsible) => {
-      //     const result = await userController.checkUserCreated(
-      //       responsible,
-      //       req.headers.authorization,
-      //       responsible.name
-      //     );
-      //     userResponsible.push(result.id);
-      //   });
-
-      //   await this._createResponsibles(userResponsible, req.params.id);
-      // }
 
       let ticket = await ticketModel.getTicketById(
         req.params.id,
@@ -1539,7 +1540,11 @@ class TicketController {
         }
         const user = await userController.checkUserCreated(
           req.body.id_user,
-          req.headers.authorization
+          req.headers.authorization,
+          req.body.name ? req.body.name : "",
+          req.body.phone ? req.body.phone : "",
+          req.body.email ? req.body.email : "",
+          req.body.type_user ? req.body.type_user : 1
         );
         let phase_id = await ticketModel.createPhaseTicket({
           id_phase: phase[0].id,
@@ -1684,17 +1689,7 @@ class TicketController {
       );
 
       if (!companyVerified || companyVerified.length <= 0) return false;
-      // let userResponsible = [];
 
-      // data.responsible.map(async (responsible) => {
-      //   let result;
-      //   result = await userController.checkUserCreated(
-      //     responsible,
-      //     data.authorization,
-      //     responsible.name
-      //   );
-      //   userResponsible.push(result.id);
-      // });
       let ticket = await ticketModel.getTicketById(data.id, data.authorization);
 
       if (!ticket || ticket.length <= 0) return false;
@@ -1743,7 +1738,11 @@ class TicketController {
         }
         const user = await userController.checkUserCreated(
           data.id_user,
-          data.authorization
+          data.authorization,
+          data.name ? data.name : "",
+          data.phone ? data.phone : "",
+          data.email ? data.email : "",
+          data.type_user ? data.type_user : 1
         );
         let phase_id = await ticketModel.createPhaseTicket({
           id_phase: phase[0].id,
@@ -1889,7 +1888,11 @@ class TicketController {
     try {
       const user = await userController.checkUserCreated(
         req.body.id_user,
-        req.headers.authorization
+        req.headers.authorization,
+        req.body.name ? req.body.name : "",
+        req.body.phone ? req.body.phone : "",
+        req.body.email ? req.body.email : "",
+        req.body.type_user ? req.body.type_user : 1
       );
       const result = await ticketModel.closedTicket(req.params.id, user.id);
 
@@ -2342,7 +2345,11 @@ class TicketController {
       if (req.body.id_ticket && req.body.id_user) {
         const result = await userController.checkUserCreated(
           req.body.id_user,
-          req.headers.authorization
+          req.headers.authorization,
+          req.body.name ? req.body.name : "",
+          req.body.phone ? req.body.phone : "",
+          req.body.email ? req.body.email : "",
+          req.body.type_user ? req.body.type_user : 1
         );
         const time = moment();
         const responsibleCheck =
@@ -2462,7 +2469,11 @@ class TicketController {
 
       const user = await userController.checkUserCreated(
         req.body.id_user,
-        req.headers.authorization
+        req.headers.authorization,
+        req.body.name ? req.body.name : "",
+        req.body.phone ? req.body.phone : "",
+        req.body.email ? req.body.email : "",
+        req.body.type_user ? req.body.type_user : 1
       );
 
       if (!user) return res.status(400).send({ error: "Houve algum problema" });
@@ -2498,7 +2509,11 @@ class TicketController {
 
       const user = await userController.checkUserCreated(
         req.body.id_user,
-        req.headers.authorization
+        req.headers.authorization,
+        req.body.name ? req.body.name : "",
+        req.body.phone ? req.body.phone : "",
+        req.body.email ? req.body.email : "",
+        req.body.type_user ? req.body.type_user : 1
       );
 
       if (!user) return res.status(400).send({ error: "Houve algum problema" });

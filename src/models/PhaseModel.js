@@ -115,7 +115,7 @@ class PhaseModel {
         .select({
           phase: "phase.id",
           phase_description: "phase.name",
-          id_user_core: "users.id_users_core",
+          id_user_core: "users.id_users",
           id_user: "users.id",
           email: "email.email",
           id_email: "email.id",
