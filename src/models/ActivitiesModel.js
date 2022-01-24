@@ -19,9 +19,11 @@ class ActivitiesModel {
                 "id": `${tableName}.id`,
                 "message": `${tableName}.text`,
                 "id_user": "users.id_users",
+                "type_user": "type_user.name",
                 "created_at": `${tableName}.created_at`,
             })
                 .leftJoin("users", "users.id", `${tableName}.id_user`)
+                .leftJoin("type_user", "type_user.id", `user.id_type`)
                 .where(`${tableName}.id_ticket`, id_ticket)
         } catch (err) {
             console.log("Error get activities ====>", err)
