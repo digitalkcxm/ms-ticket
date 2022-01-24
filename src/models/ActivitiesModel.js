@@ -23,7 +23,7 @@ class ActivitiesModel {
                 "created_at": `${tableName}.created_at`,
             })
                 .leftJoin("users", "users.id", `${tableName}.id_user`)
-                .leftJoin("type_user", "type_user.id", `user.id_type`)
+                .leftJoin("type_user", "type_user.id", `users.id_type`)
                 .where(`${tableName}.id_ticket`, id_ticket)
         } catch (err) {
             console.log("Error get activities ====>", err)
