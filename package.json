@@ -15,7 +15,7 @@
   "dependencies": {
     "amqplib": "^0.8.0",
     "async-redis": "^1.1.7",
-    "axios": "^0.20.0",
+    "axios": "^0.25.0",
     "body-parser": "^1.19.0",
     "cors": "^2.8.5",
     "cron": "^1.8.2",

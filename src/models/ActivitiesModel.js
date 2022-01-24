@@ -18,7 +18,7 @@ class ActivitiesModel {
             return await database(tableName).select({
                 "id": `${tableName}.id`,
                 "message": `${tableName}.text`,
-                "id_user": "users.id_users_core",
+                "id_user": "users.id_users",
                 "created_at": `${tableName}.created_at`,
             })
                 .leftJoin("users", "users.id", `${tableName}.id_user`)

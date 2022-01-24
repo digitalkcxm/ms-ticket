@@ -113,51 +113,6 @@ class PhaseController {
         obj.id
       );
 
-      // Realiza uma verificação com o id do usuario responsavel pela fase, e depois vincula os dois.
-      // if (
-      //   req.body.separate &&
-      //   Array.isArray(req.body.separate) &&
-      //   req.body.separate.length > 0
-      // ) {
-      //   for await (const contact of req.body.separate) {
-      //     let result;
-
-      //     if(contact.id){
-      //       result = await userController.checkUserCreated(
-      //         contact.id,
-      //         req.headers.authorization,
-      //         contact.name
-      //       );
-      //     }else if(contact.email){
-      //      result =  checkEmailCreated(contact.email,   req.headers.authorization)
-      //     }
-
-      //     usersResponsible.push(result.id);
-      //   }
-      //   await this._responsiblePhase(obj.id, usersResponsible);
-      //   obj.responsible = req.body.responsible;
-      // }
-
-      // Realiza uma verificação com o id do usuario pela fase, e depois vincula os dois.
-      // if (
-      //   req.body.notify &&
-      //   Array.isArray(req.body.notify) &&
-      //   req.body.notify.length > 0
-      // ) {
-      //   for await (const notify of req.body.notify) {
-      //     let result;
-      //     result = await userController.checkUserCreated(
-      //       notify,
-      //       req.headers.authorization,
-      //       notify.name
-      //     );
-      //     usersNotify.push(result.id);
-      //   }
-      //   obj.notify = req.body.notify;
-
-      //   await this._notifyPhase(obj.id, usersNotify, usersResponsible);
-      // }
-
       // Registra a configuração de SLA da fase.
       if (req.body.sla) {
         await this._phaseSLASettings(req.body.sla, obj.id);
@@ -479,7 +434,10 @@ class PhaseController {
           resultUser = await userController.checkUserCreated(
             responsible,
             req.headers.authorization,
-            responsible.name
+            responsible.name,
+            responsible.phone,
+            responsible.email,
+            1
           );
           usersResponsible.push(resultUser.id);
         }
@@ -497,7 +455,10 @@ class PhaseController {
           resultUser = await userController.checkUserCreated(
             notify,
             req.headers.authorization,
-            notify.name
+            notify.name,
+            notify.phone,
+            notify.email,
+            1
           );
           usersNotify.push(resultUser.id);
         }
@@ -817,7 +778,7 @@ class PhaseController {
       let user = await userController.checkUserCreated(
         req.body.id_user,
         req.headers.authorization,
-        req.body.name_user
+        req.body.name_user,
       );
 
       //Verifica se ocorreu algum erro na checagem de usuario.

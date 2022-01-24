@@ -37,7 +37,7 @@ class TicketModel {
           id_company: `${tableName}.id_company`,
           phase_id: "phase_ticket.id_phase",
           phase: "phase.name",
-          id_user: "users.id_users_core",
+          id_user: "users.id_users",
           name: "users.name",
           sla_time: "phase.sla_time",
           id_unit_of_time: "phase.id_unit_of_time",
@@ -75,7 +75,7 @@ class TicketModel {
           id_company: `${tableName}.id_company`,
           phase_id: "phase_ticket.id_phase",
           phase: "phase.name",
-          id_user: "users.id_users_core",
+          id_user: "users.id_users",
           name: "users.name",
           id_unit_of_time: "phase.id_unit_of_time",
           form: "phase.form",
@@ -117,7 +117,7 @@ class TicketModel {
       }
       if (obj.users && obj.users.length > 0) {
         stringWhere =
-          stringWhere + ` AND users.id_users_core in (${obj.users}) `;
+          stringWhere + ` AND users.id_users in (${obj.users}) `;
       }
       if (obj.closed && obj.closed.length > 0) {
         stringWhere = stringWhere + ` AND ticket.closed in (${obj.closed}) `;
@@ -137,7 +137,7 @@ class TicketModel {
           id_protocol: `${tableName}.id_protocol`,
           id_phase: "phase.id",
           phase: "phase.name",
-          id_user: "users.id_users_core",
+          id_user: "users.id_users",
           name: "users.name",
           form: "phase.form",
           closed: `${tableName}.closed`,
@@ -230,24 +230,6 @@ class TicketModel {
     }
   }
 
-  async getAllResponsibleTicket(id_ticket) {
-    try {
-      return await database("responsible_ticket")
-        .select({
-          id_ticket: "responsible_ticket.id_ticket",
-          id_user: "responsible_ticket.id_user",
-          id_users_core: "users.id_users_core",
-          id_email: "responsible_ticket.id_email",
-          id_type_of_responsible: "responsible_ticket.id_type_of_responsible",
-        })
-        .leftJoin("users", "users.id", "responsible_ticket.id_user")
-        .where("id_ticket", id_ticket);
-    } catch (err) {
-      console.log("Error when get all responsible ticket => ", err);
-      return err;
-    }
-  }
-
   async getCountResponsibleTicket(id_company, obj) {
     try {
       let stringWhere = `users.id_company = '${id_company}'`;
@@ -259,7 +241,7 @@ class TicketModel {
       }
       if (obj.users && obj.users.length > 0) {
         stringWhere =
-          stringWhere + ` AND users.id_users_core in (${obj.users}) `;
+          stringWhere + ` AND users.id_users in (${obj.users}) `;
       }
       if (obj.closed && obj.closed.length > 0) {
         stringWhere = stringWhere + ` AND ticket.closed in (${obj.closed}) `;
@@ -270,7 +252,7 @@ class TicketModel {
           `AND ticket.created_at >= '${obj.range[0]}' AND ticket.created_at <= '${obj.range[1]}'`;
       }
       return await database("ticket")
-        .select("users.id_users_core as id_user")
+        .select("users.id_users as id_user")
         .count("ticket.id as count")
         .leftJoin(
           "responsible_ticket",
@@ -287,7 +269,7 @@ class TicketModel {
           "department_phase.id_department"
         )
         .whereRaw(stringWhere)
-        .groupBy("users.id_users_core");
+        .groupBy("users.id_users");
     } catch (err) {
       console.log("Error when get all responsible ticket => ", err);
       return err;
@@ -301,7 +283,7 @@ class TicketModel {
           id: "ticket.id",
           id_seq: "ticket.id_seq",
           ids_crm: "ticket.ids_crm",
-          id_user: "users.id_users_core",
+          id_user: "users.id_users",
           id_customer: "ticket.id_customer",
           id_protocol: "ticket.id_protocol",
           closed: "ticket.closed",
@@ -333,7 +315,7 @@ class TicketModel {
         .select({
           id: "ticket.id",
           id_seq: "ticket.id_seq",
-          id_user: "users.id_users_core",
+          id_user: "users.id_users",
           id_protocol: "ticket.id_protocol",
           closed: "ticket.closed",
           id_form: `ticket.id_form`,
@@ -383,7 +365,7 @@ class TicketModel {
           id: "ticket.id",
           id_seq: "ticket.id_seq",
           id_protocol: "ticket.id_protocol",
-          id_user: "users.id_users_core",
+          id_user: "users.id_users",
           closed: "ticket.closed",
           id_unit_of_time: "phase.id_unit_of_time",
           id_form: "ticket.id_form",
@@ -437,7 +419,7 @@ class TicketModel {
   async last_interaction_ticket(id) {
     try {
       return await database("activities_ticket")
-        .select(["users.id_users_core", "users.name"])
+        .select(["users.id_users", "users.name"])
         .leftJoin("users", "users.id", "activities_ticket.id_user")
         .where("id_ticket", id)
         .orderBy("activities_ticket.created_at", "desc")
@@ -466,7 +448,7 @@ class TicketModel {
           id: "ticket.id",
           id_seq: "ticket.id_seq",
           ids_crm: "ticket.ids_crm",
-          id_user: "users.id_users_core",
+          id_user: "users.id_users",
           id_customer: "ticket.id_customer",
           id_protocol: "ticket.id_protocol",
           closed: "ticket.closed",
@@ -497,7 +479,7 @@ class TicketModel {
           id_phase: "phase_ticket.id_phase",
           name: "phase.name",
           template: "phase.id_form_template",
-          id_user: "users.id_users_core",
+          id_user: "users.id_users",
           id_form: "phase_ticket.id_form",
           created_at: "phase_ticket.created_at",
         })
@@ -587,7 +569,7 @@ class TicketModel {
           id_protocol: "ticket_protocol.id_protocol",
           created_at: "ticket_protocol.created_at",
           updated_at: "ticket_protocol.updated_at",
-          id_user: "users.id_users_core",
+          id_user: "users.id_users",
           created_by_ticket: "ticket_protocol.created_by_ticket",
         })
         .leftJoin("users", "users.id", `ticket_protocol.id_user`)
@@ -615,7 +597,7 @@ class TicketModel {
           id_ticket: "view_ticket.id_ticket",
           start: "view_ticket.start",
           end: "view_ticket.end",
-          id_user: "users.id_users_core",
+          id_user: "users.id_users",
         })
         .leftJoin("users", "users.id", `view_ticket.id_user`)
         .where("id_ticket", id_ticket);
@@ -631,7 +613,7 @@ class TicketModel {
         .select({
           id_protocol: "ticket_protocol.id_protocol",
           created_at: "ticket_protocol.created_at",
-          id_user: "users.id_users_core",
+          id_user: "users.id_users",
         })
         .leftJoin("users", "users.id", `ticket_protocol.id_user`)
         .where("ticket_protocol.id_ticket", id_ticket)
@@ -648,7 +630,7 @@ class TicketModel {
       return await database("ticket")
         .select({
           id_seq: "ticket.id_seq",
-          id_user: "users.id_users_core",
+          id_user: "users.id_users",
           created_at: "ticket.created_at",
         })
         .leftJoin("users", "users.id", `ticket.id_user`)
@@ -669,7 +651,7 @@ class TicketModel {
           id_ticket_father: "ticket.id_ticket_father",
           created_by_protocol: "ticket.created_by_protocol",
           id_protocol: "ticket.id_protocol",
-          id_user: "users.id_users_core",
+          id_user: "users.id_users",
           created_at: "ticket.created_at",
           status: "ticket.id_status",
           time_closed_ticket: "ticket.time_closed_ticket",
@@ -717,7 +699,7 @@ class TicketModel {
         ticket.id_company,
         phase_ticket.id_phase as id_phase,
         phase.name as phase,
-        users.id_users_core,
+        users.id_users as id_users_core,
         users.name,
         phase.form,
         ticket.closed,
@@ -747,7 +729,7 @@ class TicketModel {
       return await database("ticket")
         .select({
           id_seq: "ticket.id_seq",
-          id_user: "users.id_users_core",
+          id_user: "users.id_users",
           created_at: "ticket.created_at",
           closed: "ticket.closed",
           department_origin: "department.id_department_core",
