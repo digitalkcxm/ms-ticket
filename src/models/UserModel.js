@@ -3,13 +3,14 @@ const database = require("../config/database/database");
 const tableName = "users";
 
 class UserModel {
-  async getUserByID(id, company_id) {
+  async getUserByID(id, company_id, id_type) {
     try {
       return await database(tableName)
-        .select("users.id, users.name, type_user.name as source")
+        .select(["users.id", "users.name", "type_user.name as source"])
         .leftJoin("type_user", "type_user.id", `users.id_type`)
         .where("id_users", id)
-        .andWhere("id_company", company_id);
+        .andWhere("id_company", company_id)
+        .andWhere("users.id_type", id_type);
     } catch (err) {
       console.log("Error when catch user info by id => ", err);
       return err;

@@ -802,16 +802,22 @@ class TicketController {
       };
 
       let result = await activitiesModel.create(obj);
-
+console.log('teste')
       if (result && result.length > 0) {
         await updateSLA(data.id_ticket, ticket[0].phase_id, true);
 
-        obj.id = result[0].id;
 
-        obj.created_at = moment(obj.created_at).format("DD/MM/YYYY HH:mm:ss");
-        obj.updated_at = moment(obj.updated_at).format("DD/MM/YYYY HH:mm:ss");
-        obj.type = "note";
-        obj.id_user = data.id_user;
+        obj = {
+          id: result[0].id,
+          message: data.text,
+          id_user: data.id_user,
+          type: "note",
+          source: user.source,
+          name: user.name,
+          created_at: moment(obj.created_at).format("DD/MM/YYYY HH:mm:ss"),
+          updated_at: moment(obj.updated_at).format("DD/MM/YYYY HH:mm:ss"),
+          
+        }
 
         const dashPhase = await phaseModel.getPhaseById(
           ticket[0].phase_id,
