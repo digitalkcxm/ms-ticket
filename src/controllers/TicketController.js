@@ -720,7 +720,6 @@ class TicketController {
           name: user.name,
           created_at: moment(obj.created_at).format("DD/MM/YYYY HH:mm:ss"),
           updated_at: moment(obj.updated_at).format("DD/MM/YYYY HH:mm:ss"),
-          
         }
 
         await CallbackDigitalk(
@@ -816,7 +815,6 @@ console.log('teste')
           name: user.name,
           created_at: moment(obj.created_at).format("DD/MM/YYYY HH:mm:ss"),
           updated_at: moment(obj.updated_at).format("DD/MM/YYYY HH:mm:ss"),
-          
         }
 
         const dashPhase = await phaseModel.getPhaseById(
@@ -834,14 +832,7 @@ console.log('teste')
             type: "socket",
             channel: `ticket_${ticket[0].id}`,
             event: "activity",
-            obj: {
-              created_at: obj.created_at,
-              id: obj.id,
-              id_user: obj.id_user,
-              updated_at: obj.updated_at,
-              type: "note",
-              message: data.text,
-            },
+            obj,
           },
           companyVerified[0].callback
         );
