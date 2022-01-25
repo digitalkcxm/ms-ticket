@@ -22,6 +22,7 @@ class ActivitiesModel {
                 "name": "users.name",
                 "source": "type_user.name",
                 "created_at": `${tableName}.created_at`,
+                "updated_at": `${tableName}.updated_at`,
             })
                 .leftJoin("users", "users.id", `${tableName}.id_user`)
                 .leftJoin("type_user", "type_user.id", `users.id_type`)

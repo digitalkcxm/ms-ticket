@@ -710,25 +710,25 @@ class TicketController {
       if (result && result.length > 0) {
         await updateSLA(req.body.id_ticket, ticket[0].phase_id, true);
 
-        obj.id = result[0].id;
+        
+        obj = {
+          id: result[0].id,
+          message: req.body.text,
+          id_user: req.body.id_user,
+          type: "note",
+          source: user.source,
+          name: user.name,
+          created_at: moment(obj.created_at).format("DD/MM/YYYY HH:mm:ss"),
+          updated_at: moment(obj.updated_at).format("DD/MM/YYYY HH:mm:ss"),
+          
+        }
 
-        obj.created_at = moment(obj.created_at).format("DD/MM/YYYY HH:mm:ss");
-        obj.updated_at = moment(obj.updated_at).format("DD/MM/YYYY HH:mm:ss");
-        obj.type = "note";
-        obj.id_user = req.body.id_user;
         await CallbackDigitalk(
           {
             type: "socket",
             channel: `ticket_${ticket[0].id}`,
             event: "activity",
-            obj: {
-              created_at: obj.created_at,
-              id: obj.id,
-              id_user: obj.id_user,
-              updated_at: obj.updated_at,
-              type: "note",
-              message: req.body.text,
-            },
+            obj
           },
           req.company[0].callback
         );
@@ -802,16 +802,22 @@ class TicketController {
       };
 
       let result = await activitiesModel.create(obj);
-
+console.log('teste')
       if (result && result.length > 0) {
         await updateSLA(data.id_ticket, ticket[0].phase_id, true);
 
-        obj.id = result[0].id;
 
-        obj.created_at = moment(obj.created_at).format("DD/MM/YYYY HH:mm:ss");
-        obj.updated_at = moment(obj.updated_at).format("DD/MM/YYYY HH:mm:ss");
-        obj.type = "note";
-        obj.id_user = data.id_user;
+        obj = {
+          id: result[0].id,
+          message: data.text,
+          id_user: data.id_user,
+          type: "note",
+          source: user.source,
+          name: user.name,
+          created_at: moment(obj.created_at).format("DD/MM/YYYY HH:mm:ss"),
+          updated_at: moment(obj.updated_at).format("DD/MM/YYYY HH:mm:ss"),
+          
+        }
 
         const dashPhase = await phaseModel.getPhaseById(
           ticket[0].phase_id,
