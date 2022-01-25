@@ -3,7 +3,14 @@ const UserModel = require("../models/UserModel");
 const userModel = new UserModel();
 
 class UserController {
-  async checkUserCreated(user, company_id, name = "", phone = "", email = "",id_type = 1) {
+  async checkUserCreated(
+    user,
+    company_id,
+    name = "",
+    phone = "",
+    email = "",
+    id_type = 1
+  ) {
     try {
       let result = await userModel.getUserByID(user, company_id);
       if (!result || result.length <= 0) {
@@ -16,7 +23,7 @@ class UserController {
           id_type,
         });
       } else if (result && !result[0].name) {
-        await userModel.update(result[0].id, { name });
+        await userModel.update(result[0].id, { name, phone, email, id_type });
       }
 
       return result[0];

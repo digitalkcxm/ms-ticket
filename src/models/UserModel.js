@@ -6,7 +6,8 @@ class UserModel {
   async getUserByID(id, company_id) {
     try {
       return await database(tableName)
-        .select("id")
+        .select("users.id, users.name, type_user.name as source")
+        .leftJoin("type_user", "type_user.id", `users.id_type`)
         .where("id_users", id)
         .andWhere("id_company", company_id);
     } catch (err) {
