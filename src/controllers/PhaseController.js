@@ -1627,10 +1627,9 @@ class PhaseController {
   }
 
   async headerGenerate(data) {
-    const result = await phaseModel.getFormularios(data.id);
+    const result = await phaseModel.getFormularios(data.id, data.customer);
     let campos_calculados = {};
     if (result.id_form) {
-      
       const register = await new FormTemplate(global.mongodb).findRegistes(
         result.id_form[0].id_form_template
       );
@@ -1647,8 +1646,7 @@ class PhaseController {
                 campos_calculados[campo.column] = 0;
 
               campos_calculados[campo.column] =
-                campos_calculados[campo.column] +
-                documents[campo.column];
+                campos_calculados[campo.column] + documents[campo.column];
             }
           }
         }
@@ -1658,10 +1656,21 @@ class PhaseController {
     const header = {
       campos_calculados: campos_calculados,
     };
-    header.total_tickets = await ticketModel.countAllTicket(data.id);
+    header.total_tickets = await ticketModel.countAllTicket(
+      data.id,
+      data.customer
+    );
 
-    header.open_tickets = await ticketModel.countTicket(data.id, false);
-    header.closed_tickets = await ticketModel.countTicket(data.id, true);
+    header.open_tickets = await ticketModel.countTicket(
+      data.id,
+      false,
+      data.customer
+    );
+    header.closed_tickets = await ticketModel.countTicket(
+      data.id,
+      true,
+      data.customer
+    );
 
     if (header.open_tickets != "0") {
       header.percent_open_tickets = (
@@ -1681,13 +1690,15 @@ class PhaseController {
       header.percent_closed_tickets = 0;
     }
 
-    header.counter_sla = await counter_sla(data.id);
-    header.counter_sla_closed = await counter_sla(data.id, true);
+    header.counter_sla = await counter_sla(data.id, false, data.customer);
+    header.counter_sla_closed = await counter_sla(data.id, true, data.customer);
 
-    await redis.set(
-      `msTicket:header:${data.authorization}:phase:${data.id}`,
-      JSON.stringify(header)
-    );
+    if (!data.customer) {
+      await redis.set(
+        `msTicket:header:${data.authorization}:phase:${data.id}`,
+        JSON.stringify(header)
+      );
+    }
 
     return header;
   }

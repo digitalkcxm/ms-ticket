@@ -116,8 +116,7 @@ class TicketModel {
           ` AND department.id_department_core in (${obj.department}) `;
       }
       if (obj.users && obj.users.length > 0) {
-        stringWhere =
-          stringWhere + ` AND users.id_users in (${obj.users}) `;
+        stringWhere = stringWhere + ` AND users.id_users in (${obj.users}) `;
       }
       if (obj.closed && obj.closed.length > 0) {
         stringWhere = stringWhere + ` AND ticket.closed in (${obj.closed}) `;
@@ -240,8 +239,7 @@ class TicketModel {
           ` AND department.id_department_core in (${obj.department}) `;
       }
       if (obj.users && obj.users.length > 0) {
-        stringWhere =
-          stringWhere + ` AND users.id_users in (${obj.users}) `;
+        stringWhere = stringWhere + ` AND users.id_users in (${obj.users}) `;
       }
       if (obj.closed && obj.closed.length > 0) {
         stringWhere = stringWhere + ` AND ticket.closed in (${obj.closed}) `;
@@ -338,22 +336,46 @@ class TicketModel {
     }
   }
 
-  async countTicket(id_phase, status) {
-    const result = await database("phase_ticket")
-      .count("ticket.id")
-      .leftJoin("ticket", "ticket.id", "phase_ticket.id_ticket")
-      .where("phase_ticket.id_phase", id_phase)
-      .andWhere("phase_ticket.active", true)
-      .andWhere("ticket.closed", status);
+  async countTicket(id_phase, status, customer = false) {
+    let result;
+    if (customer) {
+      result = await database("phase_ticket")
+        .count("ticket.id")
+        .leftJoin("ticket", "ticket.id", "phase_ticket.id_ticket")
+        .leftJoin("customer", "customer.id_ticket", "phase_ticket.id_ticket")
+        .where("phase_ticket.id_phase", id_phase)
+        .andWhere("phase_ticket.active", true)
+        .andWhere("ticket.closed", status)
+        .andWhere("customer.crm_contact_id", customer);
+    } else {
+      result = await database("phase_ticket")
+        .count("ticket.id")
+        .leftJoin("ticket", "ticket.id", "phase_ticket.id_ticket")
+        .where("phase_ticket.id_phase", id_phase)
+        .andWhere("phase_ticket.active", true)
+        .andWhere("ticket.closed", status);
+    }
+
     return result[0].count;
   }
 
-  async countAllTicket(id_phase) {
-    const result = await database("phase_ticket")
-      .count("ticket.id")
-      .leftJoin("ticket", "ticket.id", "phase_ticket.id_ticket")
-      .where("phase_ticket.id_phase", id_phase)
-      .andWhere("phase_ticket.active", true);
+  async countAllTicket(id_phase, customer = false) {
+    let result;
+    if (customer) {
+      result = await database("phase_ticket")
+        .count("ticket.id")
+        .leftJoin("ticket", "ticket.id", "phase_ticket.id_ticket")
+        .leftJoin("customer", "customer.id_ticket", "phase_ticket.id_ticket")
+        .where("phase_ticket.id_phase", id_phase)
+        .andWhere("phase_ticket.active", true)
+        .andWhere("customer.crm_contact_id", customer);
+    } else {
+      result = await database("phase_ticket")
+        .count("ticket.id")
+        .leftJoin("ticket", "ticket.id", "phase_ticket.id_ticket")
+        .where("phase_ticket.id_phase", id_phase)
+        .andWhere("phase_ticket.active", true);
+    }
 
     return result[0].count;
   }
