@@ -1,7 +1,7 @@
 const MongoClient = require("mongodb").MongoClient;
 
 module.exports = async (app, callback) => {
-      let connectionMongo = `mongodb://${process.env.MONGO_USERNAME}:${process.env.MONGO_PASSWORD}@${process.env.MONGO_HOST}:${process.env.MONGO_PORT}/`
+       let connectionMongo = `mongodb://${process.env.MONGO_USERNAME}:${process.env.MONGO_PASSWORD}@${process.env.MONGO_HOST}:${process.env.MONGO_PORT}/`
     //let connectionMongo = "mongodb://localhost:27017/msticket";
 
   if (process.env.MONGO_STRINGCONNECTION_PARAMS)

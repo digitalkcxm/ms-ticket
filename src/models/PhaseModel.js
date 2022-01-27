@@ -393,6 +393,27 @@ class PhaseModel {
  `);
     return tickets.rows;
   }
+
+  async getFormularios(id_phase) {
+    try {
+      const id_form_template = await database("phase")
+        .select("id_form_template")
+        .where("id", id_phase);
+
+      if (id_form_template) {
+        const result = await database("phase_ticket")
+          .select("id_form")
+          .where("id_phase", id_phase)
+          .andWhere("active", true);
+
+        return { forms: result, id_form: id_form_template };
+      }
+      return false;
+    } catch (err) {
+      console.log("Error ger formularios ===>", err);
+      return err;
+    }
+  }
 }
 
 module.exports = PhaseModel;

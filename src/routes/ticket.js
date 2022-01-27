@@ -56,7 +56,7 @@ router.use(
   // body("responsible").isArray()
 );
 
-//router.post("/", (req, res) => ticketController.queueCreate(req, res))
+// router.post("/", (req, res) => ticketController.create(req, res))
 //router.put("/:id", (req, res) => ticketController.queueUpdateTicket(req, res))
 
 

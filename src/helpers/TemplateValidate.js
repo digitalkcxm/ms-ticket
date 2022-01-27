@@ -18,8 +18,14 @@ module.exports = async function (columns) {
       ? ""
       : errors.push(`item ${i}: required é um campo booleano`);
 
+    if (typeof column.calculable === "boolean") {
+      if (column.type != "int" && column.type != "decimal") {
+        errors.push(`item ${i}: O tipo ${column.type} não pode ser calculável`);
+      }
+    }
+
     let type = await typeColumnModel.getTypeByName(column.type);
-    console.log("type ===>",type)
+    console.log("type ===>", type);
     column.type = type.rows[0].id;
     if (type.length <= 0) errors.push(`item ${i}: Invalid type`);
   }

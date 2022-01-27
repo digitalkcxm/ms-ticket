@@ -50,6 +50,7 @@ const {
 const CallbackDigitalk = require("../services/CallbackDigitalk");
 
 const cache = require("../helpers/Cache");
+
 class PhaseController {
   async create(req, res) {
     // Validação do corpo da requisição.
@@ -93,7 +94,7 @@ class PhaseController {
         if (!templateValidate) {
           return res.status(400).send({ errors: templateValidate });
         }
-
+        console.log("===>", templateValidate);
         obj.id_form_template = templateValidate;
       }
 
@@ -283,7 +284,10 @@ class PhaseController {
           req.query.enable
         );
       } else {
-        result = await phaseModel.getAllPhase(req.headers.authorization,req.query.enable);
+        result = await phaseModel.getAllPhase(
+          req.headers.authorization,
+          req.query.enable
+        );
 
         for (let i in result) {
           result[i] = await this._formatPhase(
@@ -328,7 +332,7 @@ class PhaseController {
     }
   }
   // departments = JSON.parse(departments)
-  async _queryDepartment(department, authorization, status, db,enable) {
+  async _queryDepartment(department, authorization, status, db, enable) {
     let result = await phaseModel.getAllPhasesByDepartmentID(
       department,
       authorization,
@@ -640,7 +644,7 @@ class PhaseController {
     const header = await redis.get(
       `msTicket:header:${authorization}:phase:${result.id}`
     );
-    
+
     if (header) {
       result.header = JSON.parse(header);
     } else {
@@ -778,7 +782,7 @@ class PhaseController {
       let user = await userController.checkUserCreated(
         req.body.id_user,
         req.headers.authorization,
-        req.body.name_user,
+        req.body.name_user
       );
 
       //Verifica se ocorreu algum erro na checagem de usuario.
@@ -1623,7 +1627,37 @@ class PhaseController {
   }
 
   async headerGenerate(data) {
-    const header = {};
+    const result = await phaseModel.getFormularios(data.id);
+    let campos_calculados = {};
+    if (result.id_form) {
+      
+      const register = await new FormTemplate(global.mongodb).findRegistes(
+        result.id_form[0].id_form_template
+      );
+
+      if (register && register.column) {
+        const campos_calculaveis = register.column.filter((x) => x.calculable);
+        if (campos_calculaveis.length > 0) {
+          for await (const forms of result.forms) {
+            const documents = await new FormDocuments(
+              global.mongodb
+            ).findRegister(forms.id_form);
+            for (const campo of campos_calculaveis) {
+              if (!campos_calculados[campo.column])
+                campos_calculados[campo.column] = 0;
+
+              campos_calculados[campo.column] =
+                campos_calculados[campo.column] +
+                documents[campo.column];
+            }
+          }
+        }
+      }
+    }
+
+    const header = {
+      campos_calculados: campos_calculados,
+    };
     header.total_tickets = await ticketModel.countAllTicket(data.id);
 
     header.open_tickets = await ticketModel.countTicket(data.id, false);

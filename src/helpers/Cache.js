@@ -13,7 +13,7 @@ module.exports = async function (authorization, department, phase) {
   await filaController.sendToQueue(
     {
       id: phase,
-      authorization: authorization,
+      authorization: authorization
     },
     "msticket:create_header"
   );
