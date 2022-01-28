@@ -28,7 +28,7 @@ const counter_sla = async function (phase_id, closed = false, customer = false) 
   const slas = await slaModel.getSLASettings(phase_id);
   if (slas && slas.length > 0) {
     let sla_ticket
-    if(customer){
+    if(!customer){
       sla_ticket = await slaModel.getToCountSLA(phase_id, closed);
     }else{
       sla_ticket = await slaModel.getToCountSLAWithCustomer(phase_id, closed, customer);
