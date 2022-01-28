@@ -378,20 +378,122 @@ class PhaseModel {
     }
   }
 
-  async filter(department, id_company) {
-    const tickets = await database.raw(`
+  async dashForCustomer(department, id_company, customer) {
+    try {
+      const total_fases = await database.raw(`
+    SELECT COUNT(phase.id) 
+    FROM department_phase 
+    LEFT JOIN department ON department.id = department_phase.id_department 
+    LEFT JOIN phase ON phase.id = department_phase.id_phase 
+    WHERE department_phase.active = true 
+    AND phase.active = true 
+    AND department.id_department_core = ${department} 
+    AND phase.id_company = '${id_company}'
+    `);
+
+      const total_tickets = await database.raw(`
+    SELECT COUNT(ticket.id) FROM ticket
+    LEFT JOIN phase_ticket ON phase_ticket.id_ticket = ticket.id
+    LEFT JOIN phase ON phase.id = phase_ticket.id_phase
+    LEFT JOIN department_phase ON department_phase.id_phase = phase.id
+    LEFT JOIN department ON department.id = department_phase.id_department
+    LEFT JOIN customer ON customer.id_ticket = ticket.id
+    WHERE department.id_department_core = ${department} 
+    AND phase.id_company = '${id_company}'
+    AND phase.active = true
+    AND department_phase.active = true
+    AND phase_ticket.active = true
+    AND customer.crm_contact_id = ${customer};
+    `);
+
+      const tickets = await database.raw(`
     SELECT ticket.id, phase_ticket.id_phase, ticket.id_status FROM ticket
     LEFT JOIN phase_ticket ON phase_ticket.id_ticket = ticket.id
     LEFT JOIN phase ON phase.id = phase_ticket.id_phase
+    LEFT JOIN department_phase ON department_phase.id_phase = phase.id
+    LEFT JOIN department ON department.id = department_phase.id_department
+    LEFT JOIN customer ON customer.id_ticket = ticket.id
+    WHERE department.id_department_core = ${department} 
+    AND phase.id_company = '${id_company}'
+    AND phase.active = true
+    AND department_phase.active = true
+    AND phase_ticket.active = true
+    AND customer.crm_contact_id = ${customer};
+ `);
+
+      const total_tickets_fechados = await database.raw(`   
+    SELECT COUNT(ticket.id) FROM ticket
+    LEFT JOIN phase_ticket ON phase_ticket.id_ticket = ticket.id
+    LEFT JOIN phase ON phase.id = phase_ticket.id_phase
+    LEFT JOIN department_phase ON department_phase.id_phase = phase.id
+    LEFT JOIN department ON department.id = department_phase.id_department
+    LEFT JOIN customer ON customer.id_ticket = ticket.id
+    WHERE department.id_department_core = ${department} 
+    AND phase.id_company = '${id_company}'
+    AND phase.active = true
+    AND department_phase.active = true
+    AND phase_ticket.active = true
+    AND ticket.closed = true
+    AND ticket.id_status = 3
+    AND customer.crm_contact_id = ${customer};
+    `);
+
+      const phases = await database.raw(`   
+    SELECT phase.id FROM phase
     LEFT JOIN department_phase ON department_phase.id_phase = phase.id
     LEFT JOIN department ON department.id = department_phase.id_department
     WHERE department.id_department_core = ${department} 
     AND phase.id_company = '${id_company}'
     AND phase.active = true
     AND department_phase.active = true
-    AND phase_ticket.active = true;
- `);
-    return tickets.rows;
+    `);
+
+      return {
+        total_fases: total_fases.rows[0].count,
+        total_tickets: total_tickets.rows[0].count,
+        total_tickets_fechados: total_tickets_fechados.rows[0].count,
+        tickets: tickets.rows,
+        phases: phases.rows,
+        // total_tickets_atendimento: total_tickets_atendimento.rows[0].count,
+      };
+    } catch (err) {
+      console.log("dashs =>", err);
+      return false;
+    }
+  }
+
+  async filter(department, id_company, customer) {
+    if (customer) {
+      const tickets = await database.raw(`
+      SELECT ticket.id, phase_ticket.id_phase, ticket.id_status FROM ticket
+      LEFT JOIN phase_ticket ON phase_ticket.id_ticket = ticket.id
+      LEFT JOIN phase ON phase.id = phase_ticket.id_phase
+      LEFT JOIN department_phase ON department_phase.id_phase = phase.id
+      LEFT JOIN department ON department.id = department_phase.id_department
+      LEFT JOIN customer ON customer.id_ticket = ticket.id
+      WHERE department.id_department_core = ${department} 
+      AND phase.id_company = '${id_company}'
+      AND phase.active = true
+      AND department_phase.active = true
+      AND phase_ticket.active = true
+      AND customer.crm_contact_id = ${customer};
+   `);
+      return tickets.rows;
+    } else {
+      const tickets = await database.raw(`
+      SELECT ticket.id, phase_ticket.id_phase, ticket.id_status FROM ticket
+      LEFT JOIN phase_ticket ON phase_ticket.id_ticket = ticket.id
+      LEFT JOIN phase ON phase.id = phase_ticket.id_phase
+      LEFT JOIN department_phase ON department_phase.id_phase = phase.id
+      LEFT JOIN department ON department.id = department_phase.id_department
+      WHERE department.id_department_core = ${department} 
+      AND phase.id_company = '${id_company}'
+      AND phase.active = true
+      AND department_phase.active = true
+      AND phase_ticket.active = true;
+   `);
+      return tickets.rows;
+    }
   }
 
   async getFormularios(id_phase, customer = false) {

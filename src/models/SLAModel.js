@@ -153,6 +153,7 @@ class SLAModel {
     }
   }
 
+
   async getToCountSLA(id_phase, closed = false) {
     if (closed) {
       return await database.raw(`
