@@ -19,7 +19,7 @@ const sla_status = {
   aberto: 3,
 };
 
-const counter_sla = async function (phase_id, closed = false) {
+const counter_sla = async function (phase_id, closed = false, customer = false) {
   let obj = {
     emdia: 0,
     atrasado: 0,
@@ -27,7 +27,13 @@ const counter_sla = async function (phase_id, closed = false) {
   };
   const slas = await slaModel.getSLASettings(phase_id);
   if (slas && slas.length > 0) {
-    const sla_ticket = await slaModel.getToCountSLA(phase_id, closed);
+    let sla_ticket
+    if(customer){
+      sla_ticket = await slaModel.getToCountSLA(phase_id, closed);
+    }else{
+      sla_ticket = await slaModel.getToCountSLAWithCustomer(phase_id, closed, customer);
+    }
+    
     if (sla_ticket && sla_ticket.rows && sla_ticket.rows.length > 0) {
       for await (const sla of sla_ticket.rows) {
         switch (sla.id_sla_type) {

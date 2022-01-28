@@ -15,7 +15,8 @@ const ticketModel = new TicketModel();
 const CallbackDigitalk = require("../services/CallbackDigitalk");
 const { ticketSLA, settingsSLA } = require("../helpers/SLAFormat");
 
-
+const PhaseController = require("../controllers/PhaseController");
+const phaseController = new PhaseController();
 class CustomerController {
   async create(req, res) {
     const errors = validationResult(req);
@@ -78,7 +79,6 @@ class CustomerController {
   async getByID(req, res) {
     try {
       const result = await customerModel.getTicketByIDCRMCustomer(
-        
         req.query.status,
         req.params.id,
         req.query.department
@@ -92,6 +92,13 @@ class CustomerController {
         if (phases.filter((y) => y.id === x.id).length <= 0) {
           x.phase_sla = await settingsSLA(x.id);
           x.sla = await ticketSLA(x.id, x.id_ticket);
+
+          x.header = await phaseController.headerGenerate({
+            id: x.id,
+            authorization: req.body.authorization,
+            customer: req.params.id,
+          });
+
           phases.push({
             id: x.id,
             department: x.id_department_core,
@@ -101,6 +108,7 @@ class CustomerController {
             order: x.order,
             created_at: x.created_at,
             updated_at: x.updated_at,
+            header: x.header,
             ticket: [
               {
                 closed: x.closed,

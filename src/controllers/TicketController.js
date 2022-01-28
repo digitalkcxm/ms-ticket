@@ -808,6 +808,7 @@ console.log('teste')
 
         obj = {
           id: result[0].id,
+          id_seq: ticket[0].id_seq,
           message: data.text,
           id_user: data.id_user,
           type: "note",
