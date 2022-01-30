@@ -189,10 +189,10 @@ class SLAModel {
       left join ticket on ticket.id = ticket_sla_control.id_ticket 
       left join customer on customer.id_ticket = ticket.id
       where ticket_sla_control.id_phase = '${id_phase}'
-      and phase_Ticket.id_phase = '${id_phase}' 
+      and phase_ticket.id_phase = '${id_phase}' 
       and phase_ticket.active = true 
       and ticket.id_status = 3
-      and customer.crm_contact_id = ${customer};
+      and customer.crm_contact_id = '${customer}';
       `);
     } else {
       return await database.raw(`
@@ -202,10 +202,10 @@ class SLAModel {
       left join ticket on ticket.id = ticket_sla_control.id_ticket 
       left join customer on customer.id_ticket = ticket.id
       where ticket_sla_control.id_phase = '${id_phase}' 
-      and phase_Ticket.id_phase = '${id_phase}'
+      and phase_ticket.id_phase = '${id_phase}'
       and phase_ticket.active = true 
-      and ticket.id_status != 3;
-      and customer.crm_contact_id = ${customer}
+      and ticket.id_status != 3
+      and customer.crm_contact_id = '${customer}';
       `);
     }
   }
