@@ -1463,8 +1463,8 @@ console.log('teste')
 
       const tickets = [];
       for (const ticket of result) {
-        const t = [ticket];
-        const ticketFormated = await formatTicketForPhase(t, ticket);
+        
+        const ticketFormated = await formatTicketForPhase({id:ticket.id_phase}, ticket);
         tickets.push(ticketFormated);
       }
 
