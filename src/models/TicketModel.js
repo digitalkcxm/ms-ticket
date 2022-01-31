@@ -778,7 +778,7 @@ class TicketModel {
   async getLastResponsibleTicket(id_ticket) {
     try {
       const result = await database("responsible_ticket")
-        .select("users.id_users")
+        .select("users.name")
         .leftJoin("users", "users.id", "responsible_ticket.id_user")
         .where("responsible_ticket.id_ticket", id_ticket)
         .orderBy("responsible_ticket.id", "desc")
