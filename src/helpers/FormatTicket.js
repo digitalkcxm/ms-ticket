@@ -23,6 +23,7 @@ async function formatTicketForPhase(phase, ticket) {
     : "";
   ticket.created_at = moment(ticket.created_at).format("DD/MM/YYYY HH:mm:ss");
   ticket.updated_at = moment(ticket.updated_at).format("DD/MM/YYYY HH:mm:ss");
+  ticket.responsible = await ticketModel.getLastResponsibleTicket(ticket.id);
   delete ticket.id_company;
   delete ticket.id_form;
 

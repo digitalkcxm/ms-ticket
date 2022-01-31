@@ -1,6 +1,7 @@
 const database = require("../config/database/database");
 const moment = require("moment");
 const { leftJoin } = require("../config/database/database");
+const res = require("express/lib/response");
 const tableName = "ticket";
 class TicketModel {
   async create(obj) {
@@ -602,6 +603,7 @@ class TicketModel {
       return err;
     }
   }
+
   async insertViewTicket(obj) {
     try {
       return await database("view_ticket").insert(obj);
@@ -770,6 +772,25 @@ class TicketModel {
     } catch (err) {
       console.log("error get ticket created by ticket =>", err);
       return [];
+    }
+  }
+
+  async getLastResponsibleTicket(id_ticket) {
+    try {
+      const result = await database("responsible_ticket")
+        .select("users.id_user")
+        .leftJoin("users", "users.id", "responsible_ticket.id_user")
+        .where("responsible_ticket.id_ticket", id_ticket)
+        .orderBy("responsible_ticket.id", "desc")
+        .limit(1);
+
+      return result[0].id_user;
+    } catch (err) {
+      console.log(
+        "erro ao capturar o ultimo responsavel pelo ticket ===>",
+        err
+      );
+      return err;
     }
   }
 }
