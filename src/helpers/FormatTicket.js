@@ -25,7 +25,7 @@ async function formatTicketForPhase(phase, ticket) {
   ticket.updated_at = moment(ticket.updated_at).format("DD/MM/YYYY HH:mm:ss");
   const responsible = await ticketModel.getLastResponsibleTicket(ticket.id);
 
-  responsible.length > 0
+  responsible.id_users
     ? (ticket.responsible = responsible.id_users)
     : (ticket.responsible = "");
 
