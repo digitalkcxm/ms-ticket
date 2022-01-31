@@ -778,13 +778,13 @@ class TicketModel {
   async getLastResponsibleTicket(id_ticket) {
     try {
       const result = await database("responsible_ticket")
-        .select("users.id_user")
+        .select("users.id_users")
         .leftJoin("users", "users.id", "responsible_ticket.id_user")
         .where("responsible_ticket.id_ticket", id_ticket)
         .orderBy("responsible_ticket.id", "desc")
         .limit(1);
 
-      return result[0].id_user;
+      return result[0];
     } catch (err) {
       console.log(
         "erro ao capturar o ultimo responsavel pelo ticket ===>",
