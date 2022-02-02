@@ -1465,6 +1465,7 @@ class TicketController {
           { id: ticket.id_phase },
           ticket
         );
+         // sla formatado dessa forma para apresentar no analitico do ticket. favor não mexer sem consultar o Rafael ou o Silas.
         if (ticketFormated.sla) {
           const keys = Object.keys(ticketFormated.sla);
           if (keys.length > 0) {
