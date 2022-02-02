@@ -109,7 +109,7 @@ class TicketModel {
   async getAllTickets(id_company, obj) {
     console.log("TicketModel -> getAllTickets -> id_company", id_company);
     try {
-      let stringWhere = `${tableName}.id_company = '${id_company}' AND phase_ticket.active = true `;
+      let stringWhere = `${tableName}.id_company = '${id_company}'  `;
 
       if (obj.department && obj.department.length > 0) {
         stringWhere =

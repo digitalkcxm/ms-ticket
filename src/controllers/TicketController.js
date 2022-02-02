@@ -710,7 +710,6 @@ class TicketController {
       if (result && result.length > 0) {
         await updateSLA(req.body.id_ticket, ticket[0].phase_id, true);
 
-        
         obj = {
           id: result[0].id,
           message: req.body.text,
@@ -720,14 +719,14 @@ class TicketController {
           name: user.name,
           created_at: moment(obj.created_at).format("DD/MM/YYYY HH:mm:ss"),
           updated_at: moment(obj.updated_at).format("DD/MM/YYYY HH:mm:ss"),
-        }
+        };
 
         await CallbackDigitalk(
           {
             type: "socket",
             channel: `ticket_${ticket[0].id}`,
             event: "activity",
-            obj
+            obj,
           },
           req.company[0].callback
         );
@@ -801,10 +800,9 @@ class TicketController {
       };
 
       let result = await activitiesModel.create(obj);
-console.log('teste')
+      console.log("teste");
       if (result && result.length > 0) {
         await updateSLA(data.id_ticket, ticket[0].phase_id, true);
-
 
         obj = {
           id: result[0].id,
@@ -816,7 +814,7 @@ console.log('teste')
           name: user.name,
           created_at: moment(obj.created_at).format("DD/MM/YYYY HH:mm:ss"),
           updated_at: moment(obj.updated_at).format("DD/MM/YYYY HH:mm:ss"),
-        }
+        };
 
         const dashPhase = await phaseModel.getPhaseById(
           ticket[0].phase_id,
@@ -1463,8 +1461,18 @@ console.log('teste')
 
       const tickets = [];
       for (const ticket of result) {
-        
-        const ticketFormated = await formatTicketForPhase({id:ticket.id_phase}, ticket);
+        const ticketFormated = await formatTicketForPhase(
+          { id: ticket.id_phase },
+          ticket
+        );
+        if (ticketFormated.sla) {
+          const keys = Object.keys(ticketFormated.sla);
+          if (keys.length > 0) {
+            const sla = keys.pop();
+            ticketFormated.countSLA = ticketFormated.sla[sla].status;
+            ticketFormated.sla_time = ticketFormated.sla[sla].limit_sla_time;
+          }
+        }
         tickets.push(ticketFormated);
       }
 
