@@ -316,7 +316,7 @@ class TicketModel {
           id: "ticket.id",
           id_seq: "ticket.id_seq",
           id_user: "users.id_users",
-          user: "users.users",
+          user: "users.name",
           id_protocol: "ticket.id_protocol",
           closed: "ticket.closed",
           id_form: `ticket.id_form`,
