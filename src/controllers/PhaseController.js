@@ -1992,13 +1992,13 @@ class PhaseController {
                 campos_calculados[campo.column] = 0;
 
               campos_calculados[campo.column] =
-                campos_calculados[campo.column] + documents[campo.column];
-            }
+                      parseInt(campos_calculados[campo.column]) + parseInt(documents[campo.column]);
+           }
           }
         }
       }
     }
-
+console.log("campos_calculados",campos_calculados)
     const header = {
       campos_calculados: campos_calculados,
     };
