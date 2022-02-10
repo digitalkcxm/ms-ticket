@@ -441,7 +441,15 @@ class TicketController {
         `,
         };
         if (phase[0].customer && phase[0].customer.notify_open) {
-          obj = { ...obj, notified: "customer" };
+          obj = {
+            ...obj,
+            notified: "customer",
+          };
+          if (phase[0].customer.notify_open_message)
+            obj.message = phase[0].customer.notify_open_message;
+          if (phase[0].customer.notify_open_hsm)
+            obj.hsm_id = phase[0].customer.notify_open_hsm;
+
           await CallbackDigitalk(obj, callback);
         }
 
@@ -486,7 +494,15 @@ class TicketController {
         `,
         };
         if (phase[0].customer && phase[0].customer.notify_progress) {
-          obj = { ...obj, notified: "customer" };
+          obj = {
+            ...obj,
+            notified: "customer",
+          };
+          if (phase[0].customer.notify_progress_message)
+            obj.message = phase[0].customer.notify_progress_message;
+          if (phase[0].customer.notify_progress_hsm)
+            obj.hsm_id = phase[0].customer.notify_progress_hsm;
+
           await CallbackDigitalk(obj, callback);
         }
 
@@ -533,7 +549,15 @@ class TicketController {
         `,
         };
         if (phase[0].customer && phase[0].customer.notify_close) {
-          obj = { ...obj, notified: "customer" };
+          obj = {
+            ...obj,
+            notified: "customer",
+          };
+          if (phase[0].customer.notify_close_message)
+            obj.message = phase[0].customer.notify_close_message;
+          if (phase[0].customer.notify_close_hsm)
+            obj.hsm_id = phase[0].customer.notify_close_hsm;
+
           await CallbackDigitalk(obj, callback);
         }
 
@@ -579,7 +603,15 @@ class TicketController {
         `,
         };
         if (phase[0].customer && phase[0].customer.notify_start_activity) {
-          obj = { ...obj, notified: "customer" };
+          obj = {
+            ...obj,
+            notified: "customer",
+          };
+          if (phase[0].customer.notify_start_activity_message)
+            obj.message = phase[0].customer.notify_start_activity_message;
+          if (phase[0].customer.notify_start_activity_hsm)
+            obj.hsm_id = phase[0].customer.notify_start_activity_hsm;
+
           await CallbackDigitalk(obj, callback);
         }
 
@@ -623,7 +655,16 @@ class TicketController {
         `,
         };
         if (phase[0].customer && phase[0].customer.notify_first_reply) {
-          obj = { ...obj, notified: "customer" };
+          obj = {
+            ...obj,
+            notified: "customer",
+          };
+
+          if (phase[0].customer.notify_start_activity_message)
+            obj.message = phase[0].customer.notify_start_activity_message;
+          if (phase[0].customer.notify_start_activity_hsm)
+            obj.hsm_id = phase[0].customer.notify_start_activity_hsm;
+
           await CallbackDigitalk(obj, callback);
         }
 
@@ -1465,7 +1506,7 @@ class TicketController {
           { id: ticket.id_phase },
           ticket
         );
-         // sla formatado dessa forma para apresentar no analitico do ticket. favor não mexer sem consultar o Rafael ou o Silas.
+        // sla formatado dessa forma para apresentar no analitico do ticket. favor não mexer sem consultar o Rafael ou o Silas.
         if (ticketFormated.sla) {
           const keys = Object.keys(ticketFormated.sla);
           if (keys.length > 0) {
@@ -2599,6 +2640,7 @@ class TicketController {
       history.push({
         id_seq: ticket[0].id_seq,
         id_user: ticket[0].id_user,
+        user: ticket[0].name,
         created_at: ticket[0].created_at,
         closed: ticket[0].closed,
         department_origin: ticket[0].department_origin,
@@ -2632,6 +2674,7 @@ class TicketController {
         history.push({
           id_seq: father_ticket[0].id_seq,
           id_user: father_ticket[0].id_user,
+          user: father_ticket[0].name,
           created_at: moment(father_ticket[0].created_at).format(
             "DD/MM/YYYY HH:mm:ss"
           ),
@@ -2662,6 +2705,7 @@ class TicketController {
                 ticket[0].history.push({
                   id_seq: ticketRelated[0].id_seq,
                   id_user: ticketRelated[0].id_user,
+                  user: ticketRelated[0].name,
                   created_at: moment(ticketRelated[0].created_at).format(
                     "DD/MM/YYYY HH:mm:ss"
                   ),
