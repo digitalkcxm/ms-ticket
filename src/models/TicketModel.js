@@ -283,6 +283,7 @@ class TicketModel {
           id_seq: "ticket.id_seq",
           ids_crm: "ticket.ids_crm",
           id_user: "users.id_users",
+          user: "users.name",
           id_customer: "ticket.id_customer",
           id_protocol: "ticket.id_protocol",
           closed: "ticket.closed",
@@ -315,6 +316,7 @@ class TicketModel {
           id: "ticket.id",
           id_seq: "ticket.id_seq",
           id_user: "users.id_users",
+          user: "users.users",
           id_protocol: "ticket.id_protocol",
           closed: "ticket.closed",
           id_form: `ticket.id_form`,
@@ -389,6 +391,7 @@ class TicketModel {
           id_seq: "ticket.id_seq",
           id_protocol: "ticket.id_protocol",
           id_user: "users.id_users",
+          user: "users.name",
           closed: "ticket.closed",
           id_unit_of_time: "phase.id_unit_of_time",
           id_form: "ticket.id_form",
@@ -503,6 +506,7 @@ class TicketModel {
           name: "phase.name",
           template: "phase.id_form_template",
           id_user: "users.id_users",
+          user: "users.name",
           id_form: "phase_ticket.id_form",
           created_at: "phase_ticket.created_at",
         })
@@ -622,6 +626,7 @@ class TicketModel {
           start: "view_ticket.start",
           end: "view_ticket.end",
           id_user: "users.id_users",
+          user: "users.name",
         })
         .leftJoin("users", "users.id", `view_ticket.id_user`)
         .where("id_ticket", id_ticket);
@@ -638,6 +643,7 @@ class TicketModel {
           id_protocol: "ticket_protocol.id_protocol",
           created_at: "ticket_protocol.created_at",
           id_user: "users.id_users",
+          user: "users.name",
         })
         .leftJoin("users", "users.id", `ticket_protocol.id_user`)
         .where("ticket_protocol.id_ticket", id_ticket)
@@ -655,6 +661,7 @@ class TicketModel {
         .select({
           id_seq: "ticket.id_seq",
           id_user: "users.id_users",
+          user: "users.name",
           created_at: "ticket.created_at",
         })
         .leftJoin("users", "users.id", `ticket.id_user`)
@@ -676,6 +683,7 @@ class TicketModel {
           created_by_protocol: "ticket.created_by_protocol",
           id_protocol: "ticket.id_protocol",
           id_user: "users.id_users",
+          user: "users.name",
           created_at: "ticket.created_at",
           status: "ticket.id_status",
           time_closed_ticket: "ticket.time_closed_ticket",

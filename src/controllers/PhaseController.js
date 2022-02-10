@@ -1975,7 +1975,7 @@ class PhaseController {
   async headerGenerate(data) {
     const result = await phaseModel.getFormularios(data.id, data.customer);
     let campos_calculados = {};
-    if (result.id_form) {
+    if (result.id_form && result.id_form.length > 0) {
       const register = await new FormTemplate(global.mongodb).findRegistes(
         result.id_form[0].id_form_template
       );
@@ -1992,7 +1992,7 @@ class PhaseController {
                 campos_calculados[campo.column] = 0;
 
               campos_calculados[campo.column] =
-                campos_calculados[campo.column] + documents[campo.column];
+              parseInt(campos_calculados[campo.column]) + parseInt(documents[campo.column]);
             }
           }
         }

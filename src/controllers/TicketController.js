@@ -2640,6 +2640,7 @@ class TicketController {
       history.push({
         id_seq: ticket[0].id_seq,
         id_user: ticket[0].id_user,
+        user: ticket[0].name,
         created_at: ticket[0].created_at,
         closed: ticket[0].closed,
         department_origin: ticket[0].department_origin,
@@ -2673,6 +2674,7 @@ class TicketController {
         history.push({
           id_seq: father_ticket[0].id_seq,
           id_user: father_ticket[0].id_user,
+          user: father_ticket[0].name,
           created_at: moment(father_ticket[0].created_at).format(
             "DD/MM/YYYY HH:mm:ss"
           ),
@@ -2703,6 +2705,7 @@ class TicketController {
                 ticket[0].history.push({
                   id_seq: ticketRelated[0].id_seq,
                   id_user: ticketRelated[0].id_user,
+                  user: ticketRelated[0].name,
                   created_at: moment(ticketRelated[0].created_at).format(
                     "DD/MM/YYYY HH:mm:ss"
                   ),
