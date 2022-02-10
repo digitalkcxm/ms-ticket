@@ -1998,7 +1998,7 @@ class PhaseController {
         }
       }
     }
-
+console.log("campos_calculados",campos_calculados)
     const header = {
       campos_calculados: campos_calculados,
     };
