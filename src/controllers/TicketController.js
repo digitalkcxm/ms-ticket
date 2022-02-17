@@ -515,7 +515,7 @@ class TicketController {
 
         if (phase[0].separate && phase[0].separate.separate.length > 0) {
           for (const separate of phase[0].separate.separate) {
-            if (separate.notify_open) {
+            if (separate.notify_open && separate.contact && separate.contact.length > 0) {
               const email = separate.contact.filter((x) => x.email);
               const phone = separate.contact.filter((x) => x.phone);
 
@@ -624,7 +624,7 @@ class TicketController {
 
         if (phase[0].separate && phase[0].separate.separate.length > 0) {
           for (const separate of phase[0].separate.separate) {
-            if (separate.contact.length > 0 && separate.notify_start_activity) {
+            if (separate.contact && separate.contact.length > 0 && separate.notify_start_activity ) {
               const email = separate.contact.filter((x) => x.email);
               const phone = separate.contact.filter((x) => x.phone);
 
@@ -1763,9 +1763,10 @@ class TicketController {
       if (!phase || phase.length <= 0) return false;
 
       await updateSLA(ticket.id, ticket.phase_id);
+      console.log("if de troca de fases -----> ",ticket.phase_id != phase[0].id)
       if (ticket.phase_id != phase[0].id) {
-        await phaseModel.disablePhaseTicket(data.id);
-        await slaModel.disableSLA(data.id);
+       console.log( "disable phase ticket= =====>",await phaseModel.disablePhaseTicket(data.id))
+        console.log("disable sla ------>",await slaModel.disableSLA(data.id))
 
         if (data.form) {
           if (Object.keys(data.form).length > 0) {
@@ -1798,6 +1799,7 @@ class TicketController {
           id_user: user.id,
           id_form: obj.id_form,
         });
+        console.log('phase_id',phase_id)
         if (!phase_id || phase_id.length <= 0) return false;
 
         await createSLAControl(phase[0].id, data.id);
