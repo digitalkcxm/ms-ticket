@@ -1317,6 +1317,7 @@ class TicketController {
         const templateAfter = await new FormTemplate(db).findRegistes(
           history_phase[index + 1].template
         );
+        console.log("created at ----->",history_phase[index + 1])
         obj.push({
           before: {
             phase: history_phase[index + 1].id_phase,
@@ -1330,10 +1331,10 @@ class TicketController {
           },
           type: "change_form",
           id_user: history_phase[index].id_user,
-          created_at: moment(history_phase[index + 1].created_at).format(
+          created_at: moment(history_phase[index].created_at).format(
             "DD/MM/YYYY HH:mm:ss"
           ),
-          updated_at: moment(history_phase[index + 1].updated_at).format(
+          updated_at: moment(history_phase[index].updated_at).format(
             "DD/MM/YYYY HH:mm:ss"
           ),
         });
@@ -1352,7 +1353,7 @@ class TicketController {
               id: history_phase[index + 1].id_phase,
               name: history_phase[index + 1].name,
             },
-            created_at: moment(history_phase[index + 1].created_at).format(
+            created_at: moment(history_phase[index].created_at).format(
               "DD/MM/YYYY HH:mm:ss"
             ),
           });
