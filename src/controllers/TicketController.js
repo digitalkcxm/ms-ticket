@@ -2749,6 +2749,27 @@ class TicketController {
       return res.status(500).send({ error: "Houve algum problema" });
     }
   }
+
+  async tab(req, res) {
+    try {
+      const ticket = await ticketModel.getTicketById(req.body.id_ticket);
+      if (ticket.length <= 0)
+        return res.status(500).send({ error: "Não existe ticket com esse ID" });
+
+      await ticketModel.updateTicket(
+        { id_tab: req.body.id_tab, updated_at: moment().format() },
+        req.body.id_ticket,
+        req.headers.authorization
+      );
+
+      return res.status(200).send(req.body)
+    } catch (err) {
+      console.log("tab err ====> ", err);
+      return res
+        .status(500)
+        .send({ error: "Ocorreu um erro ao tabular o ticket" });
+    }
+  }
 }
 
 module.exports = TicketController;

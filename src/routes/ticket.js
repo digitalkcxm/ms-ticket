@@ -8,7 +8,9 @@ const { body } = require("express-validator");
 const TicketController = require("../controllers/TicketController");
 const ticketController = new TicketController();
 
-router.get("/sla_check/:type", (req, res) => ticketController.cronCheckSLA(req, res))
+router.get("/sla_check/:type", (req, res) =>
+  ticketController.cronCheckSLA(req, res)
+);
 // type: 1 -> /15 * * * * *
 // type: 2 -> /5 * * * * *
 // type: 3 -> /30 * * * * *
@@ -50,14 +52,8 @@ router.post("/protocol", (req, res) =>
 );
 router.put("/close/:id", (req, res) => ticketController.closedTicket(req, res));
 
-router.use(
-  body("id_user").isNumeric(),
-  body("id_phase").isUUID()
-  // body("responsible").isArray()
-);
-
+router.post("/tab", (req, res) => ticketController.tab(req, res));
 // router.post("/", (req, res) => ticketController.create(req, res))
 //router.put("/:id", (req, res) => ticketController.queueUpdateTicket(req, res))
-
 
 module.exports = router;

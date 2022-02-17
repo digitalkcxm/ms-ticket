@@ -52,6 +52,7 @@ class TicketModel {
           id_ticket_father: "ticket.id_ticket_father",
           id_protocol: "ticket.id_protocol",
           status: "status_ticket.name",
+          id_tab: "ticket.id_tab",
         })
         .leftJoin("users", "users.id", `${tableName}.id_user`)
         .leftJoin("phase_ticket", "phase_ticket.id_ticket", `${tableName}.id`)
@@ -90,6 +91,7 @@ class TicketModel {
           id_ticket_father: "ticket.id_ticket_father",
           id_protocol: "ticket.id_protocol",
           status: "status_ticket.name",
+          id_tab: "ticket.id_tab",
         })
         .leftJoin("users", "users.id", `${tableName}.id_user`)
         .leftJoin("phase_ticket", "phase_ticket.id_ticket", `${tableName}.id`)
@@ -145,6 +147,7 @@ class TicketModel {
           department_origin: `${tableName}.department_origin`,
           created_at: `${tableName}.created_at`,
           updated_at: `${tableName}.updated_at`,
+          id_tab: `${tableName}.id_tab`,
         })
         .leftJoin("users", "users.id", "ticket.id_user")
         .leftJoin("phase_ticket", "phase_ticket.id_ticket", `${tableName}.id`)
@@ -294,6 +297,7 @@ class TicketModel {
           updated_at: "ticket.updated_at",
           display_name: "ticket.display_name",
           status: "status_ticket.name",
+          id_tab: `ticket.id_tab`,
         })
         .leftJoin("ticket", "ticket.id", "phase_ticket.id_ticket")
         .leftJoin("users", "users.id", "ticket.id_user")
@@ -326,6 +330,7 @@ class TicketModel {
           display_name: "ticket.display_name",
           start_ticket: "ticket.start_ticket",
           status: "status_ticket.name",
+          id_tab: `ticket.id_tab`,
         })
         .leftJoin("ticket", "ticket.id", "phase_ticket.id_ticket")
         .leftJoin("users", "users.id", "ticket.id_user")
@@ -401,6 +406,7 @@ class TicketModel {
           updated_at: "ticket.updated_at",
           display_name: "ticket.display_name",
           id_ticket_father: "ticket.id_ticket_father",
+          id_tab: `ticket.id_tab`,
         })
         .leftJoin("users", "users.id", "ticket.id_user")
         .leftJoin("phase_ticket", "phase_ticket.id_ticket", `${tableName}.id`)
@@ -483,6 +489,7 @@ class TicketModel {
           department_origin: `ticket.department_origin`,
           created_at: "ticket.created_at",
           updated_at: "ticket.updated_at",
+          id_tab: `ticket.id_tab`,
         })
         .leftJoin("ticket", "ticket.id", "phase_ticket.id_ticket")
         .leftJoin("users", "users.id", "ticket.id_user")
