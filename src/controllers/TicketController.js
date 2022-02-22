@@ -1,84 +1,72 @@
-const TicketModel = require("../models/TicketModel");
-const UserController = require("./UserController");
-const DepartmentController = require("./DepartmentController");
-const PhaseModel = require("../models/PhaseModel");
-const EmailController = require("./EmailController");
-const UserModel = require("../models/UserModel");
-const CompanyModel = require("../models/CompanyModel");
-const EmailService = require("../services/EmailService");
-const EmailModel = require("../models/EmailModel");
-const FormTemplate = require("../documents/FormTemplate");
-const CustomerModel = require("../models/CustomerModel");
-const FormDocuments = require("../documents/FormDocuments");
-const asyncRedis = require("async-redis");
+import FormTemplate from "../documents/FormTemplate.js";
+import FormDocuments from "../documents/FormDocuments.js";
+import asyncRedis from "async-redis";
 const redis = asyncRedis.createClient(
   process.env.REDIS_PORT,
   process.env.REDIS_HOST
 );
-const { formatTicketForPhase } = require("../helpers/FormatTicket");
-const AttachmentsModel = require("../models/AttachmentsModel");
-const { validationResult } = require("express-validator");
-
-const moment = require("moment");
-const { v1 } = require("uuid");
-const notify = require("../helpers/Notify");
-
-const ticketModel = new TicketModel();
-const userController = new UserController();
-const phaseModel = new PhaseModel();
-const emailController = new EmailController();
-const userModel = new UserModel();
-const customerModel = new CustomerModel();
-const companyModel = new CompanyModel();
-const emailService = new EmailService();
-const emailModel = new EmailModel();
-const attachmentsModel = new AttachmentsModel();
-const departmentController = new DepartmentController();
-
-const ActivitiesModel = require("../models/ActivitiesModel");
-const activitiesModel = new ActivitiesModel();
-
-const SLAModel = require("../models/SLAModel");
-const slaModel = new SLAModel();
-
-const { createSLAControl, updateSLA } = require("../helpers/SLAFormat");
+import { formatTicketForPhase } from "../helpers/FormatTicket.js";
+import { validationResult } from "express-validator";
+import moment from "moment";
+import { v1 } from "uuid";
+import UserController from "./UserController.js";
+import PhaseModel from "../models/PhaseModel.js";
+import CustomerModel from "../models/CustomerModel.js";
+import TicketModel from "../models/TicketModel.js";
+import DepartmentController from "./DepartmentController.js";
+import AttachmentsModel from "../models/AttachmentsModel.js";
+import ActivitiesModel from "../models/ActivitiesModel.js";
+import SLAModel from "../models/SLAModel.js";
+import CallbackDigitalk from "../services/CallbackDigitalk.js";
+import { createSLAControl, updateSLA } from "../helpers/SLAFormat.js";
 const sla_status = {
   emdia: 1,
   atrasado: 2,
   aberto: 3,
 };
+import TypeColumnModel from "../models/TypeColumnModel.js";
+import CompanyModel from "../models/CompanyModel.js";
+import UserModel from "../models/UserModel.js";
+import cache from "../helpers/Cache.js";
 
-const TypeColumnModel = require("../models/TypeColumnModel");
-const typeColumnModel = new TypeColumnModel();
-class TicketController {
+export default class TicketController {
+constructor(database = {}, logger = {}){
+  this.logger = logger
+  this.userModel = new UserModel(database, logger);
+  this.companyModel = new CompanyModel(database, logger);
+  this.typeColumnModel = new TypeColumnModel(database, logger);
+  this.slaModel = new SLAModel(database, logger);
+  this.activitiesModel = new ActivitiesModel(database, logger);
+  this.attachmentsModel = new AttachmentsModel(database, logger);
+  this.departmentController = new DepartmentController(database, logger);
+  this.ticketModel = new TicketModel(database, logger);
+  this.customerModel = new CustomerModel(database, logger);
+  this.phaseModel = new PhaseModel(database, logger);
+  this.userController = new UserController(database, logger);
+
+}
+  //Remover assim que função da fila funcionar direitinho
   async create(req, res) {
     const errors = validationResult(req);
     if (!errors.isEmpty())
       return res.status(400).json({ errors: errors.array() });
 
     try {
-      // let userResponsible = [];
-      let id_user = await userController.checkUserCreated(
+      let id_user = await this.userController.checkUserCreated(
         req.body.id_user,
-        req.headers.authorization
+        req.headers.authorization,
+        req.body.name ? req.body.name : "",
+        req.body.phone ? req.body.phone : "",
+        req.body.email ? req.body.email : "",
+        req.body.type_user ? req.body.type_user : 1
       );
-
-      // req.body.responsible.map(async (responsible) => {
-      //   let result;
-      //   result = await userController.checkUserCreated(
-      //     responsible,
-      //     req.headers.authorization,
-      //     responsible.name
-      //   );
-      //   userResponsible.push(result.id);
-      // });
 
       let obj = {
         id: v1(),
         id_company: req.headers.authorization,
         // ids_crm: req.body.ids_crm,
         // id_customer: req.body.id_customer,
-        id_protocol: req.body.id_protocol,
+        // id_protocol: req.body.id_protocol,
         id_user: id_user.id,
         created_at: moment().format(),
         updated_at: moment().format(),
@@ -86,17 +74,19 @@ class TicketController {
       };
 
       if (req.body.department_origin) {
-        let department = await departmentController.checkDepartmentCreated(
+        let department = await this.departmentController.checkDepartmentCreated(
           req.body.department_origin,
           req.headers.authorization
         );
         obj.department_origin = department[0].id;
       }
 
-      let phase = await phaseModel.getPhase(
+      let phase = await this.phaseModel.getPhase(
         req.body.id_phase,
         req.headers.authorization
       );
+      if (!phase || phase.length <= 0)
+        return res.status(400).send({ error: "Invalid id_phase uuid" });
 
       if (req.body.form) {
         if (Object.keys(req.body.form).length > 0) {
@@ -117,7 +107,7 @@ class TicketController {
       }
 
       if (req.body.id_ticket_father) {
-        const ticketFather = await ticketModel.getTicketById(
+        const ticketFather = await this.ticketModel.getTicketById(
           req.body.id_ticket_father
         );
         if (
@@ -131,13 +121,14 @@ class TicketController {
       }
 
       if (req.body.id_protocol) {
-        obj.id_protocol = id_protocol;
+        obj.id_protocol = req.body.id_protocol;
         obj.created_by_protocol = true;
       }
 
-      let result = await ticketModel.create(obj);
+      let result = await this.ticketModel.create(obj);
+
       if (!req.body.display_name || req.body.display_name === "") {
-        await ticketModel.updateTicket(
+        await this.ticketModel.updateTicket(
           {
             display_name: `ticket#${result[0].id_seq}`,
           },
@@ -148,13 +139,10 @@ class TicketController {
       // await this._createResponsibles(userResponsible, obj.id);
 
       if (req.body.customer) {
-        console.log("customer ==> ", req.body.customer);
         await this._createCustomers(req.body.customer, obj.id);
       }
-      if (!phase || phase.length <= 0)
-        return res.status(400).send({ error: "Invalid id_phase uuid" });
 
-      let phase_id = await ticketModel.createPhaseTicket({
+      let phase_id = await this.ticketModel.createPhaseTicket({
         id_phase: phase[0].id,
         id_ticket: obj.id,
         id_user: id_user.id,
@@ -164,9 +152,7 @@ class TicketController {
       if (!phase_id || phase_id.length <= 0)
         return res.status(500).send({ error: "There was an error" });
 
-      // await this._notify(phase[0].id, req.company[0].notify_token, obj.id, userResponsible, emailResponsible, req.headers.authorization, 4, req.app.locals.db)
-
-      let ticket = await ticketModel.getTicketById(
+      let ticket = await this.ticketModel.getTicketById(
         obj.id,
         req.headers.authorization
       );
@@ -181,6 +167,24 @@ class TicketController {
         ticket = await formatTicketForPhase({ id: phase[0].id }, ticket[0]);
 
         // delete ticket[0].id_company
+
+        await CallbackDigitalk(
+          {
+            type: "socket",
+            channel: `phase_${phase[0].id}`,
+            event: "new_ticket",
+            obj: ticket,
+          },
+          req.company[0].callback
+        );
+
+        await this._notify(
+          ticket.id,
+          phase[0].id,
+          req.headers.authorization,
+          "open",
+          req.company[0].callback
+        );
         return res.status(200).send(ticket);
       }
 
@@ -195,12 +199,166 @@ class TicketController {
     }
   }
 
+  async queueCreate(data) {
+    try {
+      let userResponsible = [];
+
+      console.log("data =x=>", data);
+
+      const companyVerified = await this.companyModel.getByIdActive(
+        data.authorization
+      );
+
+      if (!companyVerified || companyVerified.length <= 0) return false;
+
+      let id_user = await this.userController.checkUserCreated(
+        data.id_user,
+        data.authorization,
+        data.name ? data.name : "",
+        data.phone ? data.phone : "",
+        data.email ? data.email : "",
+        data.type_user ? data.type_user : 1
+      );
+
+      let obj = {
+        id: v1(),
+        id_company: data.authorization,
+        // ids_crm: data.ids_crm,
+        // id_customer: data.id_customer,
+        // id_protocol: data.id_protocol,
+        id_user: id_user.id,
+        created_at: moment().format(),
+        updated_at: moment().format(),
+        display_name: data.display_name,
+      };
+
+      if (data.department_origin) {
+        let department = await this.departmentController.checkDepartmentCreated(
+          data.department_origin,
+          data.authorization
+        );
+        obj.department_origin = department[0].id;
+      }
+
+      let phase = await this.phaseModel.getPhase(data.id_phase, data.authorization);
+      if (!phase || phase.length <= 0) return false;
+
+      if (data.form) {
+        //console.log(global.mongodb)
+        if (Object.keys(data.form).length > 0) {
+          if (phase[0].form) {
+            let errors = await this._validateForm(
+              global.mongodb,
+              phase[0].id_form_template,
+              data.form
+            );
+            if (errors.length > 0) return false;
+
+            obj.id_form = await new FormDocuments(
+              global.mongodb
+            ).createRegister(data.form);
+          }
+        }
+      }
+
+      if (data.id_ticket_father) {
+        const ticketFather = await this.ticketModel.getTicketById(
+          data.id_ticket_father
+        );
+        if (
+          ticketFather &&
+          Array.isArray(ticketFather) &&
+          ticketFather.length > 0
+        ) {
+          obj.id_ticket_father = ticketFather[0].id;
+          obj.created_by_ticket = true;
+        }
+      }
+
+      if (data.id_protocol) {
+        obj.id_protocol = data.id_protocol;
+        obj.created_by_protocol = true;
+      }
+
+      let result = await this.ticketModel.create(obj);
+
+      if (!data.display_name || data.display_name === "") {
+        await this.ticketModel.updateTicket(
+          {
+            display_name: `ticket#${result[0].id_seq}`,
+          },
+          result[0].id,
+          data.authorization
+        );
+      }
+      // await this._createResponsibles(userResponsible, obj.id);
+
+      if (data.customer) {
+        await this._createCustomers(data.customer, obj.id);
+      }
+
+      let phase_id = await this.ticketModel.createPhaseTicket({
+        id_phase: phase[0].id,
+        id_ticket: obj.id,
+        id_user: id_user.id,
+        id_form: obj.id_form,
+      });
+
+      if (!phase_id || phase_id.length <= 0) return false;
+
+      let ticket = await this.ticketModel.getTicketById(obj.id, data.authorization);
+      await redis.set(
+        `msTicket:ticket:${ticket.id}`,
+        JSON.stringify(ticket[0])
+      );
+
+      if (result && result.length > 0 && result[0].id) {
+        ticket = await formatTicketForPhase({ id: phase[0].id }, ticket[0]);
+
+        const dashPhase = await this.phaseModel.getPhaseById(
+          ticket.phase_id,
+          data.authorization
+        );
+        await cache(
+          data.authorization,
+          dashPhase[0].id_department,
+          ticket.phase_id
+        );
+
+        await CallbackDigitalk(
+          {
+            type: "socket",
+            channel: `phase_${phase[0].id}`,
+            event: "new_ticket",
+            obj: ticket,
+          },
+          companyVerified[0].callback
+        );
+        await this._notify(
+          ticket.id,
+          phase[0].id,
+          data.authorization,
+          "open",
+          companyVerified[0].callback
+        );
+        // delete ticket[0].id_company
+        return ticket;
+      }
+      await redis.del(`ticket:phase:${data.authorization}`);
+
+      return false;
+    } catch (err) {
+      console.log("Error when generate object to save ticket => ", err);
+      return false;
+    }
+  }
+
   async _createResponsibles(userResponsible = null, ticket_id) {
     try {
-      await ticketModel.delResponsibleTicket(ticket_id);
+      await this.ticketModel.delResponsibleTicket(ticket_id);
       if (userResponsible.length > 0) {
         userResponsible.map(async (user) => {
-          await ticketModel.createResponsibleTicket({
+          await this.ticketModel.createResponsibleTicket({
             id_ticket: ticket_id,
             id_user: user,
             id_type_of_responsible: 2,
@@ -217,23 +375,23 @@ class TicketController {
 
   async _createCustomers(customer = null, ticket_id) {
     try {
-      await customerModel.delCustomerTicket(ticket_id);
-      if (customer.length > 0) {
-        for (let c of customer) {
-          await customerModel.create({
-            id_core: c.id_core,
-            id_ticket: ticket_id,
-            name: c.name,
-            email: c.email,
-            phone: c.phone,
-            identification_document: c.identification_document,
-            crm_ids: c.crm_ids,
-            crm_contact_id: c.crm_contact_id,
-            created_at: moment().format(),
-            updated_at: moment().format(),
-          });
-        }
-      }
+      // await this.customerModel.delCustomerTicket(ticket_id);
+      // if (customer.length > 0) {
+      //   for (let c of customer) {
+      await this.customerModel.create({
+        id_core: customer.id_core,
+        id_ticket: ticket_id,
+        name: customer.name,
+        email: customer.email,
+        phone: customer.phone,
+        identification_document: customer.identification_document,
+        crm_ids: customer.crm_ids,
+        crm_contact_id: customer.crm_contact_id,
+        created_at: moment().format(),
+        updated_at: moment().format(),
+      });
+      //   }
+      // }
       return true;
     } catch (err) {
       console.log("Error when create responsibles ==> ", err);
@@ -241,331 +399,333 @@ class TicketController {
     }
   }
 
-  // async _notify(
-  //   phase_id,
-  //   notify_token,
-  //   ticket_id,
-  //   userResponsibleTicket,
-  //   emailResponsibleTicket,
-  //   id_company,
-  //   type,
-  //   db
-  // ) {
-  //   try {
-  //     let texto = "";
-  //     let register;
-  //     let responsiblePhase = await phaseModel.getResponsiblePhase(phase_id);
-  //     let notifyPhase = await phaseModel.getNotifiedPhase(phase_id);
+  async _notify(id_ticket, id_phase, id_company, action, callback) {
+    const phase = await this.phaseModel.getPhaseById(id_phase, id_company);
+    const ticket = await this.ticketModel.getTicketById(id_ticket, id_company);
 
-  //     const resultPhase = await phaseModel.getPhaseById(phase_id, id_company);
-  //     // if (resultPhase[0].id_form_template) {
+    let obj = {
+      type: "notification",
+      id_ticket: ticket[0].id_seq,
+      id_protocol: ticket[0].id_protocol,
+      customer: await this.customerModel.getAll(ticket[0].id),
+      id_phase,
+      id_department: phase[0].id_department,
+      created_at: moment().format("DD/MM/YYYY HH:mm:ss"),
+    };
 
-  //     // }
+    switch (action) {
+      case "open":
+        obj = {
+          ...obj,
+          message: `
+        Uma atividade foi criada\n\n
+        Identificador da atividade: ${ticket[0].id_seq}\n${
+            ticket[0].id_protocol
+              ? `\n        Protocolo: ${ticket[0].id_protocol}\n`
+              : ""
+          }
+        Fase: ${phase[0].name}\n
+        Data de criação: ${moment().format("DD/MM/YYYY")}\n
+        Hora: ${moment().format("HH:mm:ss")}
+        `,
+        };
+        if (phase[0].customer && phase[0].customer.notify_open) {
+          obj = {
+            ...obj,
+            notified: "customer",
+          };
+          if (phase[0].customer.notify_open_message)
+            obj.message = phase[0].customer.notify_open_message;
+          if (phase[0].customer.notify_open_hsm)
+            obj.hsm_id = phase[0].customer.notify_open_hsm;
 
-  //     const result = await ticketModel.getTicketById(ticket_id, id_company);
-  //     if (result[0].form) {
-  //       result[0].form_data = await new FormDocuments(db).findRegister(
-  //         result[0].id_form
-  //       );
-  //       delete result[0].form;
-  //       delete result[0].id_form;
+          await CallbackDigitalk(obj, callback);
+        }
 
-  //       register = await new FormTemplate(db).findRegistes(
-  //         resultPhase[0].id_form_template
-  //       );
-  //       for (let column of register.column) {
-  //         texto =
-  //           texto +
-  //           `<p><strong>${column.label} : </strong>${
-  //             result[0].form_data[column.column]
-  //               ? result[0].form_data[column.column]
-  //               : ""
-  //           }</p>`;
-  //       }
-  //     }
+        if (phase[0].admin && phase[0].admin.notify_open) {
+          if (phase[0].customer && phase[0].customer.notify_open) {
+            obj = { ...obj, notified: "admin" };
+            await CallbackDigitalk(obj, callback);
+          }
+        }
 
-  //     switch (type) {
-  //       case 3:
-  //         const phaseInfo = await phaseModel.getPhase(phase_id, id_company);
+        if (phase[0].separate && phase[0].separate.separate.length > 0) {
+          for (const separate of phase[0].separate.separate) {
+            if (separate.notify_open) {
+              const email = separate.contact.filter((x) => x.email);
+              const phone = separate.contact.filter((x) => x.phone);
 
-  //         if (phaseInfo[0] && phaseInfo[0].responsible_notify_sla) {
-  //           if (responsiblePhase && responsiblePhase.length > 0) {
-  //             responsiblePhase.map(async (contact) => {
-  //               if (contact.id_user) {
-  //                 await notify(notify_token, {
-  //                   id_user: contact.id_user_core,
-  //                   type: type,
-  //                   id_ticket: ticket_id,
-  //                   id_seq: result[0].id_seq,
-  //                   id_phase: phase_id,
-  //                 });
-  //               } else if (contact.email) {
-  //                 await emailService.sendActiveMenssage(
-  //                   `DIGITALK INFORMA: TICKET #${result[0].id_ticket} EXPIROU`,
-  //                   contact.email,
-  //                   `Um ticket expirou em uma fase de sua responsabilidade <br><br> Fase: ${contact.phase_description}  <br><br>  ${texto}`
-  //                 );
-  //               }
-  //             });
-  //           }
-  //         }
-  //         if (userResponsibleTicket && userResponsibleTicket.length > 0) {
-  //           await this._notifyUser(
-  //             type,
-  //             userResponsibleTicket,
-  //             id_company,
-  //             ticket_id,
-  //             phase_id,
-  //             notify_token,
-  //             result[0].id_seq,
-  //             responsiblePhase,
-  //             notifyPhase
-  //           );
-  //         }
+              obj = {
+                ...obj,
+                notified: "separate",
+                email: email.length > 0 ? email[0].email : "",
+                phone: phone.length > 0 ? phone[0].phone : "",
+              };
+              await CallbackDigitalk(obj, callback);
+            }
+          }
+        }
 
-  //         if (emailResponsibleTicket && emailResponsibleTicket.length > 0) {
-  //           for (let i = 0; i < emailResponsibleTicket.length; i++) {
-  //             await responsiblePhase.map((userPhase) => {
-  //               if (userPhase.id_user == emailResponsibleTicket[i]) {
-  //                 delete emailResponsibleTicket[i];
-  //               }
-  //             });
+        break;
+      case "progress":
+        obj = {
+          ...obj,
+          message: `
+        Uma atividade foi atualizada\n\n
+        Identificador da atividade: ${ticket[0].id_seq}\n${
+            ticket[0].id_protocol
+              ? `\n        Protocolo: ${ticket[0].id_protocol}\n`
+              : ""
+          }
+        Fase: ${phase[0].name}\n
+        Data de Atualização: ${moment().format("DD/MM/YYYY")}\n
+        Hora: ${moment().format("HH:mm:ss")}
+        `,
+        };
+        if (phase[0].customer && phase[0].customer.notify_progress) {
+          obj = {
+            ...obj,
+            notified: "customer",
+          };
+          if (phase[0].customer.notify_progress_message)
+            obj.message = phase[0].customer.notify_progress_message;
+          if (phase[0].customer.notify_progress_hsm)
+            obj.hsm_id = phase[0].customer.notify_progress_hsm;
 
-  //             if (emailResponsibleTicket[i]) {
-  //               await notifyPhase.map((userPhase) => {
-  //                 if (userPhase.id_user == emailResponsibleTicket[i] > 0) {
-  //                   delete emailResponsibleTicket[i];
-  //                 }
-  //               });
-  //             }
-  //             if (emailResponsibleTicket[i]) {
-  //               let infoUser = await emailModel.getEmailById(
-  //                 emailResponsibleTicket[i],
-  //                 id_company
-  //               );
-  //               await emailService.sendActiveMenssage(
-  //                 `DIGITALK INFORMA: TICKET #${result[0].id_ticket} `,
-  //                 infoUser[0].email,
-  //                 `Você foi alertado em um dos seus tickets <br><br>  ${texto}`
-  //               );
-  //             }
-  //           }
-  //         }
-  //         break;
-  //       case 4:
-  //         let body = await emailController.formatEmail(
-  //           result[0].created_at,
-  //           result[0].sla_time,
-  //           result[0].id_seq,
-  //           result[0].name,
-  //           resultPhase[0].name,
-  //           texto,
-  //           result[0].unit_of_time
-  //         );
-  //         let email;
-  //         if (responsiblePhase && responsiblePhase.length > 0) {
-  //           responsiblePhase.map(async (contact) => {
-  //             if (contact.id_user) {
-  //               let resultNotify = await notify(notify_token, {
-  //                 id_user: contact.id_user_core,
-  //                 type: type,
-  //                 id_ticket: ticket_id,
-  //                 id_seq: result[0].id_seq,
-  //                 id_phase: phase_id,
-  //               });
-  //             } else if (contact.email) {
-  //               email = await emailService.sendActiveMenssage(
-  //                 `Ticket ID:${result[0].id_seq}`,
-  //                 contact.email,
-  //                 body
-  //               );
-  //               await emailModel.createLinkedEmailWithChatId(
-  //                 email.data.chatId,
-  //                 contact.id_email,
-  //                 ticket_id
-  //               );
-  //             }
-  //           });
-  //         }
-  //         if (notifyPhase && notifyPhase.length > 0) {
-  //           notifyPhase.map(async (contact) => {
-  //             if (contact.id_user) {
-  //               let resultNotify = await notify(notify_token, {
-  //                 id_user: contact.id_user_core,
-  //                 type: type,
-  //                 id_ticket: ticket_id,
-  //                 id_seq: result[0].id_seq,
-  //                 id_phase: phase_id,
-  //               });
-  //             } else if (contact.email) {
-  //               email = await emailService.sendActiveMenssage(
-  //                 `Ticket ID:${result[0].id_seq}`,
-  //                 contact.email,
-  //                 body
-  //               );
-  //               await emailModel.createLinkedEmailWithChatId(
-  //                 email.data.chatId,
-  //                 contact.id_email,
-  //                 ticket_id
-  //               );
-  //             }
-  //           });
-  //         }
+          await CallbackDigitalk(obj, callback);
+        }
 
-  //         if (userResponsibleTicket && userResponsibleTicket.length > 0) {
-  //           await this._notifyUser(
-  //             type,
-  //             userResponsibleTicket,
-  //             id_company,
-  //             ticket_id,
-  //             phase_id,
-  //             notify_token,
-  //             result[0].id_seq,
-  //             responsiblePhase,
-  //             notifyPhase
-  //           );
-  //         }
-  //         if (emailResponsibleTicket && emailResponsibleTicket.length > 0) {
-  //           for (let i = 0; i < emailResponsibleTicket.length; i++) {
-  //             await responsiblePhase.map((userPhase) => {
-  //               if (userPhase.id_user == emailResponsibleTicket[i]) {
-  //                 delete emailResponsibleTicket[i];
-  //               }
-  //             });
+        if (phase[0].admin && phase[0].admin.notify_progress) {
+          if (phase[0].customer && phase[0].customer.notify_open) {
+            obj = { ...obj, notified: "admin" };
+            await CallbackDigitalk(obj, callback);
+          }
+        }
 
-  //             if (emailResponsibleTicket[i]) {
-  //               await notifyPhase.map((userPhase) => {
-  //                 if (userPhase.id_user == emailResponsibleTicket[i] > 0) {
-  //                   delete emailResponsibleTicket[i];
-  //                 }
-  //               });
-  //             }
+        if (phase[0].separate && phase[0].separate.separate.length > 0) {
+          for (const separate of phase[0].separate.separate) {
+            if (separate.notify_open && separate.contact && separate.contact.length > 0) {
+              const email = separate.contact.filter((x) => x.email);
+              const phone = separate.contact.filter((x) => x.phone);
 
-  //             if (emailResponsibleTicket[i]) {
-  //               let infoUser = await emailModel.getEmailById(
-  //                 emailResponsibleTicket[i],
-  //                 id_company
-  //               );
-  //               email = await emailService.sendActiveMenssage(
-  //                 `Ticket ID:${result[0].id_seq}`,
-  //                 infoUser[0].email,
-  //                 body
-  //               );
-  //               await emailModel.createLinkedEmailWithChatId(
-  //                 email.data.chatId,
-  //                 emailResponsibleTicket[i],
-  //                 ticket_id
-  //               );
-  //             }
-  //           }
-  //         }
-  //         break;
-  //       case 5:
-  //         if (userResponsibleTicket && userResponsibleTicket.length > 0) {
-  //           await this._notifyUser(
-  //             type,
-  //             userResponsibleTicket,
-  //             id_company,
-  //             ticket_id,
-  //             phase_id,
-  //             notify_token,
-  //             result[0].id_seq
-  //           );
-  //         }
+              obj = {
+                ...obj,
+                notified: "separate",
+                email: email.length > 0 ? email[0].email : "",
+                phone: phone.length > 0 ? phone[0].phone : "",
+              };
+              await CallbackDigitalk(obj, callback);
+            }
+          }
+        }
 
-  //         if (emailResponsibleTicket && emailResponsibleTicket.length > 0) {
-  //           for (let i = 0; i < emailResponsibleTicket.length; i++) {
-  //             if (emailResponsibleTicket[i]) {
-  //               let infoUser = await emailModel.getEmailById(
-  //                 emailResponsibleTicket[i],
-  //                 id_company
-  //               );
-  //               await emailService.sendActiveMenssage(
-  //                 `Ticket ID:${result[0].id_seq}`,
-  //                 infoUser[0].email,
-  //                 `Você foi alertado em um dos seus tickets  <br><br> ${texto}`
-  //               );
-  //             }
-  //           }
-  //         }
-  //         break;
-  //       default:
-  //         console.log("Default");
-  //         break;
-  //     }
-  //     return true;
-  //   } catch (err) {
-  //     console.log("Error when notify responsibles ==> ", err);
-  //     return false;
-  //   }
-  // }
+        break;
+      case "close":
+        obj = {
+          ...obj,
+          message: `
+        Uma atividade foi finalizada\n\n
+        Identificador da atividade: ${ticket[0].id_seq}\n${
+            ticket[0].id_protocol
+              ? `\n        Protocolo: ${ticket[0].id_protocol}\n`
+              : ""
+          }
+        Fase: ${phase[0].name}\n
+        Data de Abertura:${moment(ticket[0].created_at).format("DD/MM/YYYY")}\n
+        Hora de Abertura:${moment(ticket[0].created_at).format("HH:mm:ss")}\n
+        Data de Finalização: ${moment().format("DD/MM/YYYY")}\n
+        Hora: ${moment().format("HH:mm:ss")}
+        `,
+        };
+        if (phase[0].customer && phase[0].customer.notify_close) {
+          obj = {
+            ...obj,
+            notified: "customer",
+          };
+          if (phase[0].customer.notify_close_message)
+            obj.message = phase[0].customer.notify_close_message;
+          if (phase[0].customer.notify_close_hsm)
+            obj.hsm_id = phase[0].customer.notify_close_hsm;
 
-  // async _notifyUser(
-  //   type,
-  //   user,
-  //   id_company,
-  //   id_ticket,
-  //   id_phase,
-  //   notify_token,
-  //   id_seq,
-  //   responsiblePhase = null,
-  //   notifyPhase = null
-  // ) {
-  //   try {
-  //     for (let i = 0; i < user.length; i++) {
-  //       if (user[i] && responsiblePhase) {
-  //         await responsiblePhase.map((userPhase) => {
-  //           if (userPhase.id_user == user[i]) {
-  //             delete user[i];
-  //           }
-  //         });
-  //       }
+          await CallbackDigitalk(obj, callback);
+        }
 
-  //       if (user[i] && notifyPhase) {
-  //         await notifyPhase.map((userPhase) => {
-  //           if (userPhase.id_user == user[i] > 0) {
-  //             delete user[i];
-  //           }
-  //         });
-  //       }
-  //       if (user[i]) {
-  //         let infoUser = await userModel.getById(user[i], id_company);
-  //         let resultNotify = await notify(notify_token, {
-  //           id_user: infoUser[0].id_users_core,
-  //           type: type,
-  //           id_ticket: id_ticket,
-  //           id_seq: id_seq,
-  //           id_phase: id_phase,
-  //         });
-  //       }
-  //     }
+        if (phase[0].admin && phase[0].admin.notify_close) {
+          if (phase[0].customer && phase[0].customer.notify_open) {
+            obj = { ...obj, notified: "admin" };
+            await CallbackDigitalk(obj, callback);
+          }
+        }
 
-  //     return true;
-  //   } catch (err) {
-  //     console.log("Error notify user => ", err);
-  //     return err;
-  //   }
-  // }
+        if (phase[0].separate && phase[0].separate.separate.length > 0) {
+          for (const separate of phase[0].separate.separate) {
+            if (separate.notify_close) {
+              const email = separate.contact.filter((x) => x.email);
+              const phone = separate.contact.filter((x) => x.phone);
 
+              obj = {
+                ...obj,
+                notified: "separate",
+                email: email.length > 0 ? email[0].email : "",
+                phone: phone.length > 0 ? phone[0].phone : "",
+              };
+              await CallbackDigitalk(obj, callback);
+            }
+          }
+        }
+        break;
+      case "start_activity":
+        obj = {
+          ...obj,
+          message: `
+        Uma atividade foi iniciada\n\n
+        Identificador da atividade: ${ticket[0].id_seq}\n${
+            ticket[0].id_protocol
+              ? `\n        Protocolo: ${ticket[0].id_protocol}\n`
+              : ""
+          }
+        Fase: ${phase[0].name}\n
+        Data de Abertura:${moment(ticket[0].created_at).format("DD/MM/YYYY")}\n
+        Hora de Abertura:${moment(ticket[0].created_at).format("HH:mm:ss")}\n
+        Data de Inicialização: ${moment().format("DD/MM/YYYY")}\n
+        Hora: ${moment().format("HH:mm:ss")}
+        `,
+        };
+        if (phase[0].customer && phase[0].customer.notify_start_activity) {
+          obj = {
+            ...obj,
+            notified: "customer",
+          };
+          if (phase[0].customer.notify_start_activity_message)
+            obj.message = phase[0].customer.notify_start_activity_message;
+          if (phase[0].customer.notify_start_activity_hsm)
+            obj.hsm_id = phase[0].customer.notify_start_activity_hsm;
+
+          await CallbackDigitalk(obj, callback);
+        }
+
+        if (phase[0].admin && phase[0].admin.notify_start_activity) {
+          if (phase[0].customer && phase[0].customer.notify_open) {
+            obj = { ...obj, notified: "admin" };
+            await CallbackDigitalk(obj, callback);
+          }
+        }
+
+        if (phase[0].separate && phase[0].separate.separate.length > 0) {
+          for (const separate of phase[0].separate.separate) {
+            if (separate.contact && separate.contact.length > 0 && separate.notify_start_activity ) {
+              const email = separate.contact.filter((x) => x.email);
+              const phone = separate.contact.filter((x) => x.phone);
+
+              obj = {
+                ...obj,
+                notified: "separate",
+                email: email.length > 0 ? email[0].email : "",
+                phone: phone.length > 0 ? phone[0].phone : "",
+              };
+              await CallbackDigitalk(obj, callback);
+            }
+          }
+        }
+        break;
+      case "first_reply":
+        obj = {
+          ...obj,
+          message: `
+        Um atividade foi respondida\n\n
+        Identificador da atividade: ${ticket[0].id_seq}\n${
+            ticket[0].id_protocol
+              ? `\n        Protocolo: ${ticket[0].id_protocol}\n`
+              : ""
+          }
+        Fase: ${phase[0].name}\n
+        Data de Inicialização: ${moment().format("DD/MM/YYYY")}\n
+        Hora: ${moment().format("HH:mm:ss")}
+        `,
+        };
+        if (phase[0].customer && phase[0].customer.notify_first_reply) {
+          obj = {
+            ...obj,
+            notified: "customer",
+          };
+
+          if (phase[0].customer.notify_start_activity_message)
+            obj.message = phase[0].customer.notify_start_activity_message;
+          if (phase[0].customer.notify_start_activity_hsm)
+            obj.hsm_id = phase[0].customer.notify_start_activity_hsm;
+
+          await CallbackDigitalk(obj, callback);
+        }
+
+        if (phase[0].admin && phase[0].admin.notify_first_reply) {
+          if (phase[0].customer && phase[0].customer.notify_open) {
+            obj = { ...obj, notified: "admin" };
+            await CallbackDigitalk(obj, callback);
+          }
+        }
+
+        if (phase[0].separate && phase[0].separate.separate.length > 0) {
+          for (const separate of phase[0].separate.separate) {
+            if (separate.notify_first_reply) {
+              const email = separate.contact.filter((x) => x.email);
+              const phone = separate.contact.filter((x) => x.phone);
+
+              obj = {
+                ...obj,
+                notified: "separate",
+                email: email.length > 0 ? email[0].email : "",
+                phone: phone.length > 0 ? phone[0].phone : "",
+              };
+              await CallbackDigitalk(obj, callback);
+            }
+          }
+        }
+        break;
+      default:
+        console.log("action unmapped");
+        break;
+    }
+  }
+  //Remover assim que função da fila funcionar direitinho
   async createActivities(req, res) {
     try {
       if (!req.body.id_user)
         return res.status(400).send({ error: "Whitout id_user" });
 
-      let user = await userController.checkUserCreated(
+      let user = await this.userController.checkUserCreated(
         req.body.id_user,
-        req.headers.authorization
+        req.headers.authorization,
+        req.body.name ? req.body.name : "",
+        req.body.phone ? req.body.phone : "",
+        req.body.email ? req.body.email : "",
+        req.body.type_user ? req.body.type_user : 1
       );
 
       if (!user || !user.id)
         return res.status(400).send({ error: "There was an error" });
 
-      let ticket = await ticketModel.getTicketById(
+      let ticket = await this.ticketModel.getTicketById(
         req.body.id_ticket,
         req.headers.authorization
       );
       if (!ticket || ticket.length <= 0)
         return res.status(400).send({ error: "ID ticket is invalid" });
+
+      if (!ticket[0].start_ticket) {
+        await this._notify(
+          ticket[0].id,
+          ticket[0].phase_id,
+          req.headers.authorization,
+          "start_activity",
+          req.company[0].callback
+        );
+
+        await this.ticketModel.updateTicket(
+          { start_ticket: moment(), id_status: 2 },
+          req.body.id_ticket,
+          req.headers.authorization
+        );
+      }
 
       let obj = {
         text: req.body.text,
@@ -575,13 +735,39 @@ class TicketController {
         updated_at: moment().format(),
       };
 
-      let result = await activitiesModel.create(obj);
+      let result = await this.activitiesModel.create(obj);
 
       if (result && result.length > 0) {
-        await updateSLA(req.body.id_ticket, ticket[0].phase_id);
+        await updateSLA(req.body.id_ticket, ticket[0].phase_id, true);
 
-        obj.id = result[0].id;
+        obj = {
+          id: result[0].id,
+          message: req.body.text,
+          id_user: req.body.id_user,
+          type: "note",
+          source: user.source,
+          name: user.name,
+          created_at: moment(obj.created_at).format("DD/MM/YYYY HH:mm:ss"),
+          updated_at: moment(obj.updated_at).format("DD/MM/YYYY HH:mm:ss"),
+        };
 
+        await CallbackDigitalk(
+          {
+            type: "socket",
+            channel: `ticket_${ticket[0].id}`,
+            event: "activity",
+            obj,
+          },
+          req.company[0].callback
+        );
+
+        await this._notify(
+          ticket[0].id,
+          ticket[0].phase_id,
+          req.headers.authorization,
+          "first_reply",
+          req.company[0].callback
+        );
         return res.status(200).send(obj);
       }
 
@@ -592,27 +778,152 @@ class TicketController {
     }
   }
 
+  async queueCreateActivities(data) {
+    try {
+      const companyVerified = await this.companyModel.getByIdActive(
+        data.authorization
+      );
+
+      if (!companyVerified || companyVerified.length <= 0) return false;
+
+      if (!data.id_user) return false;
+
+      let user = await this.userController.checkUserCreated(
+        data.id_user,
+        data.authorization,
+        data.name ? data.name : "",
+        data.phone ? data.phone : "",
+        data.email ? data.email : "",
+        data.type_user ? data.type_user : 1
+      );
+
+      if (!user || !user.id) return false;
+
+      let ticket = await this.ticketModel.getTicketById(
+        data.id_ticket,
+        data.authorization
+      );
+      if (!ticket || ticket.length <= 0) return false;
+
+      if (!ticket[0].start_ticket) {
+        await this._notify(
+          ticket[0].id,
+          ticket[0].phase_id,
+          data.authorization,
+          "start_activity",
+          companyVerified[0].callback
+        );
+
+        await this.ticketModel.updateTicket(
+          { start_ticket: moment(), id_status: 2 },
+          data.id_ticket,
+          data.authorization
+        );
+      }
+
+      let obj = {
+        text: data.text,
+        id_ticket: data.id_ticket,
+        id_user: user.id,
+        created_at: moment().format(),
+        updated_at: moment().format(),
+      };
+
+      let result = await this.activitiesModel.create(obj);
+      console.log("teste");
+      if (result && result.length > 0) {
+        await updateSLA(data.id_ticket, ticket[0].phase_id, true);
+
+        obj = {
+          id: result[0].id,
+          id_seq: ticket[0].id_seq,
+          message: data.text,
+          id_user: data.id_user,
+          type: "note",
+          source: user.source,
+          name: user.name,
+          created_at: moment(obj.created_at).format("DD/MM/YYYY HH:mm:ss"),
+          updated_at: moment(obj.updated_at).format("DD/MM/YYYY HH:mm:ss"),
+        };
+
+        const dashPhase = await this.phaseModel.getPhaseById(
+          ticket[0].phase_id,
+          data.authorization
+        );
+        await cache(
+          data.authorization,
+          dashPhase[0].id_department,
+          ticket[0].phase_id
+        );
+
+        await CallbackDigitalk(
+          {
+            type: "socket",
+            channel: `ticket_${ticket[0].id}`,
+            event: "activity",
+            obj,
+          },
+          companyVerified[0].callback
+        );
+
+        await this._notify(
+          ticket[0].id,
+          ticket[0].phase_id,
+          data.authorization,
+          "first_reply",
+          companyVerified[0].callback
+        );
+        return obj;
+      }
+
+      return false;
+    } catch (err) {
+      console.log("Error manage object to create activities => ", err);
+      return false;
+    }
+  }
+  //Remover assim que função da fila funcionar direitinho
   async createAttachments(req, res) {
     try {
       if (!req.body.id_user)
         return res.status(400).send({ error: "Whitout id_user" });
 
-      let user = await userController.checkUserCreated(
+      let user = await this.userController.checkUserCreated(
         req.body.id_user,
-        req.headers.authorization
+        req.headers.authorization,
+        req.body.name ? req.body.name : "",
+        req.body.phone ? req.body.phone : "",
+        req.body.email ? req.body.email : "",
+        req.body.type_user ? req.body.type_user : 1
       );
 
       if (!user || !user.id)
         return res.status(400).send({ error: "There was an error" });
 
-      let ticket = await ticketModel.getTicketById(
+      let ticket = await this.ticketModel.getTicketById(
         req.body.id_ticket,
         req.headers.authorization
       );
       if (!ticket || ticket.length <= 0)
         return res.status(400).send({ error: "ID ticket is invalid" });
 
-      let typeAttachments = await ticketModel.getTypeAttachments(req.body.type);
+      if (!ticket[0].start_ticket) {
+        await this._notify(
+          ticket[0].id,
+          ticket[0].phase_id,
+          req.headers.authorization,
+          "start_activity",
+          req.company[0].callback
+        );
+
+        await this.ticketModel.updateTicket(
+          { start_ticket: moment(), id_status: 2 },
+          req.body.id_ticket,
+          req.headers.authorization
+        );
+      }
+
+      let typeAttachments = await this.ticketModel.getTypeAttachments(req.body.type);
 
       if (!typeAttachments || typeAttachments.length <= 0)
         return res.status(400).send({ error: "Type attachments is invalid" });
@@ -627,13 +938,34 @@ class TicketController {
         updated_at: moment(),
       };
 
-      let result = await attachmentsModel.create(obj);
+      let result = await this.attachmentsModel.create(obj);
 
-      await updateSLA(req.body.id_ticket, ticket[0].phase_id);
+      await updateSLA(req.body.id_ticket, ticket[0].phase_id, true);
 
       if (result && result.length > 0) {
         obj.id = result[0].id;
 
+        obj.created_at = moment(obj.created_at).format("DD/MM/YYYY HH:mm:ss");
+        obj.updated_at = moment(obj.updated_at).format("DD/MM/YYYY HH:mm:ss");
+        obj.type = "file";
+        obj.id_user = req.body.id_user;
+        await CallbackDigitalk(
+          {
+            type: "socket",
+            channel: `ticket_${ticket[0].id}`,
+            event: "activity",
+            obj: obj,
+          },
+          req.company[0].callback
+        );
+
+        await this._notify(
+          ticket[0].id,
+          ticket[0].phase_id,
+          req.headers.authorization,
+          "first_reply",
+          req.company[0].callback
+        );
         return res.status(200).send(obj);
       }
 
@@ -644,9 +976,115 @@ class TicketController {
     }
   }
 
+  async queueCreateAttachments(data) {
+    try {
+      const companyVerified = await this.companyModel.getByIdActive(
+        data.authorization
+      );
+
+      if (!companyVerified || companyVerified.length <= 0) return false;
+
+      if (!data.id_user) return false;
+
+      let user = await this.userController.checkUserCreated(
+        data.id_user,
+        data.authorization,
+        data.name ? data.name : "",
+        data.phone ? data.phone : "",
+        data.email ? data.email : "",
+        data.type_user ? data.type_user : 1
+      );
+
+      if (!user || !user.id) return false;
+
+      let ticket = await this.ticketModel.getTicketById(
+        data.id_ticket,
+        data.authorization
+      );
+      if (!ticket || ticket.length <= 0) return false;
+
+      if (!ticket[0].start_ticket) {
+        await this._notify(
+          ticket[0].id,
+          ticket[0].phase_id,
+          data.authorization,
+          "start_activity",
+          companyVerified[0].callback
+        );
+
+        await this.ticketModel.updateTicket(
+          { start_ticket: moment(), id_status: 2 },
+          data.id_ticket,
+          data.authorization
+        );
+      }
+
+      let typeAttachments = await this.ticketModel.getTypeAttachments(data.type);
+
+      if (!typeAttachments || typeAttachments.length <= 0) return false;
+
+      let obj = {
+        id_user: user.id,
+        id_ticket: data.id_ticket,
+        url: data.url,
+        type: typeAttachments[0].id,
+        name: data.name,
+        created_at: moment(),
+        updated_at: moment(),
+      };
+
+      let result = await this.attachmentsModel.create(obj);
+
+      await updateSLA(data.id_ticket, ticket[0].phase_id, true);
+
+      if (result && result.length > 0) {
+        obj.id = result[0].id;
+
+        obj.created_at = moment(obj.created_at).format("DD/MM/YYYY HH:mm:ss");
+        obj.updated_at = moment(obj.updated_at).format("DD/MM/YYYY HH:mm:ss");
+        obj.type = "file";
+        obj.id_user = data.id_user;
+
+        const dashPhase = await this.phaseModel.getPhaseById(
+          ticket[0].phase_id,
+          data.authorization
+        );
+        await cache(
+          data.authorization,
+          dashPhase[0].id_department,
+          ticket[0].phase_id
+        );
+
+        await CallbackDigitalk(
+          {
+            type: "socket",
+            channel: `ticket_${ticket[0].id}`,
+            event: "activity",
+            obj: obj,
+          },
+          companyVerified[0].callback
+        );
+
+        await this._notify(
+          ticket[0].id,
+          ticket[0].phase_id,
+          data.authorization,
+          "first_reply",
+          companyVerified[0].callback
+        );
+        return true;
+      }
+
+      return false;
+    } catch (err) {
+      console.log("Error manage object to create attachments => ", err);
+      return res.status(400).send({ error: "There was an error" });
+    }
+  }
+
   async getTicketByID(req, res) {
     try {
-      let result = await ticketModel.getTicketByIdSeq(
+      let result = await this.ticketModel.getTicketByIdSeq(
         req.params.id,
         req.headers.authorization
       );
@@ -662,15 +1100,16 @@ class TicketController {
         { id: result[0].phase_id },
         result[0]
       );
-      const customer = await customerModel.getAll(result.id);
+      const customer = await this.customerModel.getAll(result.id);
       if (customer && Array.isArray(customer) && customer.length > 0) {
         result.customers = customer;
       }
 
-      const protocols = await ticketModel.getProtocolTicket(
+      const protocols = await this.ticketModel.getProtocolTicket(
         result.id,
         req.headers.authorization
       );
+      console.log("protocols =>", protocols);
 
       if (protocols && Array.isArray(protocols) && protocols.length > 0) {
         result.protocols = protocols;
@@ -696,13 +1135,13 @@ class TicketController {
         }
       });
 
-      const department = await phaseModel.getDepartmentPhase(result.phase_id);
+      const department = await this.phaseModel.getDepartmentPhase(result.phase_id);
       result.actual_department = department[0].id_department;
 
-      const form = await ticketModel.getFormTicket(result.id);
-      console.log("form =====>", form);
-      if (form[0].id_form) {
-        const phase = await phaseModel.getPhaseById(
+      const form = await this.ticketModel.getFormTicket(result.id);
+
+      if (form && form.length > 0 && form[0].id_form) {
+        const phase = await this.phaseModel.getPhaseById(
           form[0].id_phase,
           req.headers.authorization
         );
@@ -715,7 +1154,99 @@ class TicketController {
             result.form_template = register.column;
 
             for (const x of result.form_template) {
-              const type = await typeColumnModel.getTypeByID(x.type);
+              const type = await this.typeColumnModel.getTypeByID(x.type);
+
+              type && Array.isArray(type) && type.length > 0
+                ? (x.type = type[0].name)
+                : "";
+            }
+          }
+        }
+        result.form_data = await new FormDocuments(
+          req.app.locals.db
+        ).findRegister(form[0].id_form);
+        delete result.form_data._id;
+      }
+      console.log("result =>", result);
+      return res.status(200).send(result);
+    } catch (err) {
+      console.log("Error when select ticket by id =>", err);
+      return res.status(400).send({ error: "There was an error" });
+    }
+  }
+
+  async getTicket(req, res) {
+    try {
+      let result = await this.ticketModel.getTicketById(
+        req.params.id,
+        req.headers.authorization
+      );
+      if (result.name && result.name == "error")
+        return res.status(400).send({ error: "There was an error" });
+
+      if (result && result.length <= 0)
+        return res
+          .status(400)
+          .send({ error: "There is no ticket with this ID" });
+
+      result = await formatTicketForPhase(
+        { id: result[0].phase_id },
+        result[0]
+      );
+      const customer = await this.customerModel.getAll(result.id);
+      if (customer && Array.isArray(customer) && customer.length > 0) {
+        result.customers = customer;
+      }
+
+      const protocols = await this.ticketModel.getProtocolTicket(
+        result.id,
+        req.headers.authorization
+      );
+      console.log("protocols =>", protocols);
+      if (protocols && Array.isArray(protocols) && protocols.length > 0) {
+        result.protocols = protocols[0];
+      }
+
+      result.activities = await this._activities(
+        result.id,
+        req.app.locals.db,
+        req.headers.authorization
+      );
+
+      result.activities.sort((a, b) => {
+        if (
+          moment(a.created_at, "DD/MM/YYYY HH:mm:ss").format("X") ===
+          moment(b.created_at, "DD/MM/YYYY HH:mm:ss").format("X")
+        ) {
+          return a.id;
+        } else {
+          return (
+            moment(a.created_at, "DD/MM/YYYY HH:mm:ss").format("X") -
+            moment(b.created_at, "DD/MM/YYYY HH:mm:ss").format("X")
+          );
+        }
+      });
+
+      const department = await this.phaseModel.getDepartmentPhase(result.phase_id);
+      result.actual_department = department[0].id_department;
+
+      const form = await this.ticketModel.getFormTicket(result.id);
+
+      if (form && form.length > 0 && form[0].id_form) {
+        const phase = await this.phaseModel.getPhaseById(
+          form[0].id_phase,
+          req.headers.authorization
+        );
+        if (phase[0].form && phase[0].id_form_template) {
+          const register = await new FormTemplate(
+            req.app.locals.db
+          ).findRegistes(phase[0].id_form_template);
+
+          if (register && register.column) {
+            result.form_template = register.column;
+
+            for (const x of result.form_template) {
+              const type = await this.typeColumnModel.getTypeByID(x.type);
 
               type && Array.isArray(type) && type.length > 0
                 ? (x.type = type[0].name)
@@ -735,10 +1266,11 @@ class TicketController {
       return res.status(400).send({ error: "There was an error" });
     }
   }
+
   async _activities(id_ticket, db, id_company) {
     const obj = [];
 
-    const activities = await activitiesModel.getActivities(id_ticket);
+    const activities = await this.activitiesModel.getActivities(id_ticket);
     activities.map((value) => {
       value.created_at = moment(value.created_at).format("DD/MM/YYYY HH:mm:ss");
       value.updated_at = moment(value.updated_at).format("DD/MM/YYYY HH:mm:ss");
@@ -746,7 +1278,7 @@ class TicketController {
       obj.push(value);
     });
 
-    const attachments = await attachmentsModel.getAttachments(id_ticket);
+    const attachments = await this.attachmentsModel.getAttachments(id_ticket);
     attachments.map((value) => {
       value.created_at = moment(value.created_at).format("DD/MM/YYYY HH:mm:ss");
       value.updated_at = moment(value.updated_at).format("DD/MM/YYYY HH:mm:ss");
@@ -754,12 +1286,11 @@ class TicketController {
       obj.push(value);
     });
 
-    let history_phase = await ticketModel.getHistoryTicket(id_ticket);
+    let history_phase = await this.ticketModel.getHistoryTicket(id_ticket);
     for (let index in history_phase) {
       index = parseInt(index);
 
       if (history_phase[index + 1]) {
-        console.log("array[index + 1]", history_phase[index + 1]);
         const before = await new FormDocuments(db).findRegister(
           history_phase[index].id_form
         );
@@ -767,7 +1298,7 @@ class TicketController {
         const templateBefore = await new FormTemplate(db).findRegistes(
           history_phase[index].template
         );
-
+        console.log("templateBefore =>", templateBefore);
         const after = await new FormDocuments(db).findRegister(
           history_phase[index + 1].id_form
         );
@@ -775,34 +1306,34 @@ class TicketController {
         const templateAfter = await new FormTemplate(db).findRegistes(
           history_phase[index + 1].template
         );
+        console.log("created at ----->",history_phase[index + 1])
         obj.push({
           before: {
             phase: history_phase[index + 1].id_phase,
-            field: templateAfter.column,
+            field: templateAfter ? templateAfter.column : {},
             value: after,
           },
           after: {
             phase: history_phase[index].id_phase,
-            field: templateBefore.column,
+            field: templateBefore ? templateBefore.column : {},
             value: before,
           },
           type: "change_form",
-          id_user: history_phase[index + 1].id_user,
-          created_at: moment(history_phase[index + 1].created_at).format(
+          id_user: history_phase[index].id_user,
+          created_at: moment(history_phase[index].created_at).format(
             "DD/MM/YYYY HH:mm:ss"
           ),
-          updated_at: moment(history_phase[index + 1].updated_at).format(
+          updated_at: moment(history_phase[index].updated_at).format(
             "DD/MM/YYYY HH:mm:ss"
           ),
         });
-        console.log("TESTE ===>", obj);
 
         if (
           history_phase[index].id_phase != history_phase[index + 1].id_phase
         ) {
           obj.push({
             type: "move",
-            id_user: history_phase[index + 1].id_user,
+            id_user: history_phase[index].id_user,
             phase_dest: {
               id: history_phase[index].id_phase,
               name: history_phase[index].name,
@@ -811,15 +1342,41 @@ class TicketController {
               id: history_phase[index + 1].id_phase,
               name: history_phase[index + 1].name,
             },
-            created_at: moment(history_phase[index + 1].updated_at).format(
+            created_at: moment(history_phase[index].created_at).format(
               "DD/MM/YYYY HH:mm:ss"
             ),
           });
         }
       }
+      const slas = await this.slaModel.getSLAControl(
+        history_phase[index].id_phase,
+        id_ticket
+      );
+      for (const sla of slas) {
+        obj.push({
+          id_phase: history_phase[index].id_phase,
+          name: history_phase[index].name,
+          status: sla.status,
+          id_sla_status: sla.id_sla_status,
+          sla_type: sla.type,
+          id_sla_type: sla.id_sla_type,
+          limit_sla_time: moment(sla.limit_sla_time).format(
+            "DD/MM/YYYY HH:mm:ss"
+          ),
+          interaction_time: sla.interaction_time
+            ? moment(sla.interaction_time).format("DD/MM~/YYYY HH:mm:ss")
+            : "",
+          created_at: sla.created_at
+            ? moment(sla.created_at).format("DD/MM/YYYY HH:mm:ss")
+            : moment(history_phase[index + 1].updated_at).format(
+                "DD/MM/YYYY HH:mm:ss"
+              ),
+          type: "sla",
+        });
+      }
     }
 
-    const view_ticket = await ticketModel.getViewTicket(id_ticket);
+    const view_ticket = await this.ticketModel.getViewTicket(id_ticket);
     view_ticket.map((value) => {
       value.start = moment(value.start).format("DD/MM/YYYY HH:mm:ss");
       value.end
@@ -847,7 +1404,7 @@ class TicketController {
     //   value.created_at = moment(value.created_at).format("DD/MM/YYYY HH:mm:ss");
     // });
 
-    const create_protocol = await ticketModel.getProtocolCreatedByTicket(
+    const create_protocol = await this.ticketModel.getProtocolCreatedByTicket(
       id_ticket,
       id_company
     );
@@ -858,7 +1415,7 @@ class TicketController {
       obj.push(value);
     });
 
-    const create_ticket = await ticketModel.getTicketCreatedByTicketFather(
+    const create_ticket = await this.ticketModel.getTicketCreatedByTicketFather(
       id_ticket,
       id_company
     );
@@ -868,9 +1425,9 @@ class TicketController {
       obj.push(value);
     });
 
-    const ticket = await ticketModel.getStatusTicketById(id_ticket, id_company);
+    const ticket = await this.ticketModel.getStatusTicketById(id_ticket, id_company);
     if (ticket[0].created_by_ticket) {
-      const ticketFather = await ticketModel.getTicketById(
+      const ticketFather = await this.ticketModel.getTicketById(
         ticket[0].id_ticket_father
       );
       obj.push({
@@ -893,6 +1450,20 @@ class TicketController {
         id_user: ticket[0].id_user,
       });
     }
+    if (ticket[0].status === 3 && ticket[0].user_closed_ticket) {
+      const user = await this.userModel.getById(
+        ticket[0].user_closed_ticket,
+        id_company
+      );
+      obj.push({
+        type: "closed",
+        created_at: moment(ticket[0].time_closed_ticket).format(
+          "DD/MM/YYYY HH:mm:ss"
+        ),
+        id_user: user[0].id_users,
+      });
+    }
+
     return obj;
   }
 
@@ -908,7 +1479,7 @@ class TicketController {
         : (obj.closed = [true, false]);
       req.query.range ? (obj.range = JSON.parse(req.query.range)) : "";
 
-      const result = await ticketModel.getAllTickets(
+      const result = await this.ticketModel.getAllTickets(
         req.headers.authorization,
         obj
       );
@@ -921,9 +1492,19 @@ class TicketController {
 
       const tickets = [];
       for (const ticket of result) {
-        console.log;
-        const t = [ticket];
-        const ticketFormated = await formatTicketForPhase(t, ticket);
+        const ticketFormated = await formatTicketForPhase(
+          { id: ticket.id_phase },
+          ticket
+        );
+        // sla formatado dessa forma para apresentar no analitico do ticket. favor não mexer sem consultar o Rafael ou o Silas.
+        if (ticketFormated.sla) {
+          const keys = Object.keys(ticketFormated.sla);
+          if (keys.length > 0) {
+            const sla = keys.pop();
+            ticketFormated.countSLA = ticketFormated.sla[sla].status;
+            ticketFormated.sla_time = ticketFormated.sla[sla].limit_sla_time;
+          }
+        }
         tickets.push(ticketFormated);
       }
 
@@ -934,6 +1515,7 @@ class TicketController {
     }
   }
 
+  //Remover assim que função da fila funcionar direitinho
   async updateTicket(req, res) {
     try {
       let obj = {
@@ -943,21 +1525,8 @@ class TicketController {
         updated_at: moment().format(),
         display_name: req.body.display_name,
       };
-      // let userResponsible = [];
-      // if (req.body.responsible) {
-      //   req.body.responsible.map(async (responsible) => {
-      //     const result = await userController.checkUserCreated(
-      //       responsible,
-      //       req.headers.authorization,
-      //       responsible.name
-      //     );
-      //     userResponsible.push(result.id);
-      //   });
 
-      //   await this._createResponsibles(userResponsible, req.params.id);
-      // }
-
-      let ticket = await ticketModel.getTicketById(
+      let ticket = await this.ticketModel.getTicketById(
         req.params.id,
         req.headers.authorization
       );
@@ -967,11 +1536,17 @@ class TicketController {
           .status(400)
           .send({ error: "There is no ticket with this ID " });
 
+      ticket = await formatTicketForPhase(ticket, ticket[0]);
+
+      if (ticket.id_status === 3)
+        return res
+          .status(400)
+          .send({ error: "Impossivel atualizar um ticket finalizado!" });
       // if (req.body.customer) {
       //   await this._createCustomers(req.body.customer, req.params.id);
       // }
 
-      let phase = await phaseModel.getPhase(
+      let phase = await this.phaseModel.getPhase(
         req.body.id_phase,
         req.headers.authorization
       );
@@ -979,11 +1554,10 @@ class TicketController {
       if (!phase || phase.length <= 0)
         return res.status(400).send({ error: "Invalid id_phase uuid" });
 
-      await updateSLA(ticket[0].id, ticket[0].phase_id);
-
-      if (ticket[0].phase_id != phase[0].id) {
-        await phaseModel.disablePhaseTicket(req.params.id);
-        await slaModel.disableSLA(req.params.id);
+      await updateSLA(ticket.id, ticket.phase_id);
+      if (ticket.phase_id != phase[0].id) {
+        await this.phaseModel.disablePhaseTicket(req.params.id);
+        await this.slaModel.disableSLA(req.params.id);
 
         if (req.body.form) {
           if (Object.keys(req.body.form).length > 0) {
@@ -1002,57 +1576,139 @@ class TicketController {
             }
           }
         }
-
-        const user = await userController.checkUserCreated(
+        const user = await this.userController.checkUserCreated(
           req.body.id_user,
-          req.headers.authorization
+          req.headers.authorization,
+          req.body.name ? req.body.name : "",
+          req.body.phone ? req.body.phone : "",
+          req.body.email ? req.body.email : "",
+          req.body.type_user ? req.body.type_user : 1
         );
-        let phase_id = await ticketModel.createPhaseTicket({
+        let phase_id = await this.ticketModel.createPhaseTicket({
           id_phase: phase[0].id,
           id_ticket: req.params.id,
           id_user: user.id,
           id_form: obj.id_form,
         });
-
         if (!phase_id || phase_id.length <= 0)
           return res.status(500).send({ error: "There was an error" });
 
         await createSLAControl(phase[0].id, req.params.id);
+
+        await CallbackDigitalk(
+          {
+            type: "socket",
+            channel: `phase_${ticket.phase_id}`,
+            event: "move_ticket_old_phase",
+            obj: { id: ticket.id, id_phase: ticket.phase_id },
+          },
+          req.company[0].callback
+        );
+
+        await CallbackDigitalk(
+          {
+            type: "socket",
+            channel: `phase_${phase[0].id}`,
+            event: "move_ticket_new_phase",
+            obj: { ...ticket, phase_id: phase[0].id },
+          },
+          req.company[0].callback
+        );
+
+        await CallbackDigitalk(
+          {
+            type: "socket",
+            channel: `ticket_${ticket.id}`,
+            event: "activity",
+            obj: {
+              type: "move",
+              id_user: req.body.id_user,
+              phase_dest: {
+                id: phase[0].id,
+                name: phase[0].name,
+              },
+              phase_origin: {
+                id: ticket.phase_id,
+                name: ticket.phase,
+              },
+              created_at: moment().format("DD/MM/YYYY HH:mm:ss"),
+            },
+          },
+          req.company[0].callback
+        );
       } else {
         if (req.body.form && Object.keys(req.body.form).length > 0) {
-          const firstPhase = await ticketModel.getFirstFormTicket(ticket[0].id);
+          const firstPhase = await this.ticketModel.getFirstFormTicket(ticket[0].id);
           if (firstPhase[0].form) {
             let errors = await this._validateUpdate(
               req.app.locals.db,
               firstPhase[0].id_form_template,
               req.body.form,
-              ticket[0].id_form
+              firstPhase[0].id_form
             );
             if (errors.length > 0)
               return res.status(400).send({ errors: errors });
 
-            console.log("FORM ====>", req.body.form);
-            obj.id_form = await new FormDocuments(
-              req.app.locals.db
-            ).updateRegister(ticket[0].id_form, req.body.form);
+            await new FormDocuments(req.app.locals.db).updateRegister(
+              firstPhase[0].id_form,
+              req.body.form
+            );
           }
         }
       }
 
-      let result = await ticketModel.updateTicket(
+      await this._notify(
+        ticket.id,
+        phase[0].id,
+        req.headers.authorization,
+        "progress",
+        req.company[0].callback
+      );
+      if (!ticket.start_ticket) {
+        await this._notify(
+          ticket.id,
+          phase[0].id,
+          req.headers.authorization,
+          "start_activity",
+          req.company[0].callback
+        );
+
+        obj.start_ticket = moment();
+        obj.id_status = 2;
+      }
+      delete obj.id_form;
+      let result = await this.ticketModel.updateTicket(
         obj,
         req.params.id,
         req.headers.authorization
       );
 
-      ticket = await formatTicketForPhase(ticket, ticket[0]);
       await redis.set(
         `msTicket:ticket:${req.params.id}`,
         JSON.stringify(ticket)
       );
 
+      await CallbackDigitalk(
+        {
+          type: "socket",
+          channel: `phase_${req.body.id_phase}`,
+          event: "update_ticket",
+          obj: ticket,
+        },
+        req.company[0].callback
+      );
+
+      await CallbackDigitalk(
+        {
+          type: "socket",
+          channel: `ticket_${ticket.id}`,
+          event: "update",
+          obj: ticket,
+        },
+        req.company[0].callback
+      );
+
       await redis.del(`ticket:phase:${req.headers.authorization}`);
-      console.log("ticket update", ticket);
       if (result) return res.status(200).send(ticket);
 
       return res.status(400).send({ error: "There was an error" });
@@ -1064,18 +1720,231 @@ class TicketController {
     }
   }
 
+  async queueUpdateTicket(data) {
+    try {
+      const companyVerified = await this.companyModel.getByIdActive(
+        data.authorization
+      );
+
+      if (!companyVerified || companyVerified.length <= 0) return false;
+
+      let ticket = await this.ticketModel.getTicketById(data.id, data.authorization);
+
+      if (!ticket || ticket.length <= 0) return false;
+
+      let obj = {
+        // ids_crm: data.ids_crm,
+        // id_customer: data.id_customer,
+        // id_protocol: data.id_protocol,
+        updated_at: moment().format(),
+      };
+
+      // let result = await this.ticketModel.updateTicket(
+      //   obj,
+      //   data.id,
+      //   data.authorization
+      // );
+      ticket = await formatTicketForPhase(ticket, ticket[0]);
+
+      // await this._createResponsibles(userResponsible, data.id);
+
+      let phase = await this.phaseModel.getPhase(data.id_phase, data.authorization);
+
+      if (!phase || phase.length <= 0) return false;
+
+      await updateSLA(ticket.id, ticket.phase_id);
+      console.log("if de troca de fases -----> ",ticket.phase_id != phase[0].id)
+      if (ticket.phase_id != phase[0].id) {
+       console.log( "disable phase ticket= =====>",await this.phaseModel.disablePhaseTicket(data.id))
+        console.log("disable sla ------>",await this.slaModel.disableSLA(data.id))
+
+        if (data.form) {
+          if (Object.keys(data.form).length > 0) {
+            if (phase[0].form) {
+              let errors = await this._validateForm(
+                global.mongodb,
+                phase[0].id_form_template,
+                data.form
+              );
+              if (errors.length > 0)
+                return res.status(400).send({ errors: errors });
+
+              obj.id_form = await new FormDocuments(
+                global.mongodb
+              ).createRegister(data.form);
+            }
+          }
+        }
+        const user = await this.userController.checkUserCreated(
+          data.id_user,
+          data.authorization,
+          data.name ? data.name : "",
+          data.phone ? data.phone : "",
+          data.email ? data.email : "",
+          data.type_user ? data.type_user : 1
+        );
+        let phase_id = await this.ticketModel.createPhaseTicket({
+          id_phase: phase[0].id,
+          id_ticket: data.id,
+          id_user: user.id,
+          id_form: obj.id_form,
+        });
+        console.log('phase_id',phase_id)
+        if (!phase_id || phase_id.length <= 0) return false;
+
+        await createSLAControl(phase[0].id, data.id);
+
+        await CallbackDigitalk(
+          {
+            type: "socket",
+            channel: `phase_${ticket.phase_id}`,
+            event: "move_ticket_old_phase",
+            obj: { id: ticket.id, id_phase: ticket.phase_id },
+          },
+          companyVerified[0].callback
+        );
+
+        await CallbackDigitalk(
+          {
+            type: "socket",
+            channel: `phase_${phase[0].id}`,
+            event: "move_ticket_new_phase",
+            obj: { ...ticket, phase_id: phase[0].id },
+          },
+          companyVerified[0].callback
+        );
+
+        await CallbackDigitalk(
+          {
+            type: "socket",
+            channel: `ticket_${ticket.id}`,
+            event: "activity",
+            obj: {
+              type: "move",
+              id_user: data.id_user,
+              phase_dest: {
+                id: phase[0].id,
+                name: phase[0].name,
+              },
+              phase_origin: {
+                id: ticket.phase_id,
+                name: ticket.phase,
+              },
+              created_at: moment().format("DD/MM/YYYY HH:mm:ss"),
+            },
+          },
+          companyVerified[0].callback
+        );
+      } else {
+        if (data.form && Object.keys(data.form).length > 0) {
+          const firstPhase = await this.ticketModel.getFirstFormTicket(ticket[0].id);
+          if (firstPhase[0].form) {
+            let errors = await this._validateUpdate(
+              global.mongodb,
+              firstPhase[0].id_form_template,
+              data.form,
+              firstPhase[0].id_form
+            );
+            if (errors.length > 0) return false;
+
+            await new FormDocuments(global.mongodb).updateRegister(
+              firstPhase[0].id_form,
+              data.form
+            );
+          }
+        }
+      }
+
+      const dashPhase = await this.phaseModel.getPhaseById(
+        ticket.phase_id,
+        data.authorization
+      );
+
+      await cache(
+        data.authorization,
+        dashPhase[0].id_department,
+        ticket.phase_id
+      );
+
+      await this._notify(
+        ticket.id,
+        phase[0].id,
+        data.authorization,
+        "progress",
+        companyVerified[0].callback
+      );
+      if (!ticket.start_ticket) {
+        await this._notify(
+          ticket.id,
+          phase[0].id,
+          data.authorization,
+          "start_activity",
+          companyVerified[0].callback
+        );
+
+        obj.start_ticket = moment();
+        obj.id_status = 2;
+      }
+      delete obj.id_form;
+      let result = await this.ticketModel.updateTicket(
+        obj,
+        data.id,
+        data.authorization
+      );
+
+      await redis.set(`msTicket:ticket:${data.id}`, JSON.stringify(ticket));
+
+      await CallbackDigitalk(
+        {
+          type: "socket",
+          channel: `phase_${data.id_phase}`,
+          event: "update_ticket",
+          obj: ticket,
+        },
+        companyVerified[0].callback
+      );
+
+      await CallbackDigitalk(
+        {
+          type: "socket",
+          channel: `ticket_${ticket.id}`,
+          event: "update",
+          obj: ticket,
+        },
+        companyVerified[0].callback
+      );
+
+      await redis.del(`ticket:phase:${data.authorization}`);
+      if (result) return true;
+
+      return false;
+    } catch (err) {
+      console.log("Error when generate object to save ticket => ", err);
+      return false;
+    }
+  }
+
   async closedTicket(req, res) {
     try {
-      const result = await ticketModel.closedTicket(req.params.id);
+      const user = await this.userController.checkUserCreated(
+        req.body.id_user,
+        req.headers.authorization,
+        req.body.name ? req.body.name : "",
+        req.body.phone ? req.body.phone : "",
+        req.body.email ? req.body.email : "",
+        req.body.type_user ? req.body.type_user : 1
+      );
+      const result = await this.ticketModel.closedTicket(req.params.id, user.id);
+
       if (result && result[0].id) {
         await redis.del(`msTicket:ticket:${result[0].id}`);
 
-        let ticket = await ticketModel.getTicketById(
+        let ticket = await this.ticketModel.getTicketById(
           req.params.id,
           req.headers.authorization
         );
 
-        let slaTicket = await slaModel.getByPhaseTicket(
+        let slaTicket = await this.slaModel.getByPhaseTicket(
           ticket[0].phase_id,
           ticket[0].id,
           3
@@ -1083,40 +1952,100 @@ class TicketController {
         let obj;
         if (slaTicket && Array.isArray(slaTicket) && slaTicket.length > 0) {
           if (slaTicket[0].limit_sla_time < moment()) {
-            obj = { id_sla_status: sla_status.atrasado, active: false };
+            obj = {
+              id_sla_status: sla_status.atrasado,
+              active: false,
+              interaction_time: moment(),
+            };
           } else if (slaTicket[0].limit_sla_time > moment()) {
-            obj = { id_sla_status: sla_status.emdia, active: false };
+            obj = {
+              id_sla_status: sla_status.emdia,
+              active: false,
+              interaction_time: moment(),
+            };
           }
-          await slaModel.updateTicketSLA(
-            ticket.id_ticket,
+          await this.slaModel.updateTicketSLA(
+            ticket[0].id,
             obj,
-            slaTicket.id_sla_type
+            slaTicket.id_sla_type,
+            ticket[0].phase_id
           );
         }
 
         // Uma nova verificação para saber se o sla de resposta se manteve no tempo determinado.
-        slaTicket = await slaModel.getByPhaseTicket(
+        slaTicket = await this.slaModel.getByPhaseTicket(
           ticket[0].phase_id,
           ticket[0].id,
           2
         );
 
-        if (slaTicket && Array.isArray(slaTicket) && slaTicket.length > 0) {
-          if (slaTicket[0].limit_sla_time < slaTicket[0].interaction_time) {
-            obj = { id_sla_status: sla_status.atrasado, active: false };
+        if (
+          slaTicket &&
+          Array.isArray(slaTicket) &&
+          slaTicket.length > 0 &&
+          !slaTicket[0].interaction_time
+        ) {
+          if (slaTicket[0].limit_sla_time < moment()) {
+            obj = {
+              id_sla_status: sla_status.atrasado,
+              active: false,
+            };
           } else if (slaTicket[0].limit_sla_time > moment()) {
-            obj = { id_sla_status: sla_status.emdia, active: false };
+            obj = {
+              id_sla_status: sla_status.emdia,
+              active: false,
+            };
           }
-          await slaModel.updateTicketSLA(
-            ticket.id_ticket,
+          await this.slaModel.updateTicketSLA(
+            ticket[0].id,
             obj,
-            slaTicket.id_sla_type
+            slaTicket.id_sla_type,
+            ticket[0].phase_id
           );
         }
 
+        await this.slaModel.disableSLA(ticket[0].id);
         ticket[0] = await formatTicketForPhase(
           { id: ticket[0].phase_id },
           ticket[0]
+        );
+
+        await this._notify(
+          ticket[0].id,
+          ticket[0].phase_id,
+          req.headers.authorization,
+          "close",
+          req.company[0].callback
+        );
+
+        await CallbackDigitalk(
+          {
+            type: "socket",
+            channel: `phase_${ticket[0].phase_id}`,
+            event: "update_ticket",
+            obj: ticket[0],
+          },
+          req.company[0].callback
+        );
+        await CallbackDigitalk(
+          {
+            type: "socket",
+            channel: `ticket_${ticket[0].id}`,
+            event: "update",
+            obj: ticket[0],
+          },
+          req.company[0].callback
+        );
+
+        const phase = await this.phaseModel.getPhaseById(
+          ticket[0].phase_id,
+          req.headers.authorization
+        );
+
+        await cache(
+          req.headers.authorization,
+          phase[0].id_department,
+          ticket[0].phase_id
         );
 
         return res.status(200).send(ticket[0]);
@@ -1137,10 +2066,10 @@ class TicketController {
         if (res && res.length > 0) {
           resolve(true);
         } else {
-          const tickets = await ticketModel.getAllTicketWhitoutCompanyId();
+          const tickets = await this.ticketModel.getAllTicketWhitoutCompanyId();
           if (tickets && tickets.length > 0) {
             for (const ticket of tickets) {
-              let result = await ticketModel.getTicketById(
+              let result = await this.ticketModel.getTicketById(
                 ticket.id,
                 ticket.id_company
               );
@@ -1156,10 +2085,10 @@ class TicketController {
     });
   }
 
-  async checkSLA(type) {
-    const tickets = await slaModel.checkSLA(type);
+  async cronCheckSLA(req, res) {
+    const tickets = await this.slaModel.checkSLA(req.params.type);
     if (tickets && Array.isArray(tickets) && tickets.length > 0) {
-      switch (type) {
+      switch (req.params.type) {
         case 1:
           for (const ticket of tickets) {
             if (!ticket.interaction_time && ticket.limit_sla_time < moment()) {
@@ -1192,6 +2121,57 @@ class TicketController {
                 ticket.id_ticket,
                 { id_sla_status: sla_status.atrasado },
                 ticket.id_sla_type
+              );
+            }
+          }
+          break;
+        default:
+          break;
+      }
+    }
+    res.status(200).send(true);
+  }
+
+  async checkSLA(type) {
+    const tickets = await this.slaModel.checkSLA(type);
+    if (tickets && Array.isArray(tickets) && tickets.length > 0) {
+      switch (type) {
+        case 1:
+          for (const ticket of tickets) {
+            if (!ticket.interaction_time && ticket.limit_sla_time < moment()) {
+              console.log("1");
+              await this.slaModel.updateTicketSLA(
+                ticket.id_ticket,
+                { id_sla_status: sla_status.atrasado },
+                ticket.id_sla_type,
+                ticket.id_phase
+              );
+            }
+          }
+          break;
+        case 2:
+          for (const ticket of tickets) {
+            if (
+              ticket.interaction_time < ticket.limit_sla_time &&
+              ticket.limit_sla_time < moment()
+            ) {
+              await this.slaModel.updateTicketSLA(
+                ticket.id_ticket,
+                { id_sla_status: sla_status.atrasado },
+                ticket.id_sla_type,
+                ticket.id_phase
+              );
+            }
+          }
+          break;
+        case 3:
+          for (const ticket of tickets) {
+            if (ticket.limit_sla_time < moment()) {
+              await this.slaModel.updateTicketSLA(
+                ticket.id_ticket,
+                { id_sla_status: sla_status.atrasado },
+                ticket.id_sla_type,
+                ticket.id_phase
               );
             }
           }
@@ -1239,17 +2219,13 @@ class TicketController {
         id_form_template
       );
       for (let column of form_template.column) {
-        column.required && form[column.column]
-          ? ""
-          : errors.push(`O campo ${column.column} é obrigatório`);
+        column.required && !form[column.column]
+          ? errors.push(`O campo ${column.column} é obrigatório`)
+          : "";
       }
 
       const formColumns = Object.keys(form);
       for (const column of formColumns) {
-        console.log(
-          "==>",
-          form_template.column.filter((x) => x.column === column)
-        );
         form_template.column.filter((x) => x.column === column).length > 0
           ? ""
           : errors.push(`O campo ${column} não faz parte desse template`);
@@ -1289,34 +2265,30 @@ class TicketController {
 
   async getTicketByCustomerOrProtocol(req, res) {
     try {
-      let result = await ticketModel.getTicketByCustomerOrProtocol(
+      let result = await this.ticketModel.getTicketByCustomerOrProtocol(
         req.params.id
       );
-      console.log("result =====> ", result);
       for (let ticket of result) {
         ticket = await formatTicketForPhase([ticket], ticket);
 
-        ticket.attachments = await attachmentsModel.getAttachments(ticket.id);
-        ticket.attachments.map((value) => {
-          value.created_at = moment(value.created_at).format(
-            "DD/MM/YYYY HH:mm:ss"
-          );
-          value.updated_at = moment(value.updated_at).format(
-            "DD/MM/YYYY HH:mm:ss"
-          );
-        });
-
-        ticket.activities = await activitiesModel.getActivities(ticket.id);
-        ticket.activities.map((value) => {
-          value.created_at = moment(value.created_at).format(
-            "DD/MM/YYYY HH:mm:ss"
-          );
-          value.updated_at = moment(value.updated_at).format(
-            "DD/MM/YYYY HH:mm:ss"
-          );
-        });
-
-        ticket.history_phase = await ticketModel.getHistoryTicket(ticket.id);
+        const sla_status = function (sla) {
+          if (sla) {
+            let status = "";
+            const keys = Object.keys(sla);
+            for (const key of keys) {
+              if (sla[key].status === "Em dia") {
+                return "Em dia";
+              } else {
+                status = sla[key].status;
+              }
+            }
+            return status;
+          } else {
+            return "";
+          }
+        };
+        ticket.sla_status = sla_status(ticket.sla);
+        ticket.history_phase = await this.ticketModel.getHistoryTicket(ticket.id);
         ticket.history_phase.map((value) => {
           value.created_at = moment(value.created_at).format(
             "DD/MM/YYYY HH:mm:ss"
@@ -1337,7 +2309,7 @@ class TicketController {
   async ticketStatusCount(req, res) {
     try {
       const id_company = req.headers.authorization;
-      let result = await ticketModel.getTicketStatusCount(id_company);
+      let result = await this.ticketModel.getTicketStatusCount(id_company);
 
       let retorno;
       if (
@@ -1381,7 +2353,7 @@ class TicketController {
         : (obj.closed = [true, false]);
       req.query.range ? (obj.range = JSON.parse(req.query.range)) : "";
 
-      let result = await ticketModel.getCountResponsibleTicket(id_company, obj);
+      let result = await this.ticketModel.getCountResponsibleTicket(id_company, obj);
 
       if (result.name && result.name == "error")
         return res.status(400).send({ error: "There was an error" });
@@ -1411,24 +2383,79 @@ class TicketController {
   async startTicket(req, res) {
     try {
       if (req.body.id_ticket && req.body.id_user) {
-        const result = await userController.checkUserCreated(
+        const result = await this.userController.checkUserCreated(
           req.body.id_user,
-          req.headers.authorization
+          req.headers.authorization,
+          req.body.name ? req.body.name : "",
+          req.body.phone ? req.body.phone : "",
+          req.body.email ? req.body.email : "",
+          req.body.type_user ? req.body.type_user : 1
         );
         const time = moment();
         const responsibleCheck =
-          await ticketModel.getResponsibleByTicketAndUser(
+          await this.ticketModel.getResponsibleByTicketAndUser(
             req.body.id_ticket,
             result.id
           );
 
+        const ticket = await this.ticketModel.getTicketById(
+          req.body.id_ticket,
+          req.headers.authorization
+        );
+        console.log("req.body =>", req.body);
+        if (ticket && ticket.length > 0 && !ticket[0].start_ticket) {
+          ticket[0].start_ticket = time;
+          await this.ticketModel.updateTicket(
+            { start_ticket: time, id_status: 2 },
+            req.body.id_ticket,
+            req.headers.authorization
+          );
+
+          await updateSLA(req.body.id_ticket, ticket[0].phase_id);
+        }
+
+        const phase = await this.phaseModel.getPhaseById(
+          ticket[0].phase_id,
+          req.headers.authorization
+        );
+        await cache(
+          req.headers.authorization,
+          phase[0].id_department,
+          ticket[0].phase_id
+        );
+
+        await this._notify(
+          ticket[0].id,
+          ticket[0].id_phase,
+          req.headers.authorization,
+          "start_activity",
+          req.company[0].callback
+        );
+        await CallbackDigitalk(
+          {
+            type: "socket",
+            channel: `phase_${ticket[0].id_phase}`,
+            event: "update_ticket",
+            obj: ticket[0],
+          },
+          req.company[0].callback
+        );
+        await CallbackDigitalk(
+          {
+            type: "socket",
+            channel: `ticket_${ticket[0].id}`,
+            event: "update",
+            obj: ticket[0],
+          },
+          req.company[0].callback
+        );
         if (
           responsibleCheck &&
           Array.isArray(responsibleCheck) &&
           responsibleCheck.length > 0 &&
           !responsibleCheck[0].start_ticket
         ) {
-          await ticketModel.updateResponsible(req.body.id_ticket, result.id, {
+          await this.ticketModel.updateResponsible(req.body.id_ticket, result.id, {
             start_ticket: time,
           });
           return res
@@ -1439,7 +2466,7 @@ class TicketController {
           Array.isArray(responsibleCheck) &&
           responsibleCheck.length <= 0
         ) {
-          await ticketModel.createResponsibleTicket({
+          await this.ticketModel.createResponsibleTicket({
             id_ticket: req.body.id_ticket,
             id_user: result.id,
             id_type_of_responsible: 2,
@@ -1472,7 +2499,7 @@ class TicketController {
       if (!req.body.id_ticket || !req.body.id_protocol || req.body.id_user)
         return res.status(400).send({ error: "Houve algum problema" });
 
-      const ticket = await ticketModel.getTicketByIdSeq(
+      const ticket = await this.ticketModel.getTicketByIdSeq(
         req.body.id_ticket,
         req.headers.authorization
       );
@@ -1480,9 +2507,13 @@ class TicketController {
       if (!ticket || ticket.length < 0)
         return res.status(400).send({ error: "Houve algum problema" });
 
-      const user = await userController.checkUserCreated(
+      const user = await this.userController.checkUserCreated(
         req.body.id_user,
-        req.headers.authorization
+        req.headers.authorization,
+        req.body.name ? req.body.name : "",
+        req.body.phone ? req.body.phone : "",
+        req.body.email ? req.body.email : "",
+        req.body.type_user ? req.body.type_user : 1
       );
 
       if (!user) return res.status(400).send({ error: "Houve algum problema" });
@@ -1497,7 +2528,7 @@ class TicketController {
         created_by_ticket: req.body.created_by_ticket,
       };
 
-      const result = await ticketModel.linkProtocolToticket(obj);
+      const result = await this.ticketModel.linkProtocolToticket(obj);
 
       if (result.length <= 0)
         return res.status(400).send({ error: "Houve algum problema" });
@@ -1516,14 +2547,18 @@ class TicketController {
       if (!req.body.id_ticket || !req.body.id_user || !req.body.type)
         return res.status(400).send({ error: "Houve algum problema" });
 
-      const user = await userController.checkUserCreated(
+      const user = await this.userController.checkUserCreated(
         req.body.id_user,
-        req.headers.authorization
+        req.headers.authorization,
+        req.body.name ? req.body.name : "",
+        req.body.phone ? req.body.phone : "",
+        req.body.email ? req.body.email : "",
+        req.body.type_user ? req.body.type_user : 1
       );
 
       if (!user) return res.status(400).send({ error: "Houve algum problema" });
 
-      const ticket = await ticketModel.getTicketById(
+      const ticket = await this.ticketModel.getTicketById(
         req.body.id_ticket,
         req.headers.authorization
       );
@@ -1549,7 +2584,7 @@ class TicketController {
           break;
       }
 
-      const result = await ticketModel.insertViewTicket(obj);
+      const result = await this.ticketModel.insertViewTicket(obj);
       if (!result)
         return res.status(400).send({ error: "Houve algum problema" });
 
@@ -1562,7 +2597,7 @@ class TicketController {
 
   async history_ticket(req, res) {
     try {
-      const ticket = await ticketModel.getTicketById(
+      const ticket = await this.ticketModel.getTicketById(
         req.params.id,
         req.headers.authorization
       );
@@ -1571,11 +2606,48 @@ class TicketController {
         return res.status(400).send({ error: "Houve algum problema" });
 
       const history = [];
-      const child_tickets = await ticketModel.getTicketCreatedByTicketFather(
+
+      const slaInfo = await formatTicketForPhase(
+        { id: ticket[0].phase_id },
+        ticket[0]
+      );
+
+      const sla_status = function (sla) {
+        if (sla) {
+          let status = "";
+          const keys = Object.keys(sla);
+          for (const key of keys) {
+            if (sla[key].status === "Aberto") {
+              return "Aberto";
+            } else {
+              status = sla[key].status;
+            }
+          }
+          return status;
+        } else {
+          return "";
+        }
+      };
+
+      history.push({
+        id_seq: ticket[0].id_seq,
+        id_user: ticket[0].id_user,
+        user: ticket[0].name,
+        created_at: ticket[0].created_at,
+        closed: ticket[0].closed,
+        department_origin: ticket[0].department_origin,
+        phase_name: ticket[0].phase,
+        display_name: ticket[0].display_name,
+        id_protocol: ticket[0].id_protocol,
+        type: "ticket",
+        sla_status: sla_status(slaInfo.sla),
+        customer: await this.customerModel.getAll(ticket[0].id),
+      });
+
+      const child_tickets = await this.ticketModel.getTicketCreatedByTicketFather(
         req.params.id,
         req.headers.authorization
       );
-      console.log("child_ticket", child_tickets);
       if (child_tickets && child_tickets.length > 0) {
         for (const child_ticket of child_tickets) {
           child_ticket.created_at = moment(child_ticket.created_at).format(
@@ -1586,15 +2658,15 @@ class TicketController {
         }
       }
 
-      const father_ticket = await ticketModel.getTicketById(
+      const father_ticket = await this.ticketModel.getTicketById(
         ticket[0].id_ticket_father,
         req.headers.authorization
       );
-      console.log("father_ticket", father_ticket);
       if (father_ticket && father_ticket.length > 0) {
         history.push({
           id_seq: father_ticket[0].id_seq,
           id_user: father_ticket[0].id_user,
+          user: father_ticket[0].name,
           created_at: moment(father_ticket[0].created_at).format(
             "DD/MM/YYYY HH:mm:ss"
           ),
@@ -1604,20 +2676,20 @@ class TicketController {
           display_name: father_ticket[0].display_name,
           id_protocol: father_ticket[0].id_protocol,
           type: "ticket",
+          customer: await this.customerModel.getAll(father_ticket[0].id),
         });
       }
 
-      const customers = await customerModel.getAll(req.params.id);
-      console.log("customer", customers);
+      const customers = await this.customerModel.getAll(req.params.id);
       if (customers && customers.length > 0) {
         for (const customer of customers) {
           const customersRelated =
-            await customerModel.getByIdentification_document(
+            await this.customerModel.getByIdentification_document(
               customer.identification_document
             );
           if (customersRelated && customersRelated.length > 0) {
             for (const customerRelated of customersRelated) {
-              const ticketRelated = await ticketModel.getTicketById(
+              const ticketRelated = await this.ticketModel.getTicketById(
                 customerRelated.id_ticket,
                 req.headers.authorization
               );
@@ -1625,6 +2697,7 @@ class TicketController {
                 ticket[0].history.push({
                   id_seq: ticketRelated[0].id_seq,
                   id_user: ticketRelated[0].id_user,
+                  user: ticketRelated[0].name,
                   created_at: moment(ticketRelated[0].created_at).format(
                     "DD/MM/YYYY HH:mm:ss"
                   ),
@@ -1634,6 +2707,7 @@ class TicketController {
                   display_name: ticketRelated[0].display_name,
                   id_protocol: ticketRelated[0].id_protocol,
                   type: "ticket",
+                  customer: await this.customerModel.getAll(ticketRelated[0].id),
                 });
               }
             }
@@ -1641,11 +2715,10 @@ class TicketController {
         }
       }
 
-      const protocols = await ticketModel.getProtocolTicket(
+      const protocols = await this.ticketModel.getProtocolTicket(
         req.params.id,
         req.headers.authorization
       );
-      console.log("protocols", protocols);
       if (protocols && protocols.length > 0) {
         for (const protocol of protocols) {
           history.push({
@@ -1654,12 +2727,39 @@ class TicketController {
           });
         }
       }
+
+      if (ticket[0].id_protocol) {
+        history.push({
+          id: ticket[0].id_protocol,
+          type: "protocol",
+        });
+      }
+
       return res.status(200).send(history);
     } catch (err) {
       console.log("Error history_ticket =>", err);
       return res.status(500).send({ error: "Houve algum problema" });
     }
   }
-}
 
-module.exports = TicketController;
+  async tab(req, res) {
+    try {
+      const ticket = await this.ticketModel.getTicketById(req.body.id_ticket);
+      if (ticket.length <= 0)
+        return res.status(500).send({ error: "Não existe ticket com esse ID" });
+
+      await this.ticketModel.updateTicket(
+        { id_tab: req.body.id_tab, updated_at: moment().format() },
+        req.body.id_ticket,
+        req.headers.authorization
+      );
+
+      return res.status(200).send(req.body)
+    } catch (err) {
+      console.log("tab err ====> ", err);
+      return res
+        .status(500)
+        .send({ error: "Ocorreu um erro ao tabular o ticket" });
+    }
+  }
+}

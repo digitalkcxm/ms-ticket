@@ -1,11 +1,16 @@
-const router = require("express").Router()
+import company from "../routes/company.js";
+import phase from "../routes/phase.js";
+import ticket from "../routes/ticket.js";
+// import incoming from "../routes/incoming.js";
+import customer from "../routes/customer.js";
+import department from "../routes/department.js";
 
-router.use("/api/v1/health",(req,res)=> res.status(200).send("Ok!"))
-router.use("/api/v1/company",require("../routes/company"))
-router.use("/api/v1/phase", require("../routes/phase"))
-router.use("/api/v1/ticket",require("../routes/ticket"))
-router.use("/api/v1/incoming",require("../routes/incoming"))
-router.use("/api/v1/customer", require("../routes/customer"))
-router.use("/api/v1/department",require("../routes/department"))
-
-module.exports = router
+export default (app, database, logger) => {
+    app.use("/api/v1/health", (req, res) => res.status(200).send("Ok!"));
+  app.use("/api/v1/company", company(database, logger));
+  app.use("/api/v1/phase", phase(database, logger));
+  app.use("/api/v1/ticket", ticket(database, logger));
+  //   app.use("/api/v1/incoming", incoming());
+  app.use("/api/v1/customer", customer(database, logger));
+  app.use("/api/v1/department", department(database, logger));
+};

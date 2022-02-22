@@ -1,8 +1,8 @@
-const database = require("../config/database/database")
+import database from "../config/database/database.js"
 
 const tableName = "email"
 
-class EmailModel {
+export default class EmailModel {
     async getEmailByEmail(email, company_id) {
         try {
             return await database(tableName).select("id").where("email", email).andWhere("id_company", company_id)
@@ -52,5 +52,3 @@ class EmailModel {
         }
     }
 }
-
-module.exports = EmailModel

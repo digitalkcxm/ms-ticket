@@ -1,8 +1,8 @@
-const CompanyModel = require("../models/CompanyModel")
+import CompanyModel from "../models/CompanyModel.js"
 
 const companyModel = new CompanyModel()
 
-async function verifyCompany(req, res, next) {
+export async function verifyCompany(req, res, next) {
     const companyVerified = await companyModel.getByIdActive(req.headers.authorization)
 
     if (!companyVerified || companyVerified.length <= 0)
@@ -12,4 +12,3 @@ async function verifyCompany(req, res, next) {
     return next()
 }
 
-module.exports = { verifyCompany }

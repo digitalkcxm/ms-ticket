@@ -1,7 +1,12 @@
-require('dotenv').config()
-require('./helpers/CronJob')
-const TicketController = require("./controllers/TicketController")
+import dotenv from "dotenv";
+import TicketController from "./controllers/TicketController.js"
 
-const { setTicketAtRedis } = new TicketController()
-setTicketAtRedis()
-require('./config/server').server
+const { setTicketAtRedis } = new TicketController();
+
+
+
+setTicketAtRedis();
+import { server } from "./config/server.js";
+
+server
+

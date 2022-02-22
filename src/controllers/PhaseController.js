@@ -1,49 +1,41 @@
-const redis = require("async-redis").createClient(
-  process.env.REDIS_PORT,
-  process.env.REDIS_HOST
-);
+import redis from "async-redis";
+redis.createClient(process.env.REDIS_PORT, process.env.REDIS_HOST);
 
-const { v1 } = require("uuid");
+import { v1 } from "uuid";
 
-const moment = require("moment");
+import moment from "moment";
 
-const PhaseModel = require("../models/PhaseModel");
-const phaseModel = new PhaseModel();
+import PhaseModel from "../models/PhaseModel.js";
+import UserController from "./UserController.js";
+import TicketModel from "../models/TicketModel.js";
+import FormTemplate from "../documents/FormTemplate.js";
+import FormDocuments from "../documents/FormDocuments.js";
+import DepartmentController from "./DepartmentController.js";
+import templateValidate from "../helpers/TemplateValidate.js";
+import { formatTicketForPhase } from "../helpers/FormatTicket.js";
+import { validationResult } from "express-validator";
+import DepartmentModel from "../models/DepartmentModel.js";
+import SLAModel from "../models/SLAModel.js";
+import TypeColumnModel from "../models/TypeColumnModel.js";
+import {
+  counter_sla,
+  settingsSLA,
+  createSLAControl,
+} from "../helpers/SLAFormat.js";
+import CallbackDigitalk from "../services/CallbackDigitalk.js";
+import cache from "../helpers/Cache.js";
 
-const UserController = require("./UserController");
-const userController = new UserController();
-
-const TicketModel = require("../models/TicketModel");
-const ticketModel = new TicketModel();
-
-const FormTemplate = require("../documents/FormTemplate");
-const FormDocuments = require("../documents/FormDocuments");
-
-const UnitOfTimeModel = require("../models/UnitOfTimeModel");
-const unitOfTimeModel = new UnitOfTimeModel();
-
-const DepartmentController = require("./DepartmentController");
-const departmentController = new DepartmentController();
-
-const templateValidate = require("../helpers/TemplateValidate");
-const { formatTicketForPhase } = require("../helpers/FormatTicket");
-
-const { validationResult } = require("express-validator");
-
-const DepartmentModel = require("../models/DepartmentModel");
-const departmentModel = new DepartmentModel();
-
-const ActivitiesModel = require("../models/ActivitiesModel");
-const activitiesModel = new ActivitiesModel();
-
-const SLAModel = require("../models/SLAModel");
-const slaModel = new SLAModel();
-
-const TypeColumnModel = require("../models/TypeColumnModel");
-const typeColumnModel = new TypeColumnModel();
-
-const { counter_sla, settingsSLA } = require("../helpers/SLAFormat");
-class PhaseController {
+export default class PhaseController {
+  constructor(database = {}, logger = {}) {
+    this.logger = logger;
+    this.phaseModel = new PhaseModel(database, logger);
+    this.userController = new UserController(database, logger);
+    this.ticketModel = new TicketModel(database, logger);
+    this.departmentController = new DepartmentController(database, logger);
+    this.departmentModel = new DepartmentModel(database, logger);
+    this.slaModel = new SLAModel(database, logger);
+    this.typeColumnModel = new TypeColumnModel(database, logger);
+  }
   async create(req, res) {
     // Validação do corpo da requisição.
     const errors = validationResult(req);
@@ -77,6 +69,7 @@ class PhaseController {
         create_ticket: req.body.create_ticket,
       };
       // Executa uma validação no formulario passado pelo cliente.
+
       if (req.body.form) {
         const templateValidate = await this._formPhase(
           req.body.column,
@@ -86,12 +79,12 @@ class PhaseController {
         if (!templateValidate) {
           return res.status(400).send({ errors: templateValidate });
         }
-
+        this.logger.info("Return of validate template", templateValidate);
         obj.id_form_template = templateValidate;
       }
 
       // Cria a estrutura base da fase.
-      let phaseCreated = await phaseModel.createPhase(obj);
+      let phaseCreated = await this.phaseModel.createPhase(obj);
       if (
         !Array.isArray(phaseCreated) ||
         (Array.isArray(phaseCreated) && phaseCreated.length <= 0)
@@ -106,51 +99,6 @@ class PhaseController {
         obj.id
       );
 
-      // Realiza uma verificação com o id do usuario responsavel pela fase, e depois vincula os dois.
-      // if (
-      //   req.body.separate &&
-      //   Array.isArray(req.body.separate) &&
-      //   req.body.separate.length > 0
-      // ) {
-      //   for await (const contact of req.body.separate) {
-      //     let result;
-
-      //     if(contact.id){
-      //       result = await userController.checkUserCreated(
-      //         contact.id,
-      //         req.headers.authorization,
-      //         contact.name
-      //       );
-      //     }else if(contact.email){
-      //      result =  checkEmailCreated(contact.email,   req.headers.authorization)
-      //     }
-
-      //     usersResponsible.push(result.id);
-      //   }
-      //   await this._responsiblePhase(obj.id, usersResponsible);
-      //   obj.responsible = req.body.responsible;
-      // }
-
-      // Realiza uma verificação com o id do usuario pela fase, e depois vincula os dois.
-      // if (
-      //   req.body.notify &&
-      //   Array.isArray(req.body.notify) &&
-      //   req.body.notify.length > 0
-      // ) {
-      //   for await (const notify of req.body.notify) {
-      //     let result;
-      //     result = await userController.checkUserCreated(
-      //       notify,
-      //       req.headers.authorization,
-      //       notify.name
-      //     );
-      //     usersNotify.push(result.id);
-      //   }
-      //   obj.notify = req.body.notify;
-
-      //   await this._notifyPhase(obj.id, usersNotify, usersResponsible);
-      // }
-
       // Registra a configuração de SLA da fase.
       if (req.body.sla) {
         await this._phaseSLASettings(req.body.sla, obj.id);
@@ -163,21 +111,40 @@ class PhaseController {
       obj.created_at = moment(obj.created_at).format("DD/MM/YYYY HH:mm:ss");
       obj.updated_at = moment(obj.updated_at).format("DD/MM/YYYY HH:mm:ss");
 
+      obj = await this._formatPhase(
+        obj,
+        req.app.locals.db,
+        false,
+        false,
+        req.headers.authorization
+      );
+
       await redis.del(`ticket:phase:${req.headers.authorization}`);
+      await CallbackDigitalk(
+        {
+          type: "socket",
+          channel: `wf_department_${req.body.department}`,
+          event: "new_phase",
+          obj,
+        },
+        req.company[0].callback
+      );
+
+      await cache(req.headers.authorization, req.body.department, obj.id);
 
       return res.status(200).send(obj);
     } catch (err) {
-      console.log("Error when manage phase create => ", err);
+      this.logger.error(err, "Error when manage phase create.");
       return res.status(400).send({ error: "Error when manage phase create" });
     }
   }
 
   async _departmentPhaseLinked(department, authorization, phaseId) {
-    const result = await departmentController.checkDepartmentCreated(
+    const result = await this.departmentController.checkDepartmentCreated(
       department,
       authorization
     );
-    await phaseModel.linkedDepartment({
+    await this.phaseModel.linkedDepartment({
       id_department: result[0].id,
       id_phase: phaseId,
       active: true,
@@ -193,8 +160,7 @@ class PhaseController {
     if (!formTemplate) return false;
 
     for (const formatcolumn of column) {
-      console.log(formatcolumn);
-      const type = await typeColumnModel.getTypeByID(formatcolumn.type);
+      const type = await this.typeColumnModel.getTypeByID(formatcolumn.type);
       formatcolumn.type = type[0].name;
     }
 
@@ -205,17 +171,10 @@ class PhaseController {
     const keys = Object.keys(obj);
 
     const slaSettings = async function (sla, type) {
-      const timeType = await unitOfTimeModel.checkUnitOfTimeByName(
-        sla.unit_of_time
-      );
-      if (!timeType || timeType.length <= 0 || !sla.active || sla.time <= 0) {
-        return false;
-      }
-
-      await slaModel.slaPhaseSettings({
+      await this.slaModel.slaPhaseSettings({
         id_phase: idPhase,
         id_sla_type: type,
-        id_unit_of_time: timeType,
+        id_unit_of_time: sla.unit_of_time,
         time: sla.time,
         active: sla.active,
       });
@@ -241,31 +200,28 @@ class PhaseController {
 
   async getPhaseByID(req, res) {
     try {
-      const result = await phaseModel.getPhaseById(
+      const result = await this.phaseModel.getPhaseById(
         req.params.id,
         req.headers.authorization
       );
       if (!result || result.length < 0)
         return res.status(400).send({ error: "Invalid id phase" });
 
-      const departments = await phaseModel.getDepartmentPhase(result[0].id);
+      const departments = await this.phaseModel.getDepartmentPhase(
+        result[0].id
+      );
       result[0].department = departments[0].id_department;
 
-      const tickets = await ticketModel.getTicketByPhase(result[0].id);
-      result[0].ticket = [];
-      result[0].header = {};
-
-      result[0].header.total_tickets = tickets.length;
-      for await (let ticket of tickets) {
-        const ticketFormated = await formatTicketForPhase(result[0], ticket);
-        result[0].ticket.push(ticketFormated);
-      }
-
-      result[0].sla = await settingsSLA(result[0].id);
-      result[0] = await this._formatPhase(result[0], req.app.locals.db);
+      result[0] = await this._formatPhase(
+        result[0],
+        req.app.locals.db,
+        false,
+        false,
+        req.headers.authorization
+      );
       return res.status(200).send(result);
     } catch (err) {
-      console.log("PhaseController -> getPhaseByID -> err", err);
+      this.logger.error(err, `Error get phases with ID ${req.params.id}`);
       return res.status(400).send({ error: "There was an error" });
     }
   }
@@ -275,45 +231,30 @@ class PhaseController {
     let result;
     try {
       if (search) {
-        result = await phaseModel.getAllPhase(req.headers.authorization);
-
-        // if (isNaN(search)) {
-        //   const searchMongo = await new FormDocuments(
-        //     req.app.locals.db
-        //   ).searchRegister(search);
-
-        //   for (let i in result) {
-        //     result[i].ticket = [];
-
-        //     for (const mongoResult of searchMongo) {
-        //       let ticket = await ticketModel.getTicketByIDForm(
-        //         mongoResult._id,
-        //         result[i].id
-        //       );
-        //       if (ticket)
-        //         result[i].ticket.push(
-        //           await formatTicketForPhase(result[i], ticket)
-        //         );
-        //     }
-        //     result[i] = await this._formatPhase(result[i], req.app.locals.db);
-        //   }
-        // } else {
+        result = await this.phaseModel.getAllPhasesByDepartmentID(
+          req.query.department,
+          req.headers.authorization,
+          req.query.enable
+        );
         for (let i in result) {
-          const tickets = await ticketModel.searchTicket(
+          const tickets = await this.ticketModel.searchTicket(
             req.headers.authorization,
             search,
-            result[i].id
+            result[i].id,
+            req.query.status
           );
-          result[i].header = {};
-          result[i].ticket = [];
-          result[i].header.total_tickets = tickets.length;
-
           for await (let ticket of tickets) {
             result[i].ticket.push(
               await formatTicketForPhase(result[i], ticket)
             );
           }
-          result[i] = await this._formatPhase(result[i], req.app.locals.db);
+          result[i] = await this._formatPhase(
+            result[i],
+            req.app.locals.db,
+            true,
+            false,
+            req.headers.authorization
+          );
         }
         // }
       } else if (req.query.department) {
@@ -321,26 +262,23 @@ class PhaseController {
           req.query.department,
           req.headers.authorization,
           req.query.status,
-          req.app.locals.db
+          req.app.locals.db,
+          req.query.enable
         );
       } else {
-        result = await phaseModel.getAllPhase(req.headers.authorization);
+        result = await this.phaseModel.getAllPhase(
+          req.headers.authorization,
+          req.query.enable
+        );
 
         for (let i in result) {
-          const tickets = await ticketModel.getTicketByPhase(
-            result[i].id,
-            search
+          result[i] = await this._formatPhase(
+            result[i],
+            req.app.locals.db,
+            false,
+            false,
+            req.headers.authorization
           );
-          result[i].ticket = [];
-          result[i].header = {};
-          result[i].header.total_tickets = tickets.length;
-
-          for await (let ticket of tickets) {
-            result[i].ticket.push(
-              await formatTicketForPhase(result[i], ticket)
-            );
-          }
-          result[i] = await this._formatPhase(result[i], req.app.locals.db);
         }
 
         await redis.set(
@@ -348,41 +286,47 @@ class PhaseController {
           JSON.stringify(result)
         );
       }
-
       return res.status(200).send(result);
     } catch (err) {
-      console.log("Get all phase => ", err);
+      this.logger.error(err, "Get all phase => ");
       return res.status(400).send({ error: "There was an error" });
     }
   }
 
-  // departments = JSON.parse(departments)
-  async _queryDepartment(department, authorization, status, db) {
-    const department_id = await departmentModel.getByID(
-      department,
-      authorization
-    );
-    if (department_id && department_id.length <= 0) return false;
-
-    let result = await phaseModel.getAllPhasesByDepartmentID(
-      department_id[0].id
-    );
-    for (let phase of result) {
-      const tickets = await ticketModel.getTicketByPhaseAndStatus(
-        phase.id,
-        status
+  async getBySocket(req, res) {
+    try {
+      let result = await this.phaseModel.getAllPhasesByDepartmentID(
+        req.params.id,
+        req.headers.authorization
       );
-
-      phase.ticket = [];
-      phase.header = {};
-      phase.header.total_tickets = tickets.length;
-      for await (let ticket of tickets) {
-        phase.ticket.push(await formatTicketForPhase(phase, ticket));
+      for (let phase of result) {
+        phase = await this._formatPhase(
+          phase,
+          req.app.locals.db,
+          false,
+          false,
+          req.headers.authorization
+        );
       }
+      return res.status(200).send(result);
+    } catch (err) {
+      this.logger.error(
+        err,
+        `Error get by socket with department ID ${req.params.id}`
+      );
+      return res.status(400).send({ error: "There was an error" });
+    }
+  }
+  // departments = JSON.parse(departments)
+  async _queryDepartment(department, authorization, status, db, enable) {
+    let result = await this.phaseModel.getAllPhasesByDepartmentID(
+      department,
+      authorization,
+      enable
+    );
 
-      phase.sla = await settingsSLA(phase.id);
-
-      phase = await this._formatPhase(phase, db);
+    for (let phase of result) {
+      phase = await this._formatPhase(phase, db, false, status, authorization);
     }
 
     return result;
@@ -418,19 +362,39 @@ class PhaseController {
         create_ticket: req.body.create_ticket,
       };
 
-      await phaseModel.updatePhase(
+      const oldPhase = await this.phaseModel.getPhaseById(
+        req.params.id,
+        req.headers.authorization
+      );
+      if (!oldPhase || oldPhase.length <= 0)
+        return res
+          .status(400)
+          .send({ error: "Error when manage phase update" });
+
+      await this.phaseModel.updatePhase(
         obj,
         req.params.id,
         req.headers.authorization
       );
       obj.id = req.params.id;
 
+      if (obj.active != oldPhase[0].active) {
+        await CallbackDigitalk(
+          {
+            type: "socket",
+            channel: `wf_department_${req.body.department}`,
+            event: "change_active_phase",
+            obj: { id: req.params.id, active: obj.active },
+          },
+          req.company[0].callback
+        );
+      }
       // let result = await departmentController.checkDepartmentCreated(
       //   req.body.department,
       //   req.headers.authorization
       // );
 
-      // let departmentLinkedWithPhase = await phaseModel.selectLinkedDepartment(
+      // let departmentLinkedWithPhase = await this.phaseModel.selectLinkedDepartment(
       //   req.params.id
       // );
       // if (departmentLinkedWithPhase.length <= 0)
@@ -444,7 +408,7 @@ class PhaseController {
         req.headers.authorization,
         req.params.id
       );
-      //   await phaseModel.linkedDepartment({
+      //   await this.phaseModel.linkedDepartment({
       //     id_department: result[0].id,
       //     id_phase: req.params.id,
       //     active: true,
@@ -457,10 +421,13 @@ class PhaseController {
       ) {
         for await (const responsible of req.body.responsible) {
           let resultUser;
-          resultUser = await userController.checkUserCreated(
+          resultUser = await this.userController.checkUserCreated(
             responsible,
             req.headers.authorization,
-            responsible.name
+            responsible.name,
+            responsible.phone,
+            responsible.email,
+            1
           );
           usersResponsible.push(resultUser.id);
         }
@@ -475,10 +442,13 @@ class PhaseController {
       ) {
         for await (const notify of req.body.notify) {
           let resultUser;
-          resultUser = await userController.checkUserCreated(
+          resultUser = await this.userController.checkUserCreated(
             notify,
             req.headers.authorization,
-            notify.name
+            notify.name,
+            notify.phone,
+            notify.email,
+            1
           );
           usersNotify.push(resultUser.id);
         }
@@ -492,42 +462,50 @@ class PhaseController {
         await this._phaseSLASettings(req.body.sla, obj.id);
       }
 
-      let phase = await phaseModel.getPhaseById(
+      let phase = await this.phaseModel.getPhaseById(
         req.params.id,
         req.headers.authorization
       );
-      let validations = await this._checkColumnsFormTemplate(
-        req.body.column,
-        req.app.locals.db,
-        phase[0].id_form_template
-      );
-      if (validations.length > 0)
-        return res.status(400).send({ error: validations });
+      if (req.body.form && req.body.column) {
+        let validations = await this._checkColumnsFormTemplate(
+          req.body.column,
+          req.app.locals.db,
+          phase[0].id_form_template
+        );
+        if (validations.length > 0)
+          return res.status(400).send({ error: validations });
 
-      validations.column = req.body.column;
-      await new FormTemplate(req.app.locals.db).updateRegister(
-        validations._id,
-        validations
+        validations.column = req.body.column;
+        await new FormTemplate(req.app.locals.db).updateRegister(
+          validations._id,
+          validations
+        );
+        phase[0].department = req.body.department;
+        phase[0].formTemplate = req.body.column;
+        delete phase[0].id_form_template;
+      }
+
+      await cache(
+        req.headers.authorization,
+        req.body.department,
+        req.params.id
       );
-      phase[0].department = req.body.department;
-      phase[0].formTemplate = req.body.column;
-      delete phase[0].id_form_template;
 
       await redis.del(`ticket:phase:${req.headers.authorization}`);
       return res.status(200).send(phase);
     } catch (err) {
-      console.log("Error when manage phase update => ", err);
+      this.logger.error(err, "Error when manage phase update.");
       return res.status(400).send({ error: "Error when manage phase update" });
     }
   }
 
   async _responsiblePhase(phase_id, usersResponsible) {
     try {
-      await phaseModel.delResponsiblePhase(phase_id);
+      await this.phaseModel.delResponsiblePhase(phase_id);
 
       if (usersResponsible.length > 0) {
         usersResponsible.map(async (user) => {
-          await phaseModel.createResponsiblePhase({
+          await this.phaseModel.createResponsiblePhase({
             id_phase: phase_id,
             id_user: user,
             id_type_of_responsible: 1,
@@ -535,26 +513,25 @@ class PhaseController {
         });
       }
     } catch (err) {
-      console.log("Error responsible Phase => ", err);
+      this.logger.error(err, "Error create responsible phase.");
       return err;
     }
   }
 
   async _notifyPhase(phase_id, usersNotify, usersResponsible) {
     try {
-      await phaseModel.delNotifyPhase(phase_id);
+      await this.phaseModel.delNotifyPhase(phase_id);
 
       if (usersNotify.length > 0) {
         usersNotify.map(async (user) => {
-          console.log("User", user);
-          await phaseModel.createNotifyPhase({
+          await this.phaseModel.createNotifyPhase({
             id_phase: phase_id,
             id_user: user,
           });
         });
       }
     } catch (err) {
-      console.log("Error notify Phase => ", err);
+      this.logger.error(err, "Error create notify phase.");
       return err;
     }
   }
@@ -572,7 +549,6 @@ class PhaseController {
       newTemplate.map((valueB) =>
         valueA.column == valueB.column ? validate++ : ""
       );
-      console.log(validate, valueA.label);
 
       if (validate <= 0)
         errors.push(
@@ -589,12 +565,16 @@ class PhaseController {
     return register;
   }
 
-  async _formatPhase(result, mongodb) {
-    const department = await phaseModel.getDepartmentPhase(result.id);
+  async _formatPhase(result, mongodb, search = false, status, authorization) {
+    result.ticket = [];
+    result.header = {};
 
-    department.length > 0
-      ? (result.department = department[0].id_department)
-      : 0;
+    result.sla = await settingsSLA(result.id);
+    // const department = await this.phaseModel.getDepartmentPhase(result.id);
+
+    // department.length > 0
+    //   ? (result.department = department[0].id_department)
+    //   : 0;
 
     if (result.id_form_template) {
       const register = await new FormTemplate(mongodb).findRegistes(
@@ -605,46 +585,60 @@ class PhaseController {
         result.formTemplate = register.column;
 
         for (const x of result.formTemplate) {
-          const type = await typeColumnModel.getTypeByID(x.type);
+          const type = await this.typeColumnModel.getTypeByID(x.type);
 
           type && Array.isArray(type) && type.length > 0
             ? (x.type = type[0].name)
             : "";
         }
       }
-      result.department_can_create_protocol =
-        result.department_can_create_protocol &&
-        result.department_can_create_protocol.department
-          ? result.department_can_create_protocol.department
-          : [];
-      result.department_can_create_ticket =
-        result.department_can_create_ticket &&
-        result.department_can_create_ticket.department
-          ? result.department_can_create_ticket.department
-          : [];
-      result.separate =
-        result.separate && result.separate.separate
-          ? result.separate.separate
-          : null;
     }
-    result.header.open_tickets = await ticketModel.countTicket(
-      result.id,
-      false
-    );
-    result.header.closed_tickets = await ticketModel.countTicket(
-      result.id,
-      true
-    );
-    result.header.open_tickets!= "0"
-      ? (result.header.percent_open_tickets =
-          (result.header.total_tickets * 100) / result.header.open_tickets)
-      : result.header.percent_open_tickets;
-    result.header.closed_tickets != "0"
-      ? (result.header.percent_closed_tickets =
-          (result.header.total_tickets * 100) / result.header.closed_tickets)
-      : (result.header.percent_closed_tickets = 0);
 
-    result.header.counter_sla = await counter_sla(result.id);
+    if (!search) {
+      let tickets = "";
+      if (status) {
+        tickets = await this.ticketModel.getTicketByPhaseAndStatus(
+          result.id,
+          status
+        );
+      } else {
+        tickets = await this.ticketModel.getTicketByPhase(result.id);
+      }
+
+      for await (let ticket of tickets) {
+        result.ticket.push(await formatTicketForPhase(result, ticket));
+        // if (ticket) const getByPhaseTicket(id_phase, id_ticket);
+      }
+    }
+
+    result.department_can_create_protocol &&
+    result.department_can_create_protocol.department
+      ? (result.department_can_create_protocol =
+          result.department_can_create_protocol.department)
+      : (result.department_can_create_protocol = []);
+
+    result.department_can_create_ticket &&
+    result.department_can_create_ticket.department
+      ? (result.department_can_create_ticket =
+          result.department_can_create_ticket.department)
+      : (result.department_can_create_ticket = []);
+
+    result.separate && result.separate.separate
+      ? (result.separate = result.separate.separate)
+      : (result.separate = null);
+
+    const header = await redis.get(
+      `msTicket:header:${authorization}:phase:${result.id}`
+    );
+
+    if (header) {
+      result.header = JSON.parse(header);
+    } else {
+      result.header = await this.headerGenerate({
+        id: result.id,
+        authorization,
+      });
+    }
 
     result.created_at = moment(result.created_at).format("DD/MM/YYYY HH:mm:ss");
     result.updated_at = moment(result.updated_at).format("DD/MM/YYYY HH:mm:ss");
@@ -681,20 +675,20 @@ class PhaseController {
         return await this._phaseForCache(departments, authorization, db);
       }
     } catch (err) {
-      console.log(err);
+      this.logger.error(err);
       return { error: "Houve algum erro ao captar o departamento pelo id" };
     }
   }
 
   async _phaseForCache(departments, authorization, db) {
     const phases = [];
-    const department_id = await departmentModel.getByID(
+    const department_id = await this.departmentModel.getByID(
       departments,
       authorization
     );
     if (department_id && department_id.length <= 0) return false;
 
-    const result = await phaseModel.getPhasesByDepartmentID(
+    const result = await this.phaseModel.getPhasesByDepartmentID(
       department_id[0].id
     );
     for (const phase of result) {
@@ -714,28 +708,66 @@ class PhaseController {
 
   async disablePhase(req, res) {
     try {
-      await phaseModel.updatePhase(
+      const result = await this.phaseModel.getPhaseById(
+        req.params.id,
+        req.headers.authorization
+      );
+      if (!result || result.length < 0)
+        return res.status(400).send({ error: "Invalid id phase" });
+
+      const departments = await this.phaseModel.getDepartmentPhase(
+        result[0].id
+      );
+      result[0].department = departments[0].id_department;
+
+      result[0].ticket = [];
+      result[0].header = {};
+
+      result[0].sla = await settingsSLA(result[0].id);
+      await this.phaseModel.updatePhase(
         { active: req.body.active },
         req.params.id,
         req.headers.authorization
       );
+      await cache(
+        req.headers.authorization,
+        result[0].department,
+        req.params.id
+      );
+
+      await CallbackDigitalk(
+        {
+          type: "socket",
+          channel: `wf_department_${result[0].department}`,
+          event: "disable_phase",
+          obj: { id: req.params.id, active: req.body.active },
+        },
+        req.company[0].callback
+      );
+
       return res.status(200).send({ status: "ok" });
     } catch (err) {
-      console.log(err);
+      this.logger.error(err);
       return res.status(400).send({ error: "Error when disable phase" });
     }
   }
 
   async closeMassive(req, res) {
     try {
+      const phase = await this.phaseModel.getPhaseById(
+        req.params.id,
+        req.headers.authorization
+      );
+      if (phase.length <= 0)
+        return res.status(400).send({ error: "Id da phase invalido" });
+
       //Verifica se o id do usuario está sendo passado no body da requisição.
       if (!req.body.id_user) {
-        console.log("Error ===> Sem ID do usuário");
         return res.status(400).send({ error: "Whitout id_user" });
       }
 
       //Faz a verificação de usuario, caso ele não exista ele cria na base.
-      let user = await userController.checkUserCreated(
+      let user = await this.userController.checkUserCreated(
         req.body.id_user,
         req.headers.authorization,
         req.body.name_user
@@ -743,18 +775,18 @@ class PhaseController {
 
       //Verifica se ocorreu algum erro na checagem de usuario.
       if (!user || !user.id) {
-        console.log("Error ===> Ocorreu algum erro na checagem do usuario");
+        this.logger.info("Ocorreu algum erro na checagem do usuario");
         return res
           .status(400)
           .send({ error: "Ocorreu algum erro na checagem de usuario" });
       }
 
       //Faz o get dos tickets pelo id da fase.
-      const tickets = await ticketModel.getTicketByPhase(req.params.id, "");
+      const tickets = await this.ticketModel.getTicketByPhase(req.params.id);
 
       //Retorna um erro caso a fase não contenha tickets na fase.
       if (tickets.length <= 0) {
-        console.log("Error ===> Não há tickets ativos");
+        this.logger.info("Não há tickets ativos");
         return res
           .status(400)
           .send({ error: "Não há tickets ativos nessa phase" });
@@ -763,24 +795,81 @@ class PhaseController {
       //Faz um laço de repetição finalizando todos os tickets relacionados a phase.
       for (const ticket of tickets) {
         if (!ticket.closed) {
-          await ticketModel.closedTicket(ticket.id);
+          await this.ticketModel.closedTicket(ticket.id);
 
-          //Cria uma atividade para registrar a ação do usuario
-          let obj = {
-            text: `Ticket finalizado massivamente pelo usuario ${req.body.name_user}`,
-            id_ticket: ticket.id,
-            id_user: user.id,
-            created_at: moment().format(),
-            updated_at: moment().format(),
-          };
+          let slaTicket = await this.slaModel.getByPhaseTicket(
+            req.params.id,
+            ticket.id,
+            3
+          );
+          let obj;
+          if (slaTicket && Array.isArray(slaTicket) && slaTicket.length > 0) {
+            if (slaTicket[0].limit_sla_time < moment()) {
+              obj = {
+                id_sla_status: sla_status.atrasado,
+                active: false,
+                interaction_time: moment(),
+              };
+            } else if (slaTicket[0].limit_sla_time > moment()) {
+              obj = {
+                id_sla_status: sla_status.emdia,
+                active: false,
+                interaction_time: moment(),
+              };
+            }
+            await this.slaModel.updateTicketSLA(
+              ticket.id,
+              obj,
+              slaTicket.id_sla_type,
+              req.params.id
+            );
+          }
 
-          await activitiesModel.create(obj);
+          // Uma nova verificação para saber se o sla de resposta se manteve no tempo determinado.
+          slaTicket = await this.slaModel.getByPhaseTicket(
+            req.params.id,
+            ticket.id,
+            2
+          );
+
+          if (
+            slaTicket &&
+            Array.isArray(slaTicket) &&
+            slaTicket.length > 0 &&
+            !slaTicket[0].interaction_time
+          ) {
+            if (slaTicket[0].limit_sla_time < moment()) {
+              obj = {
+                id_sla_status: sla_status.atrasado,
+                active: false,
+              };
+            } else if (slaTicket[0].limit_sla_time > moment()) {
+              obj = {
+                id_sla_status: sla_status.emdia,
+                active: false,
+              };
+            }
+            await this.slaModel.updateTicketSLA(
+              ticket.id,
+              obj,
+              slaTicket.id_sla_type,
+              req.params.id
+            );
+          }
+
+          await this.slaModel.disableSLA(ticket.id);
         }
       }
 
+      await cache(
+        req.headers.authorization,
+        phase[0].id_department,
+        req.params.id
+      );
+
       return res.status(200).send({ msg: "OK" });
     } catch (err) {
-      console.log("Error ====> " + err);
+      this.logger.error(err, "Error when close massive tickets.");
       return res
         .status(500)
         .send({ error: "Houve um erro ao finalizar os tickets" });
@@ -790,7 +879,7 @@ class PhaseController {
   async transferMassive(req, res) {
     try {
       //Verifica se a nova fase dos tickets é valido e existe dentro do banco de dados
-      const newPhase = await phaseModel.getPhaseById(
+      const newPhase = await this.phaseModel.getPhaseById(
         req.body.new_phase,
         req.headers.authorization
       );
@@ -799,12 +888,12 @@ class PhaseController {
 
       //Verifica se o id do usuario está sendo passado no body da requisição.
       if (!req.body.id_user) {
-        console.log("Error ===> Não foi passado o ID do usuário");
+        this.logger.info("Não foi passado o ID do usuário");
         return res.status(400).send({ error: "Whitout id_user" });
       }
 
       //Faz a verificação de usuario, caso ele não exista ele cria na base.
-      let user = await userController.checkUserCreated(
+      let user = await this.userController.checkUserCreated(
         req.body.id_user,
         req.headers.authorization,
         req.body.name_user
@@ -812,18 +901,21 @@ class PhaseController {
 
       //Verifica se ocorreu algum erro na checagem de usuario.
       if (!user || !user.id) {
-        console.log("Error ===> O erro foi na checagem de usuário");
+        this.logger.info("O erro foi na checagem de usuário.");
         return res
           .status(400)
           .send({ error: "Ocorreu algum erro na checagem de usuario" });
       }
 
       //Faz o get dos tickets pelo id da fase.
-      const tickets = await ticketModel.getTicketByPhase(req.params.id, "");
+      const tickets = await this.ticketModel.getTicketByPhase(
+        req.params.id,
+        ""
+      );
 
       //Retorna um erro caso a fase não contenha tickets na fase.
       if (tickets.length <= 0) {
-        console.log("Error ===> Não há tickets ativos nessa phase");
+        this.logger.info("Não há tickets ativos nessa phase");
         return res
           .status(400)
           .send({ error: "Não há tickets ativos nessa phase" });
@@ -832,31 +924,26 @@ class PhaseController {
       //Faz um laço de repetição finalizando todos os tickets relacionados a phase.
       for (const ticket of tickets) {
         //Desativa o registro da fase atual.
-        await phaseModel.disablePhaseTicket(ticket.id);
+        await this.phaseModel.disablePhaseTicket(ticket.id);
 
         //Cria um novo registro com a nova fase.
-        await ticketModel.createPhaseTicket({
+        await this.ticketModel.createPhaseTicket({
           id_phase: req.body.new_phase,
           id_ticket: ticket.id,
         });
 
-        //Cria uma atividade para registrar a ação do usuario.
-        let obj = {
-          text: `Ticket transferido massivamente pelo usuario ${req.body.name_user} para a fase ${newPhase[0].name}`,
-          id_ticket: ticket.id,
-          id_user: user.id,
-          created_at: moment().format(),
-          updated_at: moment().format(),
-        };
-
-        await activitiesModel.create(obj);
+        await createSLAControl(req.body.new_phase, ticket.id);
       }
 
-      //console.log("Finalizou o laço");
+      await cache(
+        req.headers.authorization,
+        newPhase[0].id_department,
+        req.body.new_phase
+      );
 
       return res.status(200).send({ msg: "OK" });
     } catch (err) {
-      console.log("Error ====> " + err);
+      this.logger.error(err, "Error when transfer massive.");
       return res
         .status(500)
         .send({ error: "Houve um erro ao mover os tickets" });
@@ -875,7 +962,7 @@ class PhaseController {
           .status(400)
           .send({ error: "O array deve conter os ids das fases" });
 
-      const check = await phaseModel.getPhasesIN(
+      const check = await this.phaseModel.getPhasesIN(
         req.body,
         req.params.id,
         req.headers.authorization
@@ -889,21 +976,1067 @@ class PhaseController {
           .status(400)
           .send({ error: "Houve um erro ordenar as fases do workflow" });
 
-      console.log("check ==>", check);
       req.body.map(async (value, index) => {
         const obj = { order: index };
-        await phaseModel.updatePhase(obj, value, req.headers.authorization);
+        await this.phaseModel.updatePhase(
+          obj,
+          value,
+          req.headers.authorization
+        );
         return true;
       });
 
+      await CallbackDigitalk(
+        {
+          type: "socket",
+          channel: `wf_department_${req.params.id}`,
+          event: "new_order_phase",
+          obj: req.body,
+        },
+        req.company[0].callback
+      );
+
       return res.status(200).send(req.body);
     } catch (err) {
-      console.log("Erro ao ordenar as fases =>", err);
+      this.logger.info(err, "Erro ao ordenar as fases.");
       return res
         .status(500)
         .send({ error: "Houve um erro ordenar as fases do workflow" });
     }
   }
-}
 
-module.exports = PhaseController;
+  async dash(req, res) {
+    try {
+      if (req.query.customer) {
+        const dashRedis = await redis.get(
+          `msTicket:dashForCustomer:${req.headers.authorization}:department:${req.params.id}`
+        );
+        const dash = JSON.parse(dashRedis);
+
+        if (dash) return res.status(200).send(dash);
+
+        const result = await this.dashGenerateWithCustomer({
+          id: req.params.id,
+          authorization: req.headers.authorization,
+          customer: req.query.customer,
+        });
+
+        return res.status(200).send(result);
+      } else {
+        const dashRedis = await redis.get(
+          `msTicket:dash:${req.headers.authorization}:department:${req.params.id}`
+        );
+        const dash = JSON.parse(dashRedis);
+
+        if (dash) return res.status(200).send(dash);
+
+        const result = await this.dashGenerate({
+          id: req.params.id,
+          authorization: req.headers.authorization,
+        });
+
+        return res.status(200).send(result);
+      }
+    } catch (err) {
+      this.logger.error(err, "Error when generate dash");
+      return res.status(500).send({ error: "Houve algum problema!" });
+    }
+  }
+
+  async filter(req, res) {
+    try {
+      if (!req.query.department)
+        return res.status(500).send({ error: "Houve um erro" });
+
+      const tickets = await this.phaseModel.filter(
+        req.query.department,
+        req.headers.authorization,
+        req.query.customer
+      );
+      let obj = [];
+      if (req.query.type) {
+        switch (req.query.type) {
+          case "tickets_nao_iniciados":
+            for await (const ticket of tickets) {
+              const phaseSettings = await this.slaModel.getSLASettings(
+                ticket.id_phase
+              );
+              if (phaseSettings && phaseSettings.length > 0) {
+                const sla_ticket = await this.slaModel.getForDash(
+                  ticket.id_phase,
+                  ticket.id
+                );
+                for await (const sla of sla_ticket) {
+                  if (sla.id_sla_type === 1) {
+                    if (sla.active) {
+                      if (sla.id_sla_status == 1) {
+                        if (
+                          req.query.sla === "emdia" ||
+                          req.query.sla === "undefined"
+                        )
+                          obj.push(ticket);
+                      } else if (sla.id_sla_status == 2) {
+                        if (
+                          req.query.sla === "atrasado" ||
+                          req.query.sla === "undefined"
+                        )
+                          obj.push(ticket);
+                      }
+                    }
+                  }
+                }
+              } else {
+                if (ticket.id_status === 1) {
+                  if (
+                    req.query.sla === "sem_sla" ||
+                    req.query.sla === "undefined"
+                  )
+                    obj.push(ticket);
+                }
+              }
+            }
+            break;
+          case "tickets_iniciados_sem_resposta":
+            for await (const ticket of tickets) {
+              const phaseSettings = await this.slaModel.getSLASettings(
+                ticket.id_phase
+              );
+              if (phaseSettings && phaseSettings.length > 0) {
+                const sla_ticket = await this.slaModel.getForDash(
+                  ticket.id_phase,
+                  ticket.id
+                );
+                for await (const sla of sla_ticket) {
+                  switch (sla.id_sla_type) {
+                    case 1:
+                      if (!sla.active) {
+                        const nextSLA = sla_ticket.filter(
+                          (x) => x.id_sla_type === 2 || x.id_sla_type === 3
+                        );
+                        if (nextSLA.length <= 0) {
+                          if (ticket.id_status === 2) {
+                            const firstInteraction =
+                              await this.ticketModel.first_interaction(
+                                ticket.id
+                              );
+                            if (
+                              firstInteraction &&
+                              firstInteraction.length <= 0
+                            ) {
+                              if (
+                                req.query.sla === "sem_sla" ||
+                                req.query.sla === "undefined"
+                              )
+                                obj.push(ticket);
+                            }
+                          }
+                        }
+                      }
+                      break;
+                    case 2:
+                      if (!sla.interaction_time) {
+                        if (sla.id_sla_status === 1) {
+                          if (
+                            req.query.sla === "emdia" ||
+                            req.query.sla === "undefined"
+                          )
+                            obj.push(ticket);
+                        } else {
+                          if (
+                            req.query.sla === "atrasado" ||
+                            req.query.sla === "undefined"
+                          )
+                            obj.push(ticket);
+                        }
+                      }
+                  }
+                }
+              } else {
+                if (ticket.id_status === 2) {
+                  const firstInteraction =
+                    await this.ticketModel.first_interaction(ticket.id);
+                  if (firstInteraction && firstInteraction.length <= 0) {
+                    if (
+                      req.query.sla === "sem_sla" ||
+                      req.query.sla === "undefined"
+                    )
+                      obj.push(ticket);
+                  }
+                }
+              }
+            }
+            break;
+          case "tickets_respondidos_sem_conclusao":
+            for await (const ticket of tickets) {
+              const phaseSettings = await this.slaModel.getSLASettings(
+                ticket.id_phase
+              );
+              if (phaseSettings && phaseSettings.length > 0) {
+                const sla_ticket = await this.slaModel.getForDash(
+                  ticket.id_phase,
+                  ticket.id
+                );
+                for await (const sla of sla_ticket) {
+                  switch (sla.id_sla_type) {
+                    case 1:
+                      if (!sla.active) {
+                        const nextSLA = sla_ticket.filter(
+                          (x) => x.id_sla_type === 2 || x.id_sla_type === 3
+                        );
+                        if (nextSLA.length <= 0) {
+                          if (ticket.id_status === 2) {
+                            const firstInteraction =
+                              await this.ticketModel.first_interaction(
+                                ticket.id
+                              );
+                            if (
+                              firstInteraction &&
+                              firstInteraction.length > 0
+                            ) {
+                              if (
+                                req.query.sla === "sem_sla" ||
+                                req.query.sla === "undefined"
+                              )
+                                obj.push(ticket);
+                            }
+                          }
+                        }
+                      }
+                    case 2:
+                      if (sla.interaction_time) {
+                        const nextSLA = sla_ticket.filter(
+                          (x) => x.id_sla_type === 3 && x.active
+                        );
+
+                        if (nextSLA.length > 0) {
+                          if (nextSLA[0].id_sla_status === 2) {
+                            if (
+                              req.query.sla === "atrasado" ||
+                              req.query.sla === "undefined"
+                            )
+                              obj.push(ticket);
+                          } else {
+                            if (
+                              req.query.sla === "emdia" ||
+                              req.query.sla === "undefined"
+                            )
+                              obj.push(ticket);
+                          }
+                        }
+                      }
+                  }
+                }
+              } else {
+                if (ticket.id_status === 2) {
+                  const firstInteraction =
+                    await this.ticketModel.first_interaction(ticket.id);
+                  if (firstInteraction && firstInteraction.length > 0) {
+                    if (
+                      req.query.sla === "sem_sla" ||
+                      req.query.sla === "undefined"
+                    )
+                      obj.push(ticket);
+                  }
+                }
+              }
+            }
+            break;
+          case "tickets_concluidos":
+            for await (const ticket of tickets) {
+              const phaseSettings = await this.slaModel.getSLASettings(
+                ticket.id_phase
+              );
+              if (phaseSettings && phaseSettings.length > 0) {
+                const sla_ticket = await this.slaModel.getForDash(
+                  ticket.id_phase,
+                  ticket.id
+                );
+                if (sla_ticket.length > 0) {
+                  for await (const sla of sla_ticket) {
+                    if (sla.id_sla_type === 1) {
+                      if (!sla.active) {
+                        const nextSLA = sla_ticket.filter(
+                          (x) => x.id_sla_type === 2 || x.id_sla_type === 3
+                        );
+
+                        if (nextSLA.length <= 0) {
+                          if (ticket.id_status === 3) {
+                            if (
+                              req.query.sla === "sem_sla" ||
+                              req.query.sla === "undefined"
+                            )
+                              obj.push(ticket);
+                          }
+                        }
+                      } else if (sla.id_sla_type === 3) {
+                        if (!sla.active) {
+                          const nextSLA = sla_ticket.filter(
+                            (x) => x.id_sla_type === 2 && x.interaction_time
+                          );
+                          if (nextSLA.length > 0) {
+                            if (sla.id_sla_status === 1) {
+                              if (
+                                req.query.sla === "emdia" ||
+                                req.query.sla === "undefined"
+                              )
+                                obj.push(ticket);
+                            } else if (sla.id_sla_status === 2) {
+                              if (
+                                req.query.sla === "atrasado" ||
+                                req.query.sla === "undefined"
+                              )
+                                obj.push(ticket);
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                } else {
+                  if (ticket.id_status === 3) {
+                    if (
+                      req.query.sla === "sem_sla" ||
+                      req.query.sla === "undefined"
+                    )
+                      obj.push(ticket);
+                  }
+                }
+              } else {
+                if (ticket.id_status === 3) {
+                  if (
+                    req.query.sla === "sem_sla" ||
+                    req.query.sla === "undefined"
+                  )
+                    obj.push(ticket);
+                }
+              }
+            }
+            break;
+          default:
+            break;
+        }
+      } else {
+        obj = tickets;
+      }
+
+      for (let i in obj) {
+        obj[i] = await this.ticketModel.getTicketById(
+          obj[i].id,
+          req.headers.authorization
+        );
+        obj[i] = await formatTicketForPhase(
+          { id: obj[i][0].phase_id },
+          obj[i][0]
+        );
+      }
+      return res.status(200).send(obj);
+    } catch (err) {
+      this.logger.error(err, "Erro ao filtrar os dados");
+      return res.status(500).send({ error: "Houve um erro" });
+    }
+  }
+
+  async dashGenerate(data) {
+    if (!data.id) return false;
+
+    this.logger.info("DASH GENERATE");
+    const result = await this.phaseModel.dash(data.id, data.authorization);
+    result.total_tickets_nao_iniciados = 0;
+    result.tickets_nao_iniciados = {
+      emdia: 0,
+      atrasado: 0,
+      sem_sla: 0,
+    };
+    result.total_tickets_iniciados_sem_resposta = 0;
+    result.tickets_iniciados_sem_resposta = {
+      emdia: 0,
+      atrasado: 0,
+      sem_sla: 0,
+    };
+
+    result.total_tickets_respondidos_sem_conclusao = 0;
+    result.tickets_respondidos_sem_conclusao = {
+      emdia: 0,
+      atrasado: 0,
+      sem_sla: 0,
+    };
+
+    result.tickets_concluidos = {
+      emdia: 0,
+      atrasado: 0,
+      sem_sla: 0,
+    };
+
+    let n_iniciado = 0;
+    let iniciados = 0;
+    let concluidos = 0;
+
+    for await (const ticket of result.tickets) {
+      if (ticket.id_status === 2) {
+        iniciados = iniciados + 1;
+      }
+      if (ticket.id_status === 3) {
+        concluidos = concluidos + 1;
+      }
+
+      const phaseSettings = await this.slaModel.getSLASettings(ticket.id_phase);
+
+      if (phaseSettings && phaseSettings.length > 0) {
+        const sla_ticket = await this.slaModel.getForDash(
+          ticket.id_phase,
+          ticket.id
+        );
+        if (ticket.id_status === 1) {
+          n_iniciado = n_iniciado + 1;
+        }
+        if (sla_ticket && sla_ticket.length > 0) {
+          for await (const sla of sla_ticket) {
+            switch (sla.id_sla_type) {
+              case 1:
+                if (sla.active) {
+                  result.total_tickets_nao_iniciados =
+                    result.total_tickets_nao_iniciados + 1;
+                  if (sla.id_sla_status == 1) {
+                    result.tickets_nao_iniciados.emdia =
+                      result.tickets_nao_iniciados.emdia + 1;
+                  } else if (sla.id_sla_status == 2) {
+                    result.tickets_nao_iniciados.atrasado =
+                      result.tickets_nao_iniciados.atrasado + 1;
+                  }
+                } else {
+                  const nextSLA = sla_ticket.filter(
+                    (x) => x.id_sla_type === 2 || x.id_sla_type === 3
+                  );
+
+                  if (nextSLA.length <= 0) {
+                    switch (ticket.id_status) {
+                      case 2:
+                        const firstInteraction =
+                          await this.ticketModel.first_interaction(ticket.id);
+                        if (firstInteraction && firstInteraction.length <= 0) {
+                          result.total_tickets_iniciados_sem_resposta =
+                            result.total_tickets_iniciados_sem_resposta + 1;
+                          result.tickets_iniciados_sem_resposta.sem_sla =
+                            result.tickets_iniciados_sem_resposta.sem_sla + 1;
+                        } else {
+                          result.total_tickets_respondidos_sem_conclusao =
+                            result.total_tickets_respondidos_sem_conclusao + 1;
+                          result.tickets_respondidos_sem_conclusao.sem_sla =
+                            result.tickets_respondidos_sem_conclusao.sem_sla +
+                            1;
+                        }
+
+                        break;
+                      case 3:
+                        result.tickets_concluidos.sem_sla =
+                          result.tickets_concluidos.sem_sla + 1;
+                        break;
+                      default:
+                        break;
+                    }
+                  }
+                }
+                break;
+              case 2:
+                if (!sla.interaction_time) {
+                  result.total_tickets_iniciados_sem_resposta =
+                    result.total_tickets_iniciados_sem_resposta + 1;
+                  if (sla.id_sla_status === 1) {
+                    result.tickets_iniciados_sem_resposta.emdia =
+                      result.tickets_iniciados_sem_resposta.emdia + 1;
+                  } else {
+                    result.tickets_iniciados_sem_resposta.atrasado =
+                      result.tickets_iniciados_sem_resposta.atrasado + 1;
+                  }
+                } else {
+                  const nextSLA = sla_ticket.filter(
+                    (x) => x.id_sla_type === 3 && x.active
+                  );
+                  nextSLA;
+                  if (nextSLA.length > 0) {
+                    result.total_tickets_respondidos_sem_conclusao =
+                      result.total_tickets_respondidos_sem_conclusao + 1;
+                    if (nextSLA[0].id_sla_status === 2) {
+                      result.tickets_respondidos_sem_conclusao.atrasado =
+                        result.tickets_respondidos_sem_conclusao.atrasado + 1;
+                    } else {
+                      result.tickets_respondidos_sem_conclusao.emdia =
+                        result.tickets_respondidos_sem_conclusao.emdia + 1;
+                    }
+                  }
+                }
+                break;
+              case 3:
+                if (!sla.active) {
+                  const nextSLA = sla_ticket.filter(
+                    (x) => x.id_sla_type === 2 && x.interaction_time
+                  );
+                  if (nextSLA.length > 0) {
+                    if (sla.id_sla_status === 1) {
+                      result.tickets_concluidos.emdia =
+                        result.tickets_concluidos.emdia + 1;
+                    } else if (sla.id_sla_status === 2) {
+                      result.tickets_concluidos.atrasado =
+                        result.tickets_concluidos.atrasado + 1;
+                    }
+                  }
+                }
+                break;
+
+              default:
+                break;
+            }
+          }
+        } else {
+          switch (ticket.id_status) {
+            case 1:
+              result.total_tickets_nao_iniciados =
+                result.total_tickets_nao_iniciados + 1;
+              result.tickets_nao_iniciados.sem_sla =
+                result.tickets_nao_iniciados.sem_sla + 1;
+              break;
+            case 2:
+              const firstInteraction = await this.ticketModel.first_interaction(
+                ticket.id
+              );
+              if (firstInteraction && firstInteraction.length <= 0) {
+                result.total_tickets_iniciados_sem_resposta =
+                  result.total_tickets_iniciados_sem_resposta + 1;
+
+                result.tickets_iniciados_sem_resposta.sem_sla =
+                  result.tickets_iniciados_sem_resposta.sem_sla + 1;
+              } else {
+                result.total_tickets_respondidos_sem_conclusao =
+                  result.total_tickets_respondidos_sem_conclusao + 1;
+
+                result.tickets_respondidos_sem_conclusao.sem_sla =
+                  result.tickets_respondidos_sem_conclusao.sem_sla + 1;
+              }
+
+              break;
+            case 3:
+              result.tickets_concluidos.sem_sla =
+                result.tickets_concluidos.sem_sla + 1;
+              break;
+            default:
+              break;
+          }
+        }
+      } else {
+        switch (ticket.id_status) {
+          case 1:
+            result.total_tickets_nao_iniciados =
+              result.total_tickets_nao_iniciados + 1;
+            result.tickets_nao_iniciados.sem_sla =
+              result.tickets_nao_iniciados.sem_sla + 1;
+            break;
+          case 2:
+            const firstInteraction = await this.ticketModel.first_interaction(
+              ticket.id
+            );
+            if (firstInteraction && firstInteraction.length <= 0) {
+              result.total_tickets_iniciados_sem_resposta =
+                result.total_tickets_iniciados_sem_resposta + 1;
+
+              result.tickets_iniciados_sem_resposta.sem_sla =
+                result.tickets_iniciados_sem_resposta.sem_sla + 1;
+            } else {
+              result.total_tickets_respondidos_sem_conclusao =
+                result.total_tickets_respondidos_sem_conclusao + 1;
+
+              result.tickets_respondidos_sem_conclusao.sem_sla =
+                result.tickets_respondidos_sem_conclusao.sem_sla + 1;
+            }
+
+            break;
+          case 3:
+            result.tickets_concluidos.sem_sla =
+              result.tickets_concluidos.sem_sla + 1;
+            break;
+          default:
+            break;
+        }
+      }
+    }
+
+    const calc_percentual = async function (total, value) {
+      if (total == 0) return 0;
+
+      return ((parseInt(value) * 100) / parseInt(total)).toFixed(2);
+    };
+    result.percentual_nao_iniciado = {
+      total: await calc_percentual(
+        result.total_tickets,
+        result.total_tickets_nao_iniciados
+      ),
+      emdia: await calc_percentual(
+        result.total_tickets_nao_iniciados,
+        result.tickets_nao_iniciados.emdia
+      ),
+      atrasado: await calc_percentual(
+        result.total_tickets_nao_iniciados,
+        result.tickets_nao_iniciados.atrasado
+      ),
+      sem_sla: await calc_percentual(
+        result.total_tickets_nao_iniciados,
+        result.tickets_nao_iniciados.sem_sla
+      ),
+    };
+    result.percentual_iniciado_sem_resposta = {
+      total: await calc_percentual(
+        result.total_tickets,
+        result.total_tickets_iniciados_sem_resposta
+      ),
+      emdia: await calc_percentual(
+        result.total_tickets_iniciados_sem_resposta,
+        result.tickets_iniciados_sem_resposta.emdia
+      ),
+      atrasado: await calc_percentual(
+        result.total_tickets_iniciados_sem_resposta,
+        result.tickets_iniciados_sem_resposta.atrasado
+      ),
+      sem_sla: await calc_percentual(
+        result.total_tickets_iniciados_sem_resposta,
+        result.tickets_iniciados_sem_resposta.sem_sla
+      ),
+    };
+    result.percentual_respondido_sem_conclusao = {
+      total: await calc_percentual(
+        result.total_tickets,
+        result.total_tickets_respondidos_sem_conclusao
+      ),
+      emdia: await calc_percentual(
+        result.total_tickets_respondidos_sem_conclusao,
+        result.tickets_respondidos_sem_conclusao.emdia
+      ),
+      atrasado: await calc_percentual(
+        result.total_tickets_respondidos_sem_conclusao,
+        result.tickets_respondidos_sem_conclusao.atrasado
+      ),
+      sem_sla: await calc_percentual(
+        result.total_tickets_respondidos_sem_conclusao,
+        result.tickets_respondidos_sem_conclusao.sem_sla
+      ),
+    };
+    result.percentual_concluido = {
+      total: await calc_percentual(
+        result.total_tickets,
+        result.total_tickets_fechados
+      ),
+      emdia: await calc_percentual(
+        result.total_tickets_fechados,
+        result.tickets_concluidos.emdia
+      ),
+      atrasado: await calc_percentual(
+        result.total_tickets_fechados,
+        result.tickets_concluidos.atrasado
+      ),
+      sem_sla: await calc_percentual(
+        result.total_tickets_fechados,
+        result.tickets_concluidos.sem_sla
+      ),
+    };
+
+    delete result.tickets;
+    delete result.phases;
+
+    await redis.set(
+      `msTicket:dash:${data.authorization}:department:${data.id}`,
+      JSON.stringify(result)
+    );
+    return result;
+  }
+
+  async dashGenerateWithCustomer(data) {
+    if (!data.id) return false;
+
+    this.logger.info("DASH GENERATE WITH CUSTOMER");
+    const result = await this.phaseModel.dashForCustomer(
+      data.id,
+      data.authorization,
+      data.customer
+    );
+    result.total_tickets_nao_iniciados = 0;
+    result.tickets_nao_iniciados = {
+      emdia: 0,
+      atrasado: 0,
+      sem_sla: 0,
+    };
+    result.total_tickets_iniciados_sem_resposta = 0;
+    result.tickets_iniciados_sem_resposta = {
+      emdia: 0,
+      atrasado: 0,
+      sem_sla: 0,
+    };
+
+    result.total_tickets_respondidos_sem_conclusao = 0;
+    result.tickets_respondidos_sem_conclusao = {
+      emdia: 0,
+      atrasado: 0,
+      sem_sla: 0,
+    };
+
+    result.tickets_concluidos = {
+      emdia: 0,
+      atrasado: 0,
+      sem_sla: 0,
+    };
+
+    let n_iniciado = 0;
+    let iniciados = 0;
+    let concluidos = 0;
+
+    for await (const ticket of result.tickets) {
+      if (ticket.id_status === 2) {
+        iniciados = iniciados + 1;
+      }
+      if (ticket.id_status === 3) {
+        concluidos = concluidos + 1;
+      }
+
+      const phaseSettings = await this.slaModel.getSLASettings(ticket.id_phase);
+
+      if (phaseSettings && phaseSettings.length > 0) {
+        const sla_ticket = await this.slaModel.getForDash(
+          ticket.id_phase,
+          ticket.id
+        );
+        if (ticket.id_status === 1) {
+          n_iniciado = n_iniciado + 1;
+        }
+        if (sla_ticket && sla_ticket.length > 0) {
+          for await (const sla of sla_ticket) {
+            switch (sla.id_sla_type) {
+              case 1:
+                if (sla.active) {
+                  result.total_tickets_nao_iniciados =
+                    result.total_tickets_nao_iniciados + 1;
+                  if (sla.id_sla_status == 1) {
+                    result.tickets_nao_iniciados.emdia =
+                      result.tickets_nao_iniciados.emdia + 1;
+                  } else if (sla.id_sla_status == 2) {
+                    result.tickets_nao_iniciados.atrasado =
+                      result.tickets_nao_iniciados.atrasado + 1;
+                  }
+                } else {
+                  const nextSLA = sla_ticket.filter(
+                    (x) => x.id_sla_type === 2 || x.id_sla_type === 3
+                  );
+
+                  if (nextSLA.length <= 0) {
+                    switch (ticket.id_status) {
+                      case 2:
+                        const firstInteraction =
+                          await this.ticketModel.first_interaction(ticket.id);
+                        if (firstInteraction && firstInteraction.length <= 0) {
+                          result.total_tickets_iniciados_sem_resposta =
+                            result.total_tickets_iniciados_sem_resposta + 1;
+                          result.tickets_iniciados_sem_resposta.sem_sla =
+                            result.tickets_iniciados_sem_resposta.sem_sla + 1;
+                        } else {
+                          result.total_tickets_respondidos_sem_conclusao =
+                            result.total_tickets_respondidos_sem_conclusao + 1;
+                          result.tickets_respondidos_sem_conclusao.sem_sla =
+                            result.tickets_respondidos_sem_conclusao.sem_sla +
+                            1;
+                        }
+
+                        break;
+                      case 3:
+                        result.tickets_concluidos.sem_sla =
+                          result.tickets_concluidos.sem_sla + 1;
+                        break;
+                      default:
+                        break;
+                    }
+                  }
+                }
+                break;
+              case 2:
+                if (!sla.interaction_time) {
+                  result.total_tickets_iniciados_sem_resposta =
+                    result.total_tickets_iniciados_sem_resposta + 1;
+                  if (sla.id_sla_status === 1) {
+                    result.tickets_iniciados_sem_resposta.emdia =
+                      result.tickets_iniciados_sem_resposta.emdia + 1;
+                  } else {
+                    result.tickets_iniciados_sem_resposta.atrasado =
+                      result.tickets_iniciados_sem_resposta.atrasado + 1;
+                  }
+                } else {
+                  const nextSLA = sla_ticket.filter(
+                    (x) => x.id_sla_type === 3 && x.active
+                  );
+                  nextSLA;
+                  if (nextSLA.length > 0) {
+                    result.total_tickets_respondidos_sem_conclusao =
+                      result.total_tickets_respondidos_sem_conclusao + 1;
+                    if (nextSLA[0].id_sla_status === 2) {
+                      result.tickets_respondidos_sem_conclusao.atrasado =
+                        result.tickets_respondidos_sem_conclusao.atrasado + 1;
+                    } else {
+                      result.tickets_respondidos_sem_conclusao.emdia =
+                        result.tickets_respondidos_sem_conclusao.emdia + 1;
+                    }
+                  }
+                }
+                break;
+              case 3:
+                if (!sla.active) {
+                  const nextSLA = sla_ticket.filter(
+                    (x) => x.id_sla_type === 2 && x.interaction_time
+                  );
+                  if (nextSLA.length > 0) {
+                    if (sla.id_sla_status === 1) {
+                      result.tickets_concluidos.emdia =
+                        result.tickets_concluidos.emdia + 1;
+                    } else if (sla.id_sla_status === 2) {
+                      result.tickets_concluidos.atrasado =
+                        result.tickets_concluidos.atrasado + 1;
+                    }
+                  }
+                }
+                break;
+
+              default:
+                break;
+            }
+          }
+        } else {
+          switch (ticket.id_status) {
+            case 1:
+              result.total_tickets_nao_iniciados =
+                result.total_tickets_nao_iniciados + 1;
+              result.tickets_nao_iniciados.sem_sla =
+                result.tickets_nao_iniciados.sem_sla + 1;
+              break;
+            case 2:
+              const firstInteraction = await this.ticketModel.first_interaction(
+                ticket.id
+              );
+              if (firstInteraction && firstInteraction.length <= 0) {
+                result.total_tickets_iniciados_sem_resposta =
+                  result.total_tickets_iniciados_sem_resposta + 1;
+
+                result.tickets_iniciados_sem_resposta.sem_sla =
+                  result.tickets_iniciados_sem_resposta.sem_sla + 1;
+              } else {
+                result.total_tickets_respondidos_sem_conclusao =
+                  result.total_tickets_respondidos_sem_conclusao + 1;
+
+                result.tickets_respondidos_sem_conclusao.sem_sla =
+                  result.tickets_respondidos_sem_conclusao.sem_sla + 1;
+              }
+
+              break;
+            case 3:
+              result.tickets_concluidos.sem_sla =
+                result.tickets_concluidos.sem_sla + 1;
+              break;
+            default:
+              break;
+          }
+        }
+      } else {
+        switch (ticket.id_status) {
+          case 1:
+            result.total_tickets_nao_iniciados =
+              result.total_tickets_nao_iniciados + 1;
+            result.tickets_nao_iniciados.sem_sla =
+              result.tickets_nao_iniciados.sem_sla + 1;
+            break;
+          case 2:
+            const firstInteraction = await this.ticketModel.first_interaction(
+              ticket.id
+            );
+            if (firstInteraction && firstInteraction.length <= 0) {
+              result.total_tickets_iniciados_sem_resposta =
+                result.total_tickets_iniciados_sem_resposta + 1;
+
+              result.tickets_iniciados_sem_resposta.sem_sla =
+                result.tickets_iniciados_sem_resposta.sem_sla + 1;
+            } else {
+              result.total_tickets_respondidos_sem_conclusao =
+                result.total_tickets_respondidos_sem_conclusao + 1;
+
+              result.tickets_respondidos_sem_conclusao.sem_sla =
+                result.tickets_respondidos_sem_conclusao.sem_sla + 1;
+            }
+
+            break;
+          case 3:
+            result.tickets_concluidos.sem_sla =
+              result.tickets_concluidos.sem_sla + 1;
+            break;
+          default:
+            break;
+        }
+      }
+    }
+
+    const calc_percentual = async function (total, value) {
+      if (total == 0) return 0;
+
+      return ((parseInt(value) * 100) / parseInt(total)).toFixed(2);
+    };
+    result.percentual_nao_iniciado = {
+      total: await calc_percentual(
+        result.total_tickets,
+        result.total_tickets_nao_iniciados
+      ),
+      emdia: await calc_percentual(
+        result.total_tickets_nao_iniciados,
+        result.tickets_nao_iniciados.emdia
+      ),
+      atrasado: await calc_percentual(
+        result.total_tickets_nao_iniciados,
+        result.tickets_nao_iniciados.atrasado
+      ),
+      sem_sla: await calc_percentual(
+        result.total_tickets_nao_iniciados,
+        result.tickets_nao_iniciados.sem_sla
+      ),
+    };
+    result.percentual_iniciado_sem_resposta = {
+      total: await calc_percentual(
+        result.total_tickets,
+        result.total_tickets_iniciados_sem_resposta
+      ),
+      emdia: await calc_percentual(
+        result.total_tickets_iniciados_sem_resposta,
+        result.tickets_iniciados_sem_resposta.emdia
+      ),
+      atrasado: await calc_percentual(
+        result.total_tickets_iniciados_sem_resposta,
+        result.tickets_iniciados_sem_resposta.atrasado
+      ),
+      sem_sla: await calc_percentual(
+        result.total_tickets_iniciados_sem_resposta,
+        result.tickets_iniciados_sem_resposta.sem_sla
+      ),
+    };
+    result.percentual_respondido_sem_conclusao = {
+      total: await calc_percentual(
+        result.total_tickets,
+        result.total_tickets_respondidos_sem_conclusao
+      ),
+      emdia: await calc_percentual(
+        result.total_tickets_respondidos_sem_conclusao,
+        result.tickets_respondidos_sem_conclusao.emdia
+      ),
+      atrasado: await calc_percentual(
+        result.total_tickets_respondidos_sem_conclusao,
+        result.tickets_respondidos_sem_conclusao.atrasado
+      ),
+      sem_sla: await calc_percentual(
+        result.total_tickets_respondidos_sem_conclusao,
+        result.tickets_respondidos_sem_conclusao.sem_sla
+      ),
+    };
+    result.percentual_concluido = {
+      total: await calc_percentual(
+        result.total_tickets,
+        result.total_tickets_fechados
+      ),
+      emdia: await calc_percentual(
+        result.total_tickets_fechados,
+        result.tickets_concluidos.emdia
+      ),
+      atrasado: await calc_percentual(
+        result.total_tickets_fechados,
+        result.tickets_concluidos.atrasado
+      ),
+      sem_sla: await calc_percentual(
+        result.total_tickets_fechados,
+        result.tickets_concluidos.sem_sla
+      ),
+    };
+
+    delete result.tickets;
+    delete result.phases;
+
+    await redis.set(
+      `msTicket:dashForCustomer:${data.authorization}:department:${data.id}`,
+      JSON.stringify(result)
+    );
+    return result;
+  }
+
+  async headerGenerate(data) {
+    const result = await this.phaseModel.getFormularios(data.id, data.customer);
+    let campos_calculados = {};
+    if (result.id_form && result.id_form.length > 0) {
+      const register = await new FormTemplate(global.mongodb).findRegistes(
+        result.id_form[0].id_form_template
+      );
+
+      if (register && register.column) {
+        const campos_calculaveis = register.column.filter((x) => x.calculable);
+        if (campos_calculaveis.length > 0) {
+          for await (const forms of result.forms) {
+            const documents = await new FormDocuments(
+              global.mongodb
+            ).findRegister(forms.id_form);
+            for (const campo of campos_calculaveis) {
+              if (!campos_calculados[campo.column])
+                campos_calculados[campo.column] = 0;
+
+              campos_calculados[campo.column] =
+                parseInt(campos_calculados[campo.column]) +
+                parseInt(documents[campo.column]);
+            }
+          }
+        }
+      }
+    }
+
+    const header = {
+      campos_calculados: campos_calculados,
+    };
+    header.total_tickets = await this.ticketModel.countAllTicket(
+      data.id,
+      data.customer
+    );
+
+    header.open_tickets = await this.ticketModel.countTicket(
+      data.id,
+      false,
+      data.customer
+    );
+    header.closed_tickets = await this.ticketModel.countTicket(
+      data.id,
+      true,
+      data.customer
+    );
+
+    if (header.open_tickets != "0") {
+      header.percent_open_tickets = (
+        (parseInt(header.open_tickets) * 100) /
+        parseInt(header.total_tickets)
+      ).toFixed(2);
+    } else {
+      header.percent_open_tickets = 0.0;
+    }
+
+    if (header.closed_tickets != "0") {
+      header.percent_closed_tickets = (
+        (parseInt(header.closed_tickets) * 100) /
+        parseInt(header.total_tickets)
+      ).toFixed(2);
+    } else {
+      header.percent_closed_tickets = 0;
+    }
+
+    header.counter_sla = await counter_sla(data.id, false, data.customer);
+    header.counter_sla_closed = await counter_sla(data.id, true, data.customer);
+
+    if (!data.customer) {
+      await redis.set(
+        `msTicket:header:${data.authorization}:phase:${data.id}`,
+        JSON.stringify(header)
+      );
+    }
+
+    return header;
+  }
+}

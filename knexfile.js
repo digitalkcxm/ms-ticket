@@ -1,51 +1,49 @@
-require('dotenv').load
-
-module.exports = {
-
+import dotenv from "dotenv";
+dotenv.config();
+export default {
   development: {
-    client: 'postgresql',
+    client: "postgresql",
     connection: {
       host: process.env.DB_HOST,
       database: process.env.DB,
       user: process.env.DB_USERNAME,
-      password: process.env.DB_PASSWORD
+      password: process.env.DB_PASSWORD,
     },
     migrations: {
-      directory: __dirname + '/src/config/database/migrations'
+      directory: "./src/config/database/migrations",
     },
     seeds: {
-      directory: __dirname + '/src/config/database/seeds'
+      directory: "./src/config/database/seeds",
     },
     pool: {
       afterCreate: function (connection, callback) {
-        connection.query('SET timezone = -3;', function (err) {
+        connection.query("SET timezone = -3;", function (err) {
           callback(err, connection);
         });
-      }
-    }
+      },
+    },
   },
 
   production: {
-    client: 'postgresql',
+    client: "postgresql",
     connection: {
       host: process.env.DB_HOST,
       database: process.env.DB,
       user: process.env.DB_USERNAME,
-      password: process.env.DB_PASSWORD
+      password: process.env.DB_PASSWORD,
     },
     migrations: {
-      directory: __dirname + '/src/config/database/migrations'
+      directory: "./src/config/database/migrations",
     },
     seeds: {
-      directory: __dirname + '/src/config/database/seeds'
+      directory: "./src/config/database/seeds",
     },
     pool: {
       afterCreate: function (connection, callback) {
-        connection.query('SET timezone = -3;', function (err) {
+        connection.query("SET timezone = -3;", function (err) {
           callback(err, connection);
         });
-      }
-    }
-  }
-
+      },
+    },
+  },
 };

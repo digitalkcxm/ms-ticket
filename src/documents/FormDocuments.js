@@ -1,8 +1,8 @@
-const { Error } = require("mongoose")
 
-const ObjectID = require("mongodb").ObjectID
+
+import ObjectID from "mongodb"
 const collection = "form"
-class FormDocuments {
+export default class FormDocuments {
     constructor(db) {
         this._db = db
     }
@@ -48,5 +48,3 @@ class FormDocuments {
     }
 
 }
-
-module.exports = FormDocuments

@@ -1,7 +1,7 @@
-const TypeColumnModel = require("../models/TypeColumnModel");
+import TypeColumnModel from "../models/TypeColumnModel.js";
 const typeColumnModel = new TypeColumnModel();
 
-module.exports = async function (columns) {
+export default async function (columns) {
   let errors = [];
   for (const column of columns) {
     typeof column.editable === "boolean"
@@ -18,8 +18,14 @@ module.exports = async function (columns) {
       ? ""
       : errors.push(`item ${i}: required é um campo booleano`);
 
+    if (typeof column.calculable === "boolean") {
+      if (column.type != "int" && column.type != "decimal") {
+        errors.push(`item ${i}: O tipo ${column.type} não pode ser calculável`);
+      }
+    }
+
     let type = await typeColumnModel.getTypeByName(column.type);
-    console.log("type ===>",type)
+    console.log("type ===>", type);
     column.type = type.rows[0].id;
     if (type.length <= 0) errors.push(`item ${i}: Invalid type`);
   }

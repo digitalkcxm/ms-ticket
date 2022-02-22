@@ -1,22 +1,22 @@
-const express = require("express")
-const CompanyController = require("../controllers/CompanyController")
-const { body } = require('express-validator');
-const { verifyCompany } = require("../middlewares/VerifyCompany")
+import express from "express";
+import CompanyController from "../controllers/CompanyController.js";
+import { body } from "express-validator";
+import { verifyCompany } from "../middlewares/VerifyCompany.js";
 
-const router = express.Router()
-const companyController = new CompanyController()
+export default function company(database, logger) {
+  const router = express.Router();
 
-router.get("/", (req, res) => companyController.getByID(req, res))
+  const companyController = new CompanyController(database, logger);
 
-router.use(
+  router.get("/", companyController.getByID);
+
+  router.use(
     body("name").notEmpty(),
     body("callback").notEmpty(),
     body("notify_token").notEmpty(),
     body("active").isBoolean()
-)
-
-
-router.post("/", (req, res) => companyController.create(req, res))
-router.put("/", verifyCompany, (req, res) => companyController.update(req, res))
-
-module.exports = router
+  );
+  router.post("/", companyController.create);
+  router.put("/", verifyCompany, companyController.update);
+  return router
+}

@@ -1,6 +1,6 @@
-const database = require("../config/database/database")
+import database from "../config/database/database.js"
 const tableName = "unit_of_time"
-class UnitOfTimeModel {
+export default class UnitOfTimeModel {
     async getUnitOfTime(id){
         try{
             return await database(tableName).where("id",id)
@@ -52,5 +52,3 @@ class UnitOfTimeModel {
         return type
     }
 }
-
-module.exports = UnitOfTimeModel

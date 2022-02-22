@@ -1,6 +1,6 @@
-const moment = require("moment");
+import moment from "moment";
 
-const TicketModel = require("../models/TicketModel");
+import TicketModel from "../models/TicketModel.js";
 const ticketModel = new TicketModel();
 
 // const UnitOfTimeModel = require("../models/UnitOfTimeModel");
@@ -11,38 +11,27 @@ const ticketModel = new TicketModel();
 // const ActivitiesModel = require("../models/ActivitiesModel");
 // const activitiesModel = new ActivitiesModel();
 
-const { ticketSLA } = require("./SLAFormat");
+import { ticketSLA } from "./SLAFormat.js";
 
-async function formatTicketForPhase(phase, ticket) {
+export async function formatTicketForPhase(phase, ticket) {
   ticket.sla = await ticketSLA(phase.id, ticket.id);
-  //   let first_interaction = await ticketModel.first_interaction(ticket.id);
-  //   first_interaction.length
-  //     ? (ticket.first_message = moment(first_interaction[0].created_at).format(
-  //         "DD/MM/YYYY HH:mm:ss"
-  //       ))
-  //     : (ticket.first_message = null);
 
-  //   ticket.count_attachments = await attachmentsModel.getCountAttachments(
-  //     ticket.id
-  //   );
-  //   ticket.count_activities = await activitiesModel.getCountActivities(ticket.id);
-
-  ticket.last_interaction = await ticketModel.last_interaction_ticket(
-    ticket.id
-  );
-  //   if (last_interaction && last_interaction.length) {
-  //     ticket.last_message = last_interaction[0];
-  //     ticket.last_message.created_at = moment(
-  //       ticket.last_message.created_at
-  //     ).format("DD/MM/YYYY HH:mm:ss");
-  //   }
-
+  ticket.start_ticket
+    ? (ticket.start_ticket = moment(ticket.start_ticket).format(
+        "DD/MM/YYYY HH:mm:ss"
+      ))
+    : "";
   ticket.created_at = moment(ticket.created_at).format("DD/MM/YYYY HH:mm:ss");
   ticket.updated_at = moment(ticket.updated_at).format("DD/MM/YYYY HH:mm:ss");
+  const responsible = await ticketModel.getLastResponsibleTicket(ticket.id);
+
+  responsible && responsible.name
+    ? (ticket.responsible = responsible.name)
+    : (ticket.responsible = "");
+
   delete ticket.id_company;
   delete ticket.id_form;
 
   return ticket;
 }
 
-module.exports = { formatTicketForPhase };
