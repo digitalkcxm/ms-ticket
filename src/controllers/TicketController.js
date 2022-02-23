@@ -1699,6 +1699,7 @@ class TicketController {
         JSON.stringify(ticket)
       );
 
+      if (ticket.phase_id === phase[0].id) {
       await CallbackDigitalk(
         {
           type: "socket",
@@ -1708,7 +1709,7 @@ class TicketController {
         },
         req.company[0].callback
       );
-
+      }
       await CallbackDigitalk(
         {
           type: "socket",
@@ -1905,6 +1906,7 @@ class TicketController {
 
       await redis.set(`msTicket:ticket:${data.id}`, JSON.stringify(ticket));
 
+      if (ticket.phase_id === phase[0].id) {
       await CallbackDigitalk(
         {
           type: "socket",
@@ -1914,6 +1916,7 @@ class TicketController {
         },
         companyVerified[0].callback
       );
+      }
 
       await CallbackDigitalk(
         {
