@@ -1,7 +1,8 @@
 import TypeColumnModel from "../models/TypeColumnModel.js";
-const typeColumnModel = new TypeColumnModel();
 
-export default async function (columns) {
+export default async function (columns, database = {}, logger = {}) {
+  const typeColumnModel = new TypeColumnModel(database, logger);
+
   let errors = [];
   for (const column of columns) {
     typeof column.editable === "boolean"
@@ -25,9 +26,8 @@ export default async function (columns) {
     }
 
     let type = await typeColumnModel.getTypeByName(column.type);
-    console.log("type ===>", type);
     column.type = type.rows[0].id;
     if (type.length <= 0) errors.push(`item ${i}: Invalid type`);
   }
   return errors;
-};
+}

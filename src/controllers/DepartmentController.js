@@ -1,8 +1,9 @@
-import { counter_sla } from "../helpers/SLAFormat.js";
+import SLAController from "./SLAController.js";
 import DepartmentModel from "../models/DepartmentModel.js";
 export default class DepartmentController {
   constructor(database = {}, logger = {}) {
     this.logger = logger;
+    this.slaController = new SLAController(database, logger);
     this.departmentModel = new DepartmentModel(database, logger);
   }
 
@@ -36,7 +37,7 @@ export default class DepartmentController {
         let atrasado = 0;
 
         for await (const phase of phases) {
-          const sla = await counter_sla(phase.id_phase);
+          const sla = await this.slaController.counter_sla(phase.id_phase);
           emdia = parseInt(sla.emdia) + emdia;
           atrasado = parseInt(sla.atrasado) + atrasado;
         }

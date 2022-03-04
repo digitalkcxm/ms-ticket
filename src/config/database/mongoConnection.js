@@ -22,6 +22,7 @@ export default async (app, callback) => {
 
       app.locals.db = db;
       global.mongodb = db;
+       
       callback();
     }
   );

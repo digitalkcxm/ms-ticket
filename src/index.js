@@ -1,12 +1,9 @@
 import dotenv from "dotenv";
-import TicketController from "./controllers/TicketController.js"
+import TicketController from "./controllers/TicketController.js";
 
-const { setTicketAtRedis } = new TicketController();
+import { server, database, logger } from "./config/server.js";
 
+const ticketController = new TicketController(database, logger);
+ticketController.setTicketAtRedis();
 
-
-setTicketAtRedis();
-import { server } from "./config/server.js";
-
-server
-
+server;

@@ -1,50 +1,53 @@
-import FormTemplate from "../documents/FormTemplate.js";
-import FormDocuments from "../documents/FormDocuments.js";
+import { v1 } from "uuid";
+import moment from "moment";
 import asyncRedis from "async-redis";
 const redis = asyncRedis.createClient(
   process.env.REDIS_PORT,
   process.env.REDIS_HOST
 );
-import { formatTicketForPhase } from "../helpers/FormatTicket.js";
-import { validationResult } from "express-validator";
-import moment from "moment";
-import { v1 } from "uuid";
+import cache from "../helpers/Cache.js";
+import SLAModel from "../models/SLAModel.js";
+import UserModel from "../models/UserModel.js";
+import SLAController from "./SLAController.js";
 import UserController from "./UserController.js";
 import PhaseModel from "../models/PhaseModel.js";
-import CustomerModel from "../models/CustomerModel.js";
 import TicketModel from "../models/TicketModel.js";
+import CompanyModel from "../models/CompanyModel.js";
+import { validationResult } from "express-validator";
+import CustomerModel from "../models/CustomerModel.js";
+import FormTemplate from "../documents/FormTemplate.js";
+import FormDocuments from "../documents/FormDocuments.js";
+import ActivitiesModel from "../models/ActivitiesModel.js";
+import TypeColumnModel from "../models/TypeColumnModel.js";
 import DepartmentController from "./DepartmentController.js";
 import AttachmentsModel from "../models/AttachmentsModel.js";
-import ActivitiesModel from "../models/ActivitiesModel.js";
-import SLAModel from "../models/SLAModel.js";
 import CallbackDigitalk from "../services/CallbackDigitalk.js";
-import { createSLAControl, updateSLA } from "../helpers/SLAFormat.js";
+import { formatTicketForPhase } from "../helpers/FormatTicket.js";
+
 const sla_status = {
   emdia: 1,
   atrasado: 2,
   aberto: 3,
 };
-import TypeColumnModel from "../models/TypeColumnModel.js";
-import CompanyModel from "../models/CompanyModel.js";
-import UserModel from "../models/UserModel.js";
-import cache from "../helpers/Cache.js";
 
 export default class TicketController {
-constructor(database = {}, logger = {}){
-  this.logger = logger
-  this.userModel = new UserModel(database, logger);
-  this.companyModel = new CompanyModel(database, logger);
-  this.typeColumnModel = new TypeColumnModel(database, logger);
-  this.slaModel = new SLAModel(database, logger);
-  this.activitiesModel = new ActivitiesModel(database, logger);
-  this.attachmentsModel = new AttachmentsModel(database, logger);
-  this.departmentController = new DepartmentController(database, logger);
-  this.ticketModel = new TicketModel(database, logger);
-  this.customerModel = new CustomerModel(database, logger);
-  this.phaseModel = new PhaseModel(database, logger);
-  this.userController = new UserController(database, logger);
-
-}
+  constructor(database = {}, logger = {}) {
+    this.logger = logger;
+    this.database = database;
+    this.slaModel = new SLAModel(database, logger);
+    this.userModel = new UserModel(database, logger);
+    this.phaseModel = new PhaseModel(database, logger);
+    this.ticketModel = new TicketModel(database, logger);
+    this.companyModel = new CompanyModel(database, logger);
+    this.slaController = new SLAController(database, logger);
+    this.customerModel = new CustomerModel(database, logger);
+    this.userController = new UserController(database, logger);
+    this.typeColumnModel = new TypeColumnModel(database, logger);
+    this.activitiesModel = new ActivitiesModel(database, logger);
+    this.attachmentsModel = new AttachmentsModel(database, logger);
+    this.departmentController = new DepartmentController(database, logger);
+    this.formTemplate = new FormTemplate(logger);
+  }
   //Remover assim que função da fila funcionar direitinho
   async create(req, res) {
     const errors = validationResult(req);
@@ -162,9 +165,14 @@ constructor(database = {}, logger = {}){
       );
 
       if (result && result.length > 0 && result[0].id) {
-        await createSLAControl(phase[0].id, obj.id);
+        await this.slaController.createSLAControl(phase[0].id, obj.id);
 
-        ticket = await formatTicketForPhase({ id: phase[0].id }, ticket[0]);
+        ticket = await formatTicketForPhase(
+          { id: phase[0].id },
+          ticket[0],
+          this.database,
+          this.logger
+        );
 
         // delete ticket[0].id_company
 
@@ -240,7 +248,10 @@ constructor(database = {}, logger = {}){
         obj.department_origin = department[0].id;
       }
 
-      let phase = await this.phaseModel.getPhase(data.id_phase, data.authorization);
+      let phase = await this.phaseModel.getPhase(
+        data.id_phase,
+        data.authorization
+      );
       if (!phase || phase.length <= 0) return false;
 
       if (data.form) {
@@ -306,14 +317,22 @@ constructor(database = {}, logger = {}){
 
       if (!phase_id || phase_id.length <= 0) return false;
 
-      let ticket = await this.ticketModel.getTicketById(obj.id, data.authorization);
+      let ticket = await this.ticketModel.getTicketById(
+        obj.id,
+        data.authorization
+      );
       await redis.set(
         `msTicket:ticket:${ticket.id}`,
         JSON.stringify(ticket[0])
       );
 
       if (result && result.length > 0 && result[0].id) {
-        ticket = await formatTicketForPhase({ id: phase[0].id }, ticket[0]);
+        ticket = await formatTicketForPhase(
+          { id: phase[0].id },
+          ticket[0],
+          this.database,
+          this.logger
+        );
 
         const dashPhase = await this.phaseModel.getPhaseById(
           ticket.phase_id,
@@ -504,7 +523,11 @@ constructor(database = {}, logger = {}){
 
         if (phase[0].separate && phase[0].separate.separate.length > 0) {
           for (const separate of phase[0].separate.separate) {
-            if (separate.notify_open && separate.contact && separate.contact.length > 0) {
+            if (
+              separate.notify_open &&
+              separate.contact &&
+              separate.contact.length > 0
+            ) {
               const email = separate.contact.filter((x) => x.email);
               const phone = separate.contact.filter((x) => x.phone);
 
@@ -613,7 +636,11 @@ constructor(database = {}, logger = {}){
 
         if (phase[0].separate && phase[0].separate.separate.length > 0) {
           for (const separate of phase[0].separate.separate) {
-            if (separate.contact && separate.contact.length > 0 && separate.notify_start_activity ) {
+            if (
+              separate.contact &&
+              separate.contact.length > 0 &&
+              separate.notify_start_activity
+            ) {
               const email = separate.contact.filter((x) => x.email);
               const phone = separate.contact.filter((x) => x.phone);
 
@@ -738,7 +765,11 @@ constructor(database = {}, logger = {}){
       let result = await this.activitiesModel.create(obj);
 
       if (result && result.length > 0) {
-        await updateSLA(req.body.id_ticket, ticket[0].phase_id, true);
+        await this.slaController.updateSLA(
+          req.body.id_ticket,
+          ticket[0].phase_id,
+          true
+        );
 
         obj = {
           id: result[0].id,
@@ -832,7 +863,11 @@ constructor(database = {}, logger = {}){
       let result = await this.activitiesModel.create(obj);
       console.log("teste");
       if (result && result.length > 0) {
-        await updateSLA(data.id_ticket, ticket[0].phase_id, true);
+        await this.slaController.updateSLA(
+          data.id_ticket,
+          ticket[0].phase_id,
+          true
+        );
 
         obj = {
           id: result[0].id,
@@ -923,7 +958,9 @@ constructor(database = {}, logger = {}){
         );
       }
 
-      let typeAttachments = await this.ticketModel.getTypeAttachments(req.body.type);
+      let typeAttachments = await this.ticketModel.getTypeAttachments(
+        req.body.type
+      );
 
       if (!typeAttachments || typeAttachments.length <= 0)
         return res.status(400).send({ error: "Type attachments is invalid" });
@@ -940,7 +977,11 @@ constructor(database = {}, logger = {}){
 
       let result = await this.attachmentsModel.create(obj);
 
-      await updateSLA(req.body.id_ticket, ticket[0].phase_id, true);
+      await this.slaController.updateSLA(
+        req.body.id_ticket,
+        ticket[0].phase_id,
+        true
+      );
 
       if (result && result.length > 0) {
         obj.id = result[0].id;
@@ -1019,7 +1060,9 @@ constructor(database = {}, logger = {}){
         );
       }
 
-      let typeAttachments = await this.ticketModel.getTypeAttachments(data.type);
+      let typeAttachments = await this.ticketModel.getTypeAttachments(
+        data.type
+      );
 
       if (!typeAttachments || typeAttachments.length <= 0) return false;
 
@@ -1035,7 +1078,11 @@ constructor(database = {}, logger = {}){
 
       let result = await this.attachmentsModel.create(obj);
 
-      await updateSLA(data.id_ticket, ticket[0].phase_id, true);
+      await this.slaController.updateSLA(
+        data.id_ticket,
+        ticket[0].phase_id,
+        true
+      );
 
       if (result && result.length > 0) {
         obj.id = result[0].id;
@@ -1098,7 +1145,9 @@ constructor(database = {}, logger = {}){
 
       result = await formatTicketForPhase(
         { id: result[0].phase_id },
-        result[0]
+        result[0],
+        this.database,
+        this.logger
       );
       const customer = await this.customerModel.getAll(result.id);
       if (customer && Array.isArray(customer) && customer.length > 0) {
@@ -1135,7 +1184,9 @@ constructor(database = {}, logger = {}){
         }
       });
 
-      const department = await this.phaseModel.getDepartmentPhase(result.phase_id);
+      const department = await this.phaseModel.getDepartmentPhase(
+        result.phase_id
+      );
       result.actual_department = department[0].id_department;
 
       const form = await this.ticketModel.getFormTicket(result.id);
@@ -1146,9 +1197,9 @@ constructor(database = {}, logger = {}){
           req.headers.authorization
         );
         if (phase[0].form && phase[0].id_form_template) {
-          const register = await new FormTemplate(
-            req.app.locals.db
-          ).findRegistes(phase[0].id_form_template);
+          const register = await this.formTemplate.findRegistes(
+            phase[0].id_form_template
+          );
 
           if (register && register.column) {
             result.form_template = register.column;
@@ -1191,7 +1242,9 @@ constructor(database = {}, logger = {}){
 
       result = await formatTicketForPhase(
         { id: result[0].phase_id },
-        result[0]
+        result[0],
+        this.database,
+        this.logger
       );
       const customer = await this.customerModel.getAll(result.id);
       if (customer && Array.isArray(customer) && customer.length > 0) {
@@ -1227,7 +1280,9 @@ constructor(database = {}, logger = {}){
         }
       });
 
-      const department = await this.phaseModel.getDepartmentPhase(result.phase_id);
+      const department = await this.phaseModel.getDepartmentPhase(
+        result.phase_id
+      );
       result.actual_department = department[0].id_department;
 
       const form = await this.ticketModel.getFormTicket(result.id);
@@ -1238,9 +1293,9 @@ constructor(database = {}, logger = {}){
           req.headers.authorization
         );
         if (phase[0].form && phase[0].id_form_template) {
-          const register = await new FormTemplate(
-            req.app.locals.db
-          ).findRegistes(phase[0].id_form_template);
+          const register = await this.formTemplate.findRegistes(
+            phase[0].id_form_template
+          );
 
           if (register && register.column) {
             result.form_template = register.column;
@@ -1295,7 +1350,7 @@ constructor(database = {}, logger = {}){
           history_phase[index].id_form
         );
 
-        const templateBefore = await new FormTemplate(db).findRegistes(
+        const templateBefore = await this.formTemplate.findRegistes(
           history_phase[index].template
         );
         console.log("templateBefore =>", templateBefore);
@@ -1303,10 +1358,10 @@ constructor(database = {}, logger = {}){
           history_phase[index + 1].id_form
         );
 
-        const templateAfter = await new FormTemplate(db).findRegistes(
+        const templateAfter = await this.formTemplate.findRegistes(
           history_phase[index + 1].template
         );
-        console.log("created at ----->",history_phase[index + 1])
+        console.log("created at ----->", history_phase[index + 1]);
         obj.push({
           before: {
             phase: history_phase[index + 1].id_phase,
@@ -1425,7 +1480,10 @@ constructor(database = {}, logger = {}){
       obj.push(value);
     });
 
-    const ticket = await this.ticketModel.getStatusTicketById(id_ticket, id_company);
+    const ticket = await this.ticketModel.getStatusTicketById(
+      id_ticket,
+      id_company
+    );
     if (ticket[0].created_by_ticket) {
       const ticketFather = await this.ticketModel.getTicketById(
         ticket[0].id_ticket_father
@@ -1494,7 +1552,9 @@ constructor(database = {}, logger = {}){
       for (const ticket of result) {
         const ticketFormated = await formatTicketForPhase(
           { id: ticket.id_phase },
-          ticket
+          ticket,
+          this.database,
+          this.logger
         );
         // sla formatado dessa forma para apresentar no analitico do ticket. favor não mexer sem consultar o Rafael ou o Silas.
         if (ticketFormated.sla) {
@@ -1536,7 +1596,12 @@ constructor(database = {}, logger = {}){
           .status(400)
           .send({ error: "There is no ticket with this ID " });
 
-      ticket = await formatTicketForPhase(ticket, ticket[0]);
+      ticket = await formatTicketForPhase(
+        ticket,
+        ticket[0],
+        this.database,
+        this.logger
+      );
 
       if (ticket.id_status === 3)
         return res
@@ -1554,7 +1619,7 @@ constructor(database = {}, logger = {}){
       if (!phase || phase.length <= 0)
         return res.status(400).send({ error: "Invalid id_phase uuid" });
 
-      await updateSLA(ticket.id, ticket.phase_id);
+      await this.slaController.updateSLA(ticket.id, ticket.phase_id);
       if (ticket.phase_id != phase[0].id) {
         await this.phaseModel.disablePhaseTicket(req.params.id);
         await this.slaModel.disableSLA(req.params.id);
@@ -1593,7 +1658,7 @@ constructor(database = {}, logger = {}){
         if (!phase_id || phase_id.length <= 0)
           return res.status(500).send({ error: "There was an error" });
 
-        await createSLAControl(phase[0].id, req.params.id);
+        await this.slaController.createSLAControl(phase[0].id, req.params.id);
 
         await CallbackDigitalk(
           {
@@ -1638,7 +1703,9 @@ constructor(database = {}, logger = {}){
         );
       } else {
         if (req.body.form && Object.keys(req.body.form).length > 0) {
-          const firstPhase = await this.ticketModel.getFirstFormTicket(ticket[0].id);
+          const firstPhase = await this.ticketModel.getFirstFormTicket(
+            ticket[0].id
+          );
           if (firstPhase[0].form) {
             let errors = await this._validateUpdate(
               req.app.locals.db,
@@ -1688,15 +1755,17 @@ constructor(database = {}, logger = {}){
         JSON.stringify(ticket)
       );
 
-      await CallbackDigitalk(
-        {
-          type: "socket",
-          channel: `phase_${req.body.id_phase}`,
-          event: "update_ticket",
-          obj: ticket,
-        },
-        req.company[0].callback
-      );
+      if (ticket.phase_id === phase[0].id) {
+        await CallbackDigitalk(
+          {
+            type: "socket",
+            channel: `phase_${req.body.id_phase}`,
+            event: "update_ticket",
+            obj: ticket,
+          },
+          req.company[0].callback
+        );
+      }
 
       await CallbackDigitalk(
         {
@@ -1728,7 +1797,10 @@ constructor(database = {}, logger = {}){
 
       if (!companyVerified || companyVerified.length <= 0) return false;
 
-      let ticket = await this.ticketModel.getTicketById(data.id, data.authorization);
+      let ticket = await this.ticketModel.getTicketById(
+        data.id,
+        data.authorization
+      );
 
       if (!ticket || ticket.length <= 0) return false;
 
@@ -1744,19 +1816,36 @@ constructor(database = {}, logger = {}){
       //   data.id,
       //   data.authorization
       // );
-      ticket = await formatTicketForPhase(ticket, ticket[0]);
+      ticket = await formatTicketForPhase(
+        ticket,
+        ticket[0],
+        this.database,
+        this.logger
+      );
 
       // await this._createResponsibles(userResponsible, data.id);
 
-      let phase = await this.phaseModel.getPhase(data.id_phase, data.authorization);
+      let phase = await this.phaseModel.getPhase(
+        data.id_phase,
+        data.authorization
+      );
 
       if (!phase || phase.length <= 0) return false;
 
-      await updateSLA(ticket.id, ticket.phase_id);
-      console.log("if de troca de fases -----> ",ticket.phase_id != phase[0].id)
+      await this.slaController.updateSLA(ticket.id, ticket.phase_id);
+      console.log(
+        "if de troca de fases -----> ",
+        ticket.phase_id != phase[0].id
+      );
       if (ticket.phase_id != phase[0].id) {
-       console.log( "disable phase ticket= =====>",await this.phaseModel.disablePhaseTicket(data.id))
-        console.log("disable sla ------>",await this.slaModel.disableSLA(data.id))
+        console.log(
+          "disable phase ticket= =====>",
+          await this.phaseModel.disablePhaseTicket(data.id)
+        );
+        console.log(
+          "disable sla ------>",
+          await this.slaModel.disableSLA(data.id)
+        );
 
         if (data.form) {
           if (Object.keys(data.form).length > 0) {
@@ -1789,10 +1878,10 @@ constructor(database = {}, logger = {}){
           id_user: user.id,
           id_form: obj.id_form,
         });
-        console.log('phase_id',phase_id)
+        console.log("phase_id", phase_id);
         if (!phase_id || phase_id.length <= 0) return false;
 
-        await createSLAControl(phase[0].id, data.id);
+        await this.slaController.createSLAControl(phase[0].id, data.id);
 
         await CallbackDigitalk(
           {
@@ -1837,7 +1926,9 @@ constructor(database = {}, logger = {}){
         );
       } else {
         if (data.form && Object.keys(data.form).length > 0) {
-          const firstPhase = await this.ticketModel.getFirstFormTicket(ticket[0].id);
+          const firstPhase = await this.ticketModel.getFirstFormTicket(
+            ticket[0].id
+          );
           if (firstPhase[0].form) {
             let errors = await this._validateUpdate(
               global.mongodb,
@@ -1934,7 +2025,10 @@ constructor(database = {}, logger = {}){
         req.body.email ? req.body.email : "",
         req.body.type_user ? req.body.type_user : 1
       );
-      const result = await this.ticketModel.closedTicket(req.params.id, user.id);
+      const result = await this.ticketModel.closedTicket(
+        req.params.id,
+        user.id
+      );
 
       if (result && result[0].id) {
         await redis.del(`msTicket:ticket:${result[0].id}`);
@@ -2007,7 +2101,9 @@ constructor(database = {}, logger = {}){
         await this.slaModel.disableSLA(ticket[0].id);
         ticket[0] = await formatTicketForPhase(
           { id: ticket[0].phase_id },
-          ticket[0]
+          ticket[0],
+          this.database,
+          this.logger
         );
 
         await this._notify(
@@ -2212,12 +2308,15 @@ constructor(database = {}, logger = {}){
     return timeNow;
   }
 
-  async _validateForm(db, id_form_template, form, update = false) {
+  async _validateForm(db, id_form_template, form) {
     try {
       const errors = [];
-      const form_template = await new FormTemplate(db).findRegistes(
+
+      console.log(id_form_template)
+      const form_template = await this.formTemplate.findRegistes(
         id_form_template
       );
+      console.log(form_template);
       for (let column of form_template.column) {
         column.required && !form[column.column]
           ? errors.push(`O campo ${column.column} é obrigatório`)
@@ -2240,9 +2339,10 @@ constructor(database = {}, logger = {}){
   async _validateUpdate(db, id_form_template, form, id_form_ticket) {
     try {
       const errors = [];
-      const form_template = await new FormTemplate(db).findRegistes(
+      const form_template = await this.formTemplate.findRegistes(
         id_form_template
       );
+      
       const form_register = await new FormDocuments(db).findRegister(
         id_form_ticket
       );
@@ -2269,7 +2369,12 @@ constructor(database = {}, logger = {}){
         req.params.id
       );
       for (let ticket of result) {
-        ticket = await formatTicketForPhase([ticket], ticket);
+        ticket = await formatTicketForPhase(
+          [ticket],
+          ticket,
+          this.database,
+          this.logger
+        );
 
         const sla_status = function (sla) {
           if (sla) {
@@ -2288,7 +2393,9 @@ constructor(database = {}, logger = {}){
           }
         };
         ticket.sla_status = sla_status(ticket.sla);
-        ticket.history_phase = await this.ticketModel.getHistoryTicket(ticket.id);
+        ticket.history_phase = await this.ticketModel.getHistoryTicket(
+          ticket.id
+        );
         ticket.history_phase.map((value) => {
           value.created_at = moment(value.created_at).format(
             "DD/MM/YYYY HH:mm:ss"
@@ -2353,7 +2460,10 @@ constructor(database = {}, logger = {}){
         : (obj.closed = [true, false]);
       req.query.range ? (obj.range = JSON.parse(req.query.range)) : "";
 
-      let result = await this.ticketModel.getCountResponsibleTicket(id_company, obj);
+      let result = await this.ticketModel.getCountResponsibleTicket(
+        id_company,
+        obj
+      );
 
       if (result.name && result.name == "error")
         return res.status(400).send({ error: "There was an error" });
@@ -2411,7 +2521,10 @@ constructor(database = {}, logger = {}){
             req.headers.authorization
           );
 
-          await updateSLA(req.body.id_ticket, ticket[0].phase_id);
+          await this.slaController.updateSLA(
+            req.body.id_ticket,
+            ticket[0].phase_id
+          );
         }
 
         const phase = await this.phaseModel.getPhaseById(
@@ -2455,9 +2568,13 @@ constructor(database = {}, logger = {}){
           responsibleCheck.length > 0 &&
           !responsibleCheck[0].start_ticket
         ) {
-          await this.ticketModel.updateResponsible(req.body.id_ticket, result.id, {
-            start_ticket: time,
-          });
+          await this.ticketModel.updateResponsible(
+            req.body.id_ticket,
+            result.id,
+            {
+              start_ticket: time,
+            }
+          );
           return res
             .status(200)
             .send({ start_ticket: moment(time).format("DD/MM/YYYY HH:mm:ss") });
@@ -2496,8 +2613,8 @@ constructor(database = {}, logger = {}){
 
   async linkProtocolToTicket(req, res) {
     try {
-      if (!req.body.id_ticket || !req.body.id_protocol || req.body.id_user)
-        return res.status(400).send({ error: "Houve algum problema" });
+      if (!req.body.id_ticket || !req.body.id_protocol || !req.body.id_user)
+      return res.status(400).send({ error: "Houve algum problema" });
 
       const ticket = await this.ticketModel.getTicketByIdSeq(
         req.body.id_ticket,
@@ -2515,7 +2632,6 @@ constructor(database = {}, logger = {}){
         req.body.email ? req.body.email : "",
         req.body.type_user ? req.body.type_user : 1
       );
-
       if (!user) return res.status(400).send({ error: "Houve algum problema" });
 
       const obj = {
@@ -2609,7 +2725,9 @@ constructor(database = {}, logger = {}){
 
       const slaInfo = await formatTicketForPhase(
         { id: ticket[0].phase_id },
-        ticket[0]
+        ticket[0],
+        this.database,
+        this.logger
       );
 
       const sla_status = function (sla) {
@@ -2644,10 +2762,11 @@ constructor(database = {}, logger = {}){
         customer: await this.customerModel.getAll(ticket[0].id),
       });
 
-      const child_tickets = await this.ticketModel.getTicketCreatedByTicketFather(
-        req.params.id,
-        req.headers.authorization
-      );
+      const child_tickets =
+        await this.ticketModel.getTicketCreatedByTicketFather(
+          req.params.id,
+          req.headers.authorization
+        );
       if (child_tickets && child_tickets.length > 0) {
         for (const child_ticket of child_tickets) {
           child_ticket.created_at = moment(child_ticket.created_at).format(
@@ -2707,7 +2826,9 @@ constructor(database = {}, logger = {}){
                   display_name: ticketRelated[0].display_name,
                   id_protocol: ticketRelated[0].id_protocol,
                   type: "ticket",
-                  customer: await this.customerModel.getAll(ticketRelated[0].id),
+                  customer: await this.customerModel.getAll(
+                    ticketRelated[0].id
+                  ),
                 });
               }
             }
@@ -2754,7 +2875,7 @@ constructor(database = {}, logger = {}){
         req.headers.authorization
       );
 
-      return res.status(200).send(req.body)
+      return res.status(200).send(req.body);
     } catch (err) {
       console.log("tab err ====> ", err);
       return res

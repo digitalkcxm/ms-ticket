@@ -1,41 +1,39 @@
-import redis from "async-redis";
-redis.createClient(process.env.REDIS_PORT, process.env.REDIS_HOST);
-
 import { v1 } from "uuid";
-
 import moment from "moment";
-
+import async_redis from "async-redis";
+const redis = async_redis.createClient(process.env.REDIS_PORT, process.env.REDIS_HOST);
+import cache from "../helpers/Cache.js";
+import SLAModel from "../models/SLAModel.js";
+import SLAController from "./SLAController.js";
 import PhaseModel from "../models/PhaseModel.js";
 import UserController from "./UserController.js";
 import TicketModel from "../models/TicketModel.js";
+import { validationResult } from "express-validator";
 import FormTemplate from "../documents/FormTemplate.js";
-import FormDocuments from "../documents/FormDocuments.js";
+// import FormDocuments from "../documents/FormDocuments.js";
+import DepartmentModel from "../models/DepartmentModel.js";
+import TypeColumnModel from "../models/TypeColumnModel.js";
 import DepartmentController from "./DepartmentController.js";
 import templateValidate from "../helpers/TemplateValidate.js";
-import { formatTicketForPhase } from "../helpers/FormatTicket.js";
-import { validationResult } from "express-validator";
-import DepartmentModel from "../models/DepartmentModel.js";
-import SLAModel from "../models/SLAModel.js";
-import TypeColumnModel from "../models/TypeColumnModel.js";
-import {
-  counter_sla,
-  settingsSLA,
-  createSLAControl,
-} from "../helpers/SLAFormat.js";
 import CallbackDigitalk from "../services/CallbackDigitalk.js";
-import cache from "../helpers/Cache.js";
+import { formatTicketForPhase } from "../helpers/FormatTicket.js";
+
 
 export default class PhaseController {
   constructor(database = {}, logger = {}) {
+
     this.logger = logger;
-    this.phaseModel = new PhaseModel(database, logger);
-    this.userController = new UserController(database, logger);
-    this.ticketModel = new TicketModel(database, logger);
-    this.departmentController = new DepartmentController(database, logger);
-    this.departmentModel = new DepartmentModel(database, logger);
+    this.database = database;
     this.slaModel = new SLAModel(database, logger);
+    this.phaseModel = new PhaseModel(database, logger);
+    this.ticketModel = new TicketModel(database, logger);
+    this.slaController = new SLAController(database, logger)
+    this.userController = new UserController(database, logger);
     this.typeColumnModel = new TypeColumnModel(database, logger);
-  }
+    this.departmentModel = new DepartmentModel(database, logger);
+    this.departmentController = new DepartmentController(database, logger);
+    this.formTemplate = new FormTemplate(logger)
+    }
   async create(req, res) {
     // Validação do corpo da requisição.
     const errors = validationResult(req);
@@ -152,10 +150,14 @@ export default class PhaseController {
   }
 
   async _formPhase(column, db) {
-    const errorsColumns = await templateValidate(column);
+    const errorsColumns = await templateValidate(
+      column,
+      this.database,
+      this.logger
+    );
     if (errorsColumns.length > 0) return errorsColumns;
 
-    const formTemplate = await new FormTemplate(db).createRegister(column);
+    const formTemplate = await this.formTemplate.createRegister(column);
 
     if (!formTemplate) return false;
 
@@ -170,8 +172,8 @@ export default class PhaseController {
   async _phaseSLASettings(obj, idPhase) {
     const keys = Object.keys(obj);
 
-    const slaSettings = async function (sla, type) {
-      await this.slaModel.slaPhaseSettings({
+    const slaSettings = async function (sla, type, slaModel) {
+      await slaModel.slaPhaseSettings({
         id_phase: idPhase,
         id_sla_type: type,
         id_unit_of_time: sla.unit_of_time,
@@ -184,13 +186,13 @@ export default class PhaseController {
     keys.map((key) => {
       switch (key) {
         case "1":
-          slaSettings(obj[key], key);
+          slaSettings(obj[key], key, this.slaModel);
           break;
         case "2":
-          slaSettings(obj[key], key);
+          slaSettings(obj[key], key,this.slaModel);
           break;
         case "3":
-          slaSettings(obj[key], key);
+          slaSettings(obj[key], key,this.slaModel);
           break;
         default:
           return false;
@@ -245,7 +247,12 @@ export default class PhaseController {
           );
           for await (let ticket of tickets) {
             result[i].ticket.push(
-              await formatTicketForPhase(result[i], ticket)
+              await formatTicketForPhase(
+                result[i],
+                ticket,
+                this.database,
+                this.logger
+              )
             );
           }
           result[i] = await this._formatPhase(
@@ -476,7 +483,7 @@ export default class PhaseController {
           return res.status(400).send({ error: validations });
 
         validations.column = req.body.column;
-        await new FormTemplate(req.app.locals.db).updateRegister(
+        await this.formTemplate.updateRegister(
           validations._id,
           validations
         );
@@ -537,7 +544,7 @@ export default class PhaseController {
   }
 
   async _checkColumnsFormTemplate(newTemplate, db, template) {
-    const register = await new FormTemplate(db).findRegistes(template);
+    const register = await this.formTemplate.findRegistes(template);
     const errors = [];
     if (newTemplate.length < register.column.length)
       errors.push(
@@ -569,15 +576,15 @@ export default class PhaseController {
     result.ticket = [];
     result.header = {};
 
-    result.sla = await settingsSLA(result.id);
+    result.sla = await this.slaController.settingsSLA(result.id);
     // const department = await this.phaseModel.getDepartmentPhase(result.id);
 
     // department.length > 0
     //   ? (result.department = department[0].id_department)
     //   : 0;
-
+    
     if (result.id_form_template) {
-      const register = await new FormTemplate(mongodb).findRegistes(
+      const register = await this.formTemplate.findRegistes(
         result.id_form_template
       );
 
@@ -606,7 +613,9 @@ export default class PhaseController {
       }
 
       for await (let ticket of tickets) {
-        result.ticket.push(await formatTicketForPhase(result, ticket));
+        result.ticket.push(
+          await formatTicketForPhase(result, ticket, this.database, this.logger)
+        );
         // if (ticket) const getByPhaseTicket(id_phase, id_ticket);
       }
     }
@@ -693,7 +702,7 @@ export default class PhaseController {
     );
     for (const phase of result) {
       if (phase.id_form_template && phase.form) {
-        const register = await new FormTemplate(db).findRegistes(
+        const register = await this.formTemplate.findRegistes(
           phase.id_form_template
         );
         if (register && register.column) phase.formTemplate = register.column;
@@ -723,7 +732,7 @@ export default class PhaseController {
       result[0].ticket = [];
       result[0].header = {};
 
-      result[0].sla = await settingsSLA(result[0].id);
+      result[0].sla = await this.slaController.settingsSLA(result[0].id);
       await this.phaseModel.updatePhase(
         { active: req.body.active },
         req.params.id,
@@ -932,7 +941,7 @@ export default class PhaseController {
           id_ticket: ticket.id,
         });
 
-        await createSLAControl(req.body.new_phase, ticket.id);
+        await this.slaController.createSLAControl(req.body.new_phase, ticket.id);
       }
 
       await cache(
@@ -1326,7 +1335,9 @@ export default class PhaseController {
         );
         obj[i] = await formatTicketForPhase(
           { id: obj[i][0].phase_id },
-          obj[i][0]
+          obj[i][0],
+          this.database,
+          this.logger
         );
       }
       return res.status(200).send(obj);
@@ -1966,7 +1977,7 @@ export default class PhaseController {
     const result = await this.phaseModel.getFormularios(data.id, data.customer);
     let campos_calculados = {};
     if (result.id_form && result.id_form.length > 0) {
-      const register = await new FormTemplate(global.mongodb).findRegistes(
+      const register = await this.formTemplate.findRegistes(
         result.id_form[0].id_form_template
       );
 
@@ -1974,9 +1985,7 @@ export default class PhaseController {
         const campos_calculaveis = register.column.filter((x) => x.calculable);
         if (campos_calculaveis.length > 0) {
           for await (const forms of result.forms) {
-            const documents = await new FormDocuments(
-              global.mongodb
-            ).findRegister(forms.id_form);
+            const documents = await this.formTemplate.findRegister(forms.id_form);
             for (const campo of campos_calculaveis) {
               if (!campos_calculados[campo.column])
                 campos_calculados[campo.column] = 0;
@@ -2027,8 +2036,8 @@ export default class PhaseController {
       header.percent_closed_tickets = 0;
     }
 
-    header.counter_sla = await counter_sla(data.id, false, data.customer);
-    header.counter_sla_closed = await counter_sla(data.id, true, data.customer);
+    header.counter_sla = await this.slaController.counter_sla(data.id, false, data.customer);
+    header.counter_sla_closed = await this.slaController.counter_sla(data.id, true, data.customer);
 
     if (!data.customer) {
       await redis.set(

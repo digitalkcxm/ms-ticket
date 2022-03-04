@@ -1,25 +1,35 @@
 import express from "express";
-const router = express.Router();
-
-import { verifyCompany } from "../middlewares/VerifyCompany.js";
-router.use(verifyCompany);
-
-import PhaseController from "../controllers/PhaseController.js";
 import { body } from "express-validator";
+import { verifyCompany } from "../middlewares/VerifyCompany.js";
+import PhaseController from "../controllers/PhaseController.js";
 
 export default function phase(database = {}, logger = {}) {
+  const router = express.Router();
   const phaseController = new PhaseController(database, logger);
-  router.get("/cache/", phaseController.getAllPhaseForCache);
-  router.get("/socket/:id", phaseController.getBySocket);
-  router.get("/dash/:id", phaseController.dash);
-  router.get("/filter/", phaseController.filter);
-  router.get("/:id", phaseController.getPhaseByID);
-  router.get("/", phaseController.getAllPhase);
+  router.use((req, res, next) =>
+    verifyCompany(req, res, next, database, logger)
+  );
+  router.get("/cache/", (req, res) =>
+    phaseController.getAllPhaseForCache(req, res)
+  );
+  router.get("/socket/:id", (req, res) =>
+    phaseController.getBySocket(req, res)
+  );
+  router.get("/dash/:id", (req, res) => phaseController.dash(req, res));
+  router.get("/filter/", (req, res) => phaseController.filter(req, res));
+  router.get("/:id", (req, res) => phaseController.getPhaseByID(req, res));
+  router.get("/", (req, res) => phaseController.getAllPhase(req, res));
 
-  router.put("/disable/:id", phaseController.disablePhase);
-  router.put("/close_massive/:id", phaseController.closeMassive);
-  router.put("/transfer_massive/:id", phaseController.transferMassive);
-  router.put("/order/:id", phaseController.orderPhase);
+  router.put("/disable/:id", (req, res) =>
+    phaseController.disablePhase(req, res)
+  );
+  router.put("/close_massive/:id", (req, res) =>
+    phaseController.closeMassive(req, res)
+  );
+  router.put("/transfer_massive/:id", (req, res) =>
+    phaseController.transferMassive(req, res)
+  );
+  router.put("/order/:id", (req, res) => phaseController.orderPhase(req, res));
 
   router.use(
     body("name").notEmpty(),
@@ -30,7 +40,7 @@ export default function phase(database = {}, logger = {}) {
     // body("active").isBoolean()
   );
 
-  router.post("/", phaseController.create);
-  router.put("/:id", phaseController.updatePhase);
-  return router
+  router.post("/", (req, res) => phaseController.create(req, res));
+  router.put("/:id", (req, res) => phaseController.updatePhase(req, res));
+  return router;
 }

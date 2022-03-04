@@ -1,8 +1,9 @@
-const moment = require("moment");
-const EmailModel = require("../models/EmailModel");
+import moment from "moment";
+import EmailModel from "../models/EmailModel";
 
-class EmailController {
+export default class EmailController {
   constructor(database = {}, logger = {}) {
+    
     this.logger = logger;
     this.emailModel = new EmailModel(database, logger);
   }
@@ -19,7 +20,7 @@ class EmailController {
 
       return result[0];
     } catch (err) {
-      console.log("Error when check if email created => ", err);
+      this.logger.error(err, "Error when check if email created.");
       return err;
     }
   }
@@ -119,5 +120,3 @@ class EmailController {
 </html>`;
   }
 }
-
-module.exports = EmailController;

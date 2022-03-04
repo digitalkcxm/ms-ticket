@@ -1,19 +1,21 @@
-import { v1 } from "uuid"
-import moment from "moment"
-import TicketModel from "../models/TicketModel.js"
-import { validationResult } from "express-validator"
-import CustomerModel from "../models/CustomerModel.js"
-import CallbackDigitalk from "../services/CallbackDigitalk.js"
-import PhaseController from "../controllers/PhaseController.js"
-import { formatTicketForPhase } from "../helpers/FormatTicket.js"
-import  { ticketSLA, settingsSLA } from "../helpers/SLAFormat.js"
+import { v1 } from "uuid";
+import moment from "moment";
+import SLAController from "./SLAController.js";
+import TicketModel from "../models/TicketModel.js";
+import { validationResult } from "express-validator";
+import CustomerModel from "../models/CustomerModel.js";
+import CallbackDigitalk from "../services/CallbackDigitalk.js";
+import PhaseController from "../controllers/PhaseController.js";
+import { formatTicketForPhase } from "../helpers/FormatTicket.js";
 
 export default class CustomerController {
-  constructor(database = {}, logger = {}){
-    this.logger = logger
-    this.ticketModel = new TicketModel();
-    this.customerModel = new CustomerModel();
-    this.phaseController = new PhaseController();
+  constructor(database = {}, logger = {}) {
+    this.logger = logger;
+    this.database = database;
+    this.ticketModel = new TicketModel(database, logger);
+    this.slaController = new SLAController(database, logger);
+    this.customerModel = new CustomerModel(database, logger);
+    this.phaseController = new PhaseController(database, logger);
   }
 
   async create(req, res) {
@@ -53,7 +55,9 @@ export default class CustomerController {
       );
       ticket = await formatTicketForPhase(
         { id: ticket[0].phase_id },
-        ticket[0]
+        ticket[0],
+        this.database,
+        this.logger
       );
 
       await CallbackDigitalk(
@@ -67,7 +71,7 @@ export default class CustomerController {
       );
       return res.status(200).send(obj);
     } catch (err) {
-      this.logger.error(err,"Error when manager customer info.");
+      this.logger.error(err, "Error when manager customer info.");
       return res
         .status(400)
         .send({ error: "Error when manager customer info" });
@@ -86,10 +90,9 @@ export default class CustomerController {
 
       const phases = [];
       for await (const x of result) {
-        
         if (phases.filter((y) => y.id === x.id).length <= 0) {
-          x.phase_sla = await settingsSLA(x.id);
-          x.sla = await ticketSLA(x.id, x.id_ticket);
+          x.phase_sla = await this.slaController.settingsSLA(x.id);
+          x.sla = await this.slaController.ticketSLA(x.id, x.id_ticket);
 
           x.header = await this.phaseController.headerGenerate({
             id: x.id,
@@ -157,7 +160,7 @@ export default class CustomerController {
       }
       return res.status(200).send(phases);
     } catch (err) {
-      this.logger.error(err,"Error when get company info.");
+      this.logger.error(err, "Error when get company info.");
       return res.status(400).send({ error: "Error when get company info" });
     }
   }
@@ -177,7 +180,7 @@ export default class CustomerController {
 
       return res.status(200).send(result);
     } catch (err) {
-      this.logger.error(err,"Error when get company info.");
+      this.logger.error(err, "Error when get company info.");
       return res.status(400).send({ error: "Error when get company info" });
     }
   }
@@ -196,7 +199,7 @@ export default class CustomerController {
 
       return res.status(200).send(result);
     } catch (err) {
-      this.logger.error(err,"Error when get company info.");
+      this.logger.error(err, "Error when get company info.");
       return res.status(400).send({ error: "Error when get company info" });
     }
   }
@@ -225,7 +228,7 @@ export default class CustomerController {
 
       return res.status(200).send(result);
     } catch (err) {
-      this.logger.error(err,"Error when manage object to update company.");
+      this.logger.error(err, "Error when manage object to update company.");
       return res
         .status(400)
         .send({ error: "Error when manage object to update company" });

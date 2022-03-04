@@ -1,5 +1,4 @@
 import UserModel from "../models/UserModel.js";
-
 export default class UserController {
   constructor(database = {}, logger = {}) {
     this.logger = logger;
@@ -13,24 +12,20 @@ export default class UserController {
     email = "",
     id_type = 1
   ) {
+    let obj = {};
+    name ? (obj.name = name) : "";
+    phone ? (obj.phone = phone) : "";
+    email ? (obj.email = email) : "";
+    id_type ? (obj.id_type = id_type) : "";
+
     try {
       let result = await this.userModel.getUserByID(user, company_id, id_type);
       if (!result || result.length <= 0) {
-        result = await this.userModel.create({
-          id_users: user,
-          id_company: company_id,
-          name: name,
-          phone: phone,
-          email: email,
-          id_type: id_type,
-        });
+        obj = { ...obj, id_users: user, id_company: company_id };
+
+        result = await this.userModel.create(obj);
       } else if (result && !result[0].name) {
-        await this.userModel.update(result[0].id, {
-          name: name,
-          phone: phone,
-          email: email,
-          id_type: id_type,
-        });
+        await this.userModel.update(result[0].id, obj);
       }
 
       return result[0];

@@ -1,13 +1,16 @@
 import express from "express";
-const router = express.Router();
-
 import { verifyCompany } from "../middlewares/VerifyCompany.js";
-router.use(verifyCompany);
-
 import DepartmentController from "../controllers/DepartmentController.js";
-const departmentController = new DepartmentController();
 
-export default function department(database = {},logger ={}) {
-  router.get("/", departmentController.getCountSLADepartment);
+export default function department(database = {}, logger = {}) {
+  const router = express.Router();
+  const departmentController = new DepartmentController(database, logger);
+  router.use((req, res, next) =>
+    verifyCompany(req, res, next, database, logger)
+  );
+
+  router.get("/", (req, res) =>
+    departmentController.getCountSLADepartment(req, res)
+  );
   return router;
 }

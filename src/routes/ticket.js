@@ -1,42 +1,62 @@
 import express from "express";
 import { verifyCompany } from "../middlewares/VerifyCompany.js";
-
-const router = express.Router();
-router.use(verifyCompany);
-
 import TicketController from "../controllers/TicketController.js";
 
 export default function ticket(database = {}, logger = {}) {
+  const router = express.Router();
   const ticketController = new TicketController(database, logger);
+  router.use((req, res, next) =>
+    verifyCompany(req, res, next, database, logger)
+  );
 
-  router.get("/sla_check/:type", ticketController.cronCheckSLA);
+  router.get("/sla_check/:type", (req, res) =>
+    ticketController.cronCheckSLA(req, res)
+  );
   // type: 1 -> /15 * * * * *
   // type: 2 -> /5 * * * * *
   // type: 3 -> /30 * * * * *
 
-  router.get("/history/:id", ticketController.history_ticket);
+  router.get("/history/:id", (req, res) =>
+    ticketController.history_ticket(req, res)
+  );
 
-  router.get("/status", ticketController.ticketStatusCount);
-  router.get("/count", ticketController.ticketResponsibleCount);
+  router.get("/status", (req, res) =>
+    ticketController.ticketStatusCount(req, res)
+  );
+  router.get("/count", (req, res) =>
+    ticketController.ticketResponsibleCount(req, res)
+  );
 
-  router.get("/socket/:id", ticketController.getTicket);
+  router.get("/socket/:id", (req, res) => ticketController.getTicket(req, res));
 
-  router.get("/:id", ticketController.getTicketByID);
+  router.get("/:id", (req, res) => ticketController.getTicketByID(req, res));
 
-  router.get("/protocol/:id", ticketController.getTicketByCustomerOrProtocol);
-  router.get("/", ticketController.getAllTicket);
+  router.get("/protocol/:id", (req, res) =>
+    ticketController.getTicketByCustomerOrProtocol(req, res)
+  );
+  router.get("/", (req, res) => ticketController.getAllTicket(req, res));
 
-  router.post("/activities", ticketController.createActivities);
-  router.post("/attachments", ticketController.createAttachments);
-  router.post("/start_ticket", ticketController.startTicket);
+  router.post("/activities", (req, res) =>
+    ticketController.createActivities(req, res)
+  );
+  router.post("/attachments", (req, res) =>
+    ticketController.createAttachments(req, res)
+  );
+  router.post("/start_ticket", (req, res) =>
+    ticketController.startTicket(req, res)
+  );
 
-  router.post("/view", ticketController.viewTicket);
+  router.post("/view", (req, res) => ticketController.viewTicket(req, res));
 
-  router.post("/protocol", ticketController.linkProtocolToTicket);
-  router.put("/close/:id", ticketController.closedTicket);
+  router.post("/protocol", (req, res) =>
+    ticketController.linkProtocolToTicket(req, res)
+  );
+  router.put("/close/:id", (req, res) =>
+    ticketController.closedTicket(req, res)
+  );
 
-  router.post("/tab", ticketController.tab);
-  // router.post("/",  ticketController.create)
+  router.post("/tab", (req, res) => ticketController.tab(req, res));
+  router.post("/", (req, res) => ticketController.create(req, res));
   //router.put("/:id",  ticketController.queueUpdateTicket)
 
   return router;

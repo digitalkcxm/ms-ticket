@@ -1,7 +1,7 @@
 import moment from "moment";
 
 import TicketModel from "../models/TicketModel.js";
-const ticketModel = new TicketModel();
+
 
 // const UnitOfTimeModel = require("../models/UnitOfTimeModel");
 
@@ -11,10 +11,13 @@ const ticketModel = new TicketModel();
 // const ActivitiesModel = require("../models/ActivitiesModel");
 // const activitiesModel = new ActivitiesModel();
 
-import { ticketSLA } from "./SLAFormat.js";
 
-export async function formatTicketForPhase(phase, ticket) {
-  ticket.sla = await ticketSLA(phase.id, ticket.id);
+import SLAController from "../controllers/SLAController.js";
+
+export async function formatTicketForPhase(phase, ticket, database, logger) {
+  const ticketModel = new TicketModel(database, logger);
+  const slaController = new SLAController(database, logger);
+  ticket.sla = await slaController.ticketSLA(phase.id, ticket.id);
 
   ticket.start_ticket
     ? (ticket.start_ticket = moment(ticket.start_ticket).format(
@@ -34,4 +37,3 @@ export async function formatTicketForPhase(phase, ticket) {
 
   return ticket;
 }
-

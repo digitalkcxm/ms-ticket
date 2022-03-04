@@ -8,7 +8,7 @@ export default function company(database, logger) {
 
   const companyController = new CompanyController(database, logger);
 
-  router.get("/", companyController.getByID);
+  router.get("/", (req, res) => companyController.getByID(req, res));
 
   router.use(
     body("name").notEmpty(),
@@ -16,7 +16,13 @@ export default function company(database, logger) {
     body("notify_token").notEmpty(),
     body("active").isBoolean()
   );
-  router.post("/", companyController.create);
-  router.put("/", verifyCompany, companyController.update);
-  return router
+  router.post("/", (req, res) => companyController.create(req, res));
+
+  // middleware
+  router.use((req, res, next) =>
+    verifyCompany(req, res, next, database, logger)
+  );
+
+  router.put("/", (req, res) => companyController.update(req, res));
+  return router;
 }

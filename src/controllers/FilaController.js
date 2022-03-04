@@ -1,5 +1,5 @@
-import TicketController from "./TicketController.js";
 import PhaseController from "./PhaseController.js";
+import TicketController from "./TicketController.js";
 
 export default class FilaController {
   constructor(database = {}, logger = {}) {

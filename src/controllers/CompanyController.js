@@ -8,6 +8,7 @@ export default class CompanyController {
     this.logger = logger;
     this.companyModel = new CompanyModel(database, logger);
   }
+
   async create(req, res) {
     const errors = validationResult(req);
     if (!errors.isEmpty())

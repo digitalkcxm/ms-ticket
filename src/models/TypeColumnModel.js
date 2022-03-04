@@ -1,9 +1,9 @@
 const tableName = "type_column"
-
 export default class TypeColumnModel {
     constructor(database, logger){
         this.database = database
         this.logger = logger
+     
     }
     async getTypeByName(name) {
         try {

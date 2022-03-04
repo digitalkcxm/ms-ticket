@@ -7,13 +7,12 @@ import connect from "../config/database/mongoConnection.js";
 import { queue } from "../config/RabbitMQ.js";
 import moment from "moment-timezone";
 import http from "http";
-import database from "./database/database.js"
-import logger from './logger.js'
+import database from "./database/database.js";
+import logger from "./logger.js";
 
-import FilaController from "../controllers/FilaController.js"
+import FilaController from "../controllers/FilaController.js";
 
 const server = http.createServer(app);
-
 
 app.use(cors());
 app.use(bodyParser.json({ limit: "256mb", extended: true }));
@@ -21,7 +20,7 @@ app.use(bodyParser.urlencoded({ extended: true, limit: "256mb" }));
 // app.use(expressValidator())
 moment.tz.setDefault("America/Sao_Paulo");
 
-routes(app, database, logger)
+routes(app, database, logger);
 // app.use(routes);
 queue();
 
@@ -42,4 +41,4 @@ setTimeout(() => {
   filaController.consumerCreateHeader();
 }, 5000);
 
-export { server, app };
+export { server, app, database, logger };
