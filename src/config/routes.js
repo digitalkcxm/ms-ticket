@@ -6,7 +6,7 @@ import customer from "../routes/customer.js";
 import department from "../routes/department.js";
 
 export default (app, database, logger) => {
-    app.use("/api/v1/health", (req, res) => res.status(200).send("Ok!"));
+  app.get("/api/v1/health", (req, res) => res.status(200).send("Ok!"));
   app.use("/api/v1/company", company(database, logger));
   app.use("/api/v1/phase", phase(database, logger));
   app.use("/api/v1/ticket", ticket(database, logger));
