@@ -1985,6 +1985,7 @@ export default class TicketController {
 
       await redis.set(`msTicket:ticket:${data.id}`, JSON.stringify(ticket));
 
+      if (ticket.phase_id === phase[0].id) {
       await CallbackDigitalk(
         {
           type: "socket",
@@ -1994,6 +1995,7 @@ export default class TicketController {
         },
         companyVerified[0].callback
       );
+      }
 
       await CallbackDigitalk(
         {
