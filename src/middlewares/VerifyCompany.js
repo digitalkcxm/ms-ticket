@@ -3,6 +3,12 @@ import CompanyModel from "../models/CompanyModel.js";
 export async function verifyCompany(req, res, next, database, logger) {
   const companyModel = new CompanyModel(database, logger);
 
+  if (!req.headers.authorization) {
+    return res
+      .status(400)
+      .send({ error: "Please check your company authorization" });
+  }
+  
   const companyVerified = await companyModel.getByIdActive(
     req.headers.authorization
   );

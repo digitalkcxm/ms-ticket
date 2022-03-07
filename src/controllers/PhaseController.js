@@ -1,7 +1,10 @@
 import { v1 } from "uuid";
 import moment from "moment";
 import async_redis from "async-redis";
-const redis = async_redis.createClient(process.env.REDIS_PORT, process.env.REDIS_HOST);
+const redis = async_redis.createClient(
+  process.env.REDIS_PORT,
+  process.env.REDIS_HOST
+);
 import cache from "../helpers/Cache.js";
 import SLAModel from "../models/SLAModel.js";
 import SLAController from "./SLAController.js";
@@ -18,22 +21,20 @@ import templateValidate from "../helpers/TemplateValidate.js";
 import CallbackDigitalk from "../services/CallbackDigitalk.js";
 import { formatTicketForPhase } from "../helpers/FormatTicket.js";
 
-
 export default class PhaseController {
   constructor(database = {}, logger = {}) {
-
     this.logger = logger;
     this.database = database;
     this.slaModel = new SLAModel(database, logger);
     this.phaseModel = new PhaseModel(database, logger);
     this.ticketModel = new TicketModel(database, logger);
-    this.slaController = new SLAController(database, logger)
+    this.slaController = new SLAController(database, logger);
     this.userController = new UserController(database, logger);
     this.typeColumnModel = new TypeColumnModel(database, logger);
     this.departmentModel = new DepartmentModel(database, logger);
     this.departmentController = new DepartmentController(database, logger);
-    this.formTemplate = new FormTemplate(logger)
-    }
+    this.formTemplate = new FormTemplate(logger);
+  }
   async create(req, res) {
     // Validação do corpo da requisição.
     const errors = validationResult(req);
@@ -162,6 +163,10 @@ export default class PhaseController {
     if (!formTemplate) return false;
 
     for (const formatcolumn of column) {
+      this.logger.info({
+        msg: "Chamada ao get type by id ",
+        data: formatcolumn.type,
+      });
       const type = await this.typeColumnModel.getTypeByID(formatcolumn.type);
       formatcolumn.type = type[0].name;
     }
@@ -189,10 +194,10 @@ export default class PhaseController {
           slaSettings(obj[key], key, this.slaModel);
           break;
         case "2":
-          slaSettings(obj[key], key,this.slaModel);
+          slaSettings(obj[key], key, this.slaModel);
           break;
         case "3":
-          slaSettings(obj[key], key,this.slaModel);
+          slaSettings(obj[key], key, this.slaModel);
           break;
         default:
           return false;
@@ -483,10 +488,7 @@ export default class PhaseController {
           return res.status(400).send({ error: validations });
 
         validations.column = req.body.column;
-        await this.formTemplate.updateRegister(
-          validations._id,
-          validations
-        );
+        await this.formTemplate.updateRegister(validations._id, validations);
         phase[0].department = req.body.department;
         phase[0].formTemplate = req.body.column;
         delete phase[0].id_form_template;
@@ -582,7 +584,7 @@ export default class PhaseController {
     // department.length > 0
     //   ? (result.department = department[0].id_department)
     //   : 0;
-    
+
     if (result.id_form_template) {
       const register = await this.formTemplate.findRegistes(
         result.id_form_template
@@ -592,7 +594,12 @@ export default class PhaseController {
         result.formTemplate = register.column;
 
         for (const x of result.formTemplate) {
-          const type = await this.typeColumnModel.getTypeByID(x.type);
+          let type;
+          if (isNaN(x.type)) {
+            type = await this.typeColumnModel.getTypeByName(x.type);
+          } else {
+            type = await this.typeColumnModel.getTypeByID(x.type);
+          }
 
           type && Array.isArray(type) && type.length > 0
             ? (x.type = type[0].name)
@@ -941,7 +948,10 @@ export default class PhaseController {
           id_ticket: ticket.id,
         });
 
-        await this.slaController.createSLAControl(req.body.new_phase, ticket.id);
+        await this.slaController.createSLAControl(
+          req.body.new_phase,
+          ticket.id
+        );
       }
 
       await cache(
@@ -1985,7 +1995,9 @@ export default class PhaseController {
         const campos_calculaveis = register.column.filter((x) => x.calculable);
         if (campos_calculaveis.length > 0) {
           for await (const forms of result.forms) {
-            const documents = await this.formTemplate.findRegister(forms.id_form);
+            const documents = await this.formTemplate.findRegister(
+              forms.id_form
+            );
             for (const campo of campos_calculaveis) {
               if (!campos_calculados[campo.column])
                 campos_calculados[campo.column] = 0;
@@ -2036,8 +2048,16 @@ export default class PhaseController {
       header.percent_closed_tickets = 0;
     }
 
-    header.counter_sla = await this.slaController.counter_sla(data.id, false, data.customer);
-    header.counter_sla_closed = await this.slaController.counter_sla(data.id, true, data.customer);
+    header.counter_sla = await this.slaController.counter_sla(
+      data.id,
+      false,
+      data.customer
+    );
+    header.counter_sla_closed = await this.slaController.counter_sla(
+      data.id,
+      true,
+      data.customer
+    );
 
     if (!data.customer) {
       await redis.set(
