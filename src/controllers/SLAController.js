@@ -304,11 +304,11 @@ export default class SLAController {
                   3
                 );
                 if (getSLA && Array.isArray(getSLA) && getSLA.length <= 0) {
-                  await this.ticketControl(value);
+                  await this.ticketControl(value,id_ticket,id_phase);
                 }
               }
             } else {
-              await this.ticketControl(value);
+              await this.ticketControl(value,id_ticket,id_phase);
             }
             break;
           default:
@@ -348,7 +348,7 @@ export default class SLAController {
       // Atualiza o controle de sla do ticket
       await this.slaModel.updateTicketSLA(id_ticket, obj, 1, id_phase);
 
-      await createSLAControl(id_phase, id_ticket);
+      await this.createSLAControl(id_phase, id_ticket);
       if (activity) {
         slaTicket = await this.slaModel.getByPhaseTicket(id_phase, id_ticket, 2);
         if (
