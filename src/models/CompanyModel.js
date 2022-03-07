@@ -1,43 +1,48 @@
-const database = require('../config/database/database')
-const tableName = "company"
+const tableName = "company";
 
-class CompanyModel {
-    async create(obj) {
-        try {
-            return await database(tableName).returning("id").insert(obj)
-        } catch (err) {
-            console.log("Erro when create company ==>", err)
-            return err
-        }
+export default class CompanyModel {
+  constructor(database = {}, logger = {}) {
+    this.database = database;
+    this.logger = logger;
+  }
+  async create(obj) {
+    try {
+      return await this.database(tableName).returning("id").insert(obj);
+    } catch (err) {
+      this.logger.error(err, "Erro when create company.");
+      return err;
     }
+  }
 
-    async getById(id) {
-        try {
-            return await database(tableName).where("id", id)
-        } catch (err) {
-            console.log("Error when get company by id ==>", err)
-            return false
-        }
+  async getById(id) {
+    try {
+      return await this.database(tableName).where("id", id);
+    } catch (err) {
+      this.logger.error(err, `Error when get company with ID ${id}.`);
+      return false;
     }
+  }
 
-    async getByIdActive(id) {
-        try {
-            return await database(tableName).where("id", id).andWhere("active", true)
-        } catch (err) {
-            // console.log("Error when get company by id ==>", err)
-            return false
-        }
+  async getByIdActive(id) {
+    try {
+      return await this.database(tableName)
+        .where("id", id)
+        .andWhere("active", true);
+    } catch (err) {
+      this.logger.error(err, `Error when get active company with ID ${id}.`);
+      return false;
     }
+  }
 
-
-    async update(obj, id) {
-        try {
-            return await database(tableName).returning("*").update(obj).where("id", id)
-        } catch (err) {
-            console.log("Error when update company => ", err)
-            return err
-        }
+  async update(obj, id) {
+    try {
+      return await this.database(tableName)
+        .returning("*")
+        .update(obj)
+        .where("id", id);
+    } catch (err) {
+      this.logger.error(err, `Error when update company with ID ${id}.`);
+      return err;
     }
+  }
 }
-
-module.exports = CompanyModel

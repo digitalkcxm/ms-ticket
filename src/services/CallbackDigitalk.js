@@ -1,5 +1,5 @@
-const axios = require("axios");
-module.exports = async (obj, callback) => {
+import axios from  "axios";
+export default async (obj, callback) => {
   try {
     return await axios({
       method: "post",

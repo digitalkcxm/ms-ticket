@@ -1,20 +1,23 @@
-const database = require("../config/database/database");
+import database from "../config/database/database.js";
 const tableName = "customer";
-const moment = require("moment");
 
-class CustomerModel {
+export default class CustomerModel {
+  constructor(database = {}, logger = {}) {
+    this.database = database;
+    this.logger = logger;
+  }
   async create(obj) {
     try {
-      return await database(tableName).returning(["id"]).insert(obj);
+      return await this.database(tableName).returning(["id"]).insert(obj);
     } catch (err) {
-      console.log("Error when create phase => ", err);
+      this.logger.error(err, "Error when create phase.");
       return err;
     }
   }
 
   async getAll(ticketId) {
     try {
-      return await database(tableName)
+      return await this.database(tableName)
         .select(
           "id",
           "id_core",
@@ -31,13 +34,17 @@ class CustomerModel {
         .where({ id_ticket: ticketId })
         .orderBy("updated_at", "desc");
     } catch (err) {
+      this.logger.error(
+        err,
+        `Error get all customer linked ticket with ID ${ticketId}`
+      );
       return err;
     }
   }
 
   async getByIdentification_document(identification_document, id_ticket) {
     try {
-      return await database(tableName)
+      return await this.database(tableName)
         .select(
           "id",
           "id_core",
@@ -55,13 +62,14 @@ class CustomerModel {
         .whereNot("id_ticket", id_ticket)
         .orderBy("updated_at", "desc");
     } catch (err) {
+      this.logger.error(err, "Error get customer by identification document.");
       return err;
     }
   }
 
   async getByID(id) {
     try {
-      return await database(tableName)
+      return await this.database(tableName)
         .select(
           "id",
           "id_core",
@@ -77,19 +85,21 @@ class CustomerModel {
         )
         .where("crm_contact_id", id);
     } catch (err) {
-      console.log("Error =<", err);
+      this.logger.error(
+        err,
+        `Error when get customer by crm contact id with ID ${id}`
+      );
       return err;
     }
   }
 
-  async getTicketByIDCRMCustomer(status,id,department) {
+  async getTicketByIDCRMCustomer(status, id, department) {
     try {
-     
-      let newStatus =  JSON.parse(status).length > 0 ? status.replace('[', '').replace(']', '') : '0'
-      
- 
-      console.log(status,id)
-      const query =  await database.raw(`
+      let newStatus =
+        JSON.parse(status).length > 0
+          ? status.replace("[", "").replace("]", "")
+          : "0";
+      const query = await this.database.raw(`
       SELECT DISTINCT ticket.id_seq,
         phase.id,
         department.id_department_core,
@@ -121,8 +131,8 @@ class CustomerModel {
       AND phase_ticket.active = true
       AND phase.active = true
       AND customer.crm_contact_id = '${id}'
-      `)
-      return query.rows
+      `);
+      return query.rows;
       // ("customer").select(['DISTINCT ticket.id_seq'])
       //   .leftJoin("ticket", "ticket.id", "customer.id_ticket")
       //   .leftJoin("phase_ticket", "phase_ticket.id_ticket", "ticket.id")
@@ -132,23 +142,25 @@ class CustomerModel {
       //   .andWhere("phase.active", true)
       //   .andWhere('customer.crm_contact_id', id)
     } catch (err) {
-      console.log("Error when get ticket by id crm contact id", err);
+      this.logger.error(err, "Error when get ticket by id crm contact id.");
       return err;
     }
   }
 
   async delCustomerTicket(id_ticket) {
     try {
-      return await database("customer").andWhere("id_ticket", id_ticket).del();
+      return await this.database("customer")
+        .andWhere("id_ticket", id_ticket)
+        .del();
     } catch (err) {
-      console.log("Error when get responsible Ticket =>", err);
+      this.logger.error(err, "Error when get responsible Ticket.");
       return err;
     }
   }
 
   async getByIDCore(coreId) {
     try {
-      return await database(tableName)
+      return await this.database(tableName)
         .select(
           "id",
           "id_core",
@@ -164,14 +176,17 @@ class CustomerModel {
         )
         .where("id_core", coreId);
     } catch (err) {
-      console.log("Error =<", err);
+      this.logger.error(
+        err,
+        "Error when get by id customer of core aplication."
+      );
       return err;
     }
   }
 
   async insertCustomer(obj) {
     try {
-      return await database(tableName)
+      return await this.database(tableName)
         .returning([
           "id",
           "id_core",
@@ -187,13 +202,14 @@ class CustomerModel {
         ])
         .insert(obj);
     } catch (err) {
+      this.logger.error(err, "Error create a new customer.");
       return err;
     }
   }
 
   async update(obj, id) {
     try {
-      return await database(tableName)
+      return await this.database(tableName)
         .returning([
           "id",
           "id_core",
@@ -210,9 +226,8 @@ class CustomerModel {
         .update(obj)
         .where({ id });
     } catch (err) {
+      this.logger.error(err, `Error when update customer with ID ${id}`);
       return err;
     }
   }
 }
-
-module.exports = CustomerModel;

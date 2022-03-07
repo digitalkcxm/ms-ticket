@@ -1,20 +1,22 @@
-const database = require("../config/database/database");
-const { table } = require("../config/database/database");
 const tableName = "phase";
 
-class PhaseModel {
+export default class PhaseModel {
+  constructor(database = {}, logger = {}) {
+    this.database = database;
+    this.logger = logger;
+  }
   async createPhase(obj) {
     try {
-      return await database(tableName).returning(["id"]).insert(obj);
+      return await this.database(tableName).returning(["id"]).insert(obj);
     } catch (err) {
-      console.log("Error when create phase => ", err);
+      this.logger.error(err, "Error when create phase.");
       return err;
     }
   }
 
   async getPhaseById(id_phase, id_company) {
     try {
-      return await database(tableName)
+      return await this.database(tableName)
         .select({
           id: "phase.id",
           id_unit_of_time: "phase.id_unit_of_time",
@@ -52,66 +54,70 @@ class PhaseModel {
         .andWhere("department_phase.active", true)
         .andWhere("phase.id_company", id_company);
     } catch (err) {
-      console.log("Error when catch phase and tickets by id phase => ", err);
+      this.logger.error(err, "Error when catch phase and tickets by id phase.");
       return err;
     }
   }
 
   async getPhase(id, id_company) {
     try {
-      return await database(tableName)
+      return await this.database(tableName)
         .where("id", id)
         .andWhere("id_company", id_company);
     } catch (err) {
-      console.log("Error when catch phase by id => ", err);
+      this.logger.error(err, "Error when catch phase by id => ");
       return err;
     }
   }
 
   async createResponsiblePhase(obj) {
     try {
-      return await database("responsible_phase").returning(["id"]).insert(obj);
+      return await this.database("responsible_phase")
+        .returning(["id"])
+        .insert(obj);
     } catch (err) {
-      console.log("Error when create responsible phase => ", err);
+      this.logger.error(err, "Error when create responsible phase => ");
       return err;
     }
   }
 
   async createNotifyPhase(obj) {
     try {
-      return await database("notify_phase").returning(["id"]).insert(obj);
+      return await this.database("notify_phase").returning(["id"]).insert(obj);
     } catch (err) {
-      console.log("Error when create notify phase => ", err);
+      this.logger.error(err, "Error when create notify phase.");
       return err;
     }
   }
 
   async linkedDepartment(obj) {
     try {
-      await database("department_phase")
+      await this.database("department_phase")
         .update("active", false)
         .where("id_phase", obj.id_phase);
-      return await database("department_phase").returning(["id"]).insert(obj);
+      return await this.database("department_phase")
+        .returning(["id"])
+        .insert(obj);
     } catch (err) {
-      console.log("Error when linked department with phase =>", err);
+      this.logger.error(err, "Error when linked department with phase.");
       return err;
     }
   }
 
   async selectLinkedDepartment(phase_id) {
     try {
-      return await database("department_phase")
+      return await this.database("department_phase")
         .where("id_phase", phase_id)
         .andWhere("active", true);
     } catch (err) {
-      console.log("Error when remove linked =>", err);
+      this.logger.error(err, "Error when remove linked.");
       return err;
     }
   }
 
   async getNotifiedPhase(phase_id) {
     try {
-      return await database("phase")
+      return await this.database("phase")
         .select({
           phase: "phase.id",
           phase_description: "phase.name",
@@ -125,14 +131,14 @@ class PhaseModel {
         .leftJoin("email", "email.id", "notify_phase.id_email")
         .where("phase.id", phase_id);
     } catch (err) {
-      console.log("Error when get notified phase =>", err);
+      this.logger.error(err, "Error when get notified phase.");
       return err;
     }
   }
 
   async getDepartmentPhase(id_phase) {
     try {
-      return await database("department_phase")
+      return await this.database("department_phase")
         .select({ id_department: "department.id_department_core" })
         .leftJoin(
           "department",
@@ -142,14 +148,14 @@ class PhaseModel {
         .where("department_phase.id_phase", id_phase)
         .andWhere("department_phase.active", true);
     } catch (err) {
-      console.log("Error when catch department phase =>", err);
+      this.logger.error(err, "Error when catch department phase.");
       return err;
     }
   }
 
   async getPhasesByDepartmentID(id_department) {
     try {
-      return await database("department_phase")
+      return await this.database("department_phase")
         .select({
           id: "phase.id",
           name: "phase.name",
@@ -163,25 +169,25 @@ class PhaseModel {
         .andWhere("phase.active", true)
         .andWhere("department_phase.active", true);
     } catch (err) {
-      console.log("Error when catch department id ==>", err);
+      this.logger.error(err, "Error when catch department id");
       return err;
     }
   }
 
   async disablePhaseTicket(id_ticket) {
     try {
-      return await database("phase_ticket")
+      return await this.database("phase_ticket")
         .update({ active: "false" })
         .where("id_ticket", id_ticket);
     } catch (err) {
-      console.log("Error when disable phase ticket linked");
+      this.logger.error(err, "Error when disable phase ticket linked.");
       return err;
     }
   }
 
   async getAllPhase(id_company, enable) {
     try {
-      return await database(tableName)
+      return await this.database(tableName)
         .select([
           "id",
           "id_unit_of_time",
@@ -212,7 +218,7 @@ class PhaseModel {
 
   async getAllPhasesByDepartmentID(id_department, id_company, enable) {
     try {
-      return await database("department_phase")
+      return await this.database("department_phase")
         .select([
           "phase.id",
           "phase.icon as emoji",
@@ -244,46 +250,48 @@ class PhaseModel {
         .andWhere("department.id_company", id_company)
         .orderBy("phase.order", "asc");
     } catch (err) {
-      console.log("Error when catch department id ==>", err);
+      this.logger.error(err, "Error when catch department id.");
       return err;
     }
   }
 
   async updatePhase(obj, id_phase, id_company) {
     try {
-      return await database(tableName)
+      return await this.database(tableName)
         .update(obj)
         .where("id", id_phase)
         .andWhere("id_company", id_company);
     } catch (err) {
-      console.log("Error update phase => ", err);
+      this.logger.error(err, "Error update phase.");
       return err;
     }
   }
 
   async delResponsiblePhase(id_phase) {
     try {
-      return await database("responsible_phase")
+      return await this.database("responsible_phase")
         .where("id_phase", id_phase)
         .del();
     } catch (err) {
-      console.log("Error when get responsible Ticket =>", err);
+      this.logger.error(err, "Error when get responsible Ticket.");
       return err;
     }
   }
 
   async delNotifyPhase(id_phase) {
     try {
-      return await database("notify_phase").where("id_phase", id_phase).del();
+      return await this.database("notify_phase")
+        .where("id_phase", id_phase)
+        .del();
     } catch (err) {
-      console.log("Error when get responsible Ticket =>", err);
+      this.logger.error(err, "Error when get responsible Ticket.");
       return err;
     }
   }
 
   async getPhasesIN(phases, department, company) {
     try {
-      return await database(tableName)
+      return await this.database(tableName)
         .leftJoin("department_phase", "department_phase.id_phase", "phase.id")
         .leftJoin(
           "department",
@@ -295,14 +303,14 @@ class PhaseModel {
         .andWhere("department.id_department_core", department)
         .andWhere("phase.id_company", company);
     } catch (err) {
-      console.log("Erro ao captar as ordens dos tickets =>", err);
+      this.logger.error(err, "Erro ao captar as ordens dos tickets.");
       return err;
     }
   }
 
   async dash(department, id_company) {
     try {
-      const total_fases = await database.raw(`
+      const total_fases = await this.database.raw(`
     SELECT COUNT(phase.id) 
     FROM department_phase 
     LEFT JOIN department ON department.id = department_phase.id_department 
@@ -313,7 +321,7 @@ class PhaseModel {
     AND phase.id_company = '${id_company}'
     `);
 
-      const total_tickets = await database.raw(`
+      const total_tickets = await this.database.raw(`
     SELECT COUNT(ticket.id) FROM ticket
     LEFT JOIN phase_ticket ON phase_ticket.id_ticket = ticket.id
     LEFT JOIN phase ON phase.id = phase_ticket.id_phase
@@ -326,7 +334,7 @@ class PhaseModel {
     AND phase_ticket.active = true;
     `);
 
-      const tickets = await database.raw(`
+      const tickets = await this.database.raw(`
     SELECT ticket.id, phase_ticket.id_phase, ticket.id_status FROM ticket
     LEFT JOIN phase_ticket ON phase_ticket.id_ticket = ticket.id
     LEFT JOIN phase ON phase.id = phase_ticket.id_phase
@@ -339,7 +347,7 @@ class PhaseModel {
     AND phase_ticket.active = true;
  `);
 
-      const total_tickets_fechados = await database.raw(`   
+      const total_tickets_fechados = await this.database.raw(`   
     SELECT COUNT(ticket.id) FROM ticket
     LEFT JOIN phase_ticket ON phase_ticket.id_ticket = ticket.id
     LEFT JOIN phase ON phase.id = phase_ticket.id_phase
@@ -354,7 +362,7 @@ class PhaseModel {
     AND ticket.id_status = 3
     `);
 
-      const phases = await database.raw(`   
+      const phases = await this.database.raw(`   
     SELECT phase.id FROM phase
     LEFT JOIN department_phase ON department_phase.id_phase = phase.id
     LEFT JOIN department ON department.id = department_phase.id_department
@@ -373,14 +381,14 @@ class PhaseModel {
         // total_tickets_atendimento: total_tickets_atendimento.rows[0].count,
       };
     } catch (err) {
-      console.log("dashs =>", err);
+      this.logger.error(err, "dashs");
       return false;
     }
   }
 
   async dashForCustomer(department, id_company, customer) {
     try {
-      const total_fases = await database.raw(`
+      const total_fases = await this.database.raw(`
     SELECT COUNT(phase.id) 
     FROM department_phase 
     LEFT JOIN department ON department.id = department_phase.id_department 
@@ -391,7 +399,7 @@ class PhaseModel {
     AND phase.id_company = '${id_company}'
     `);
 
-      const total_tickets = await database.raw(`
+      const total_tickets = await this.database.raw(`
     SELECT COUNT(ticket.id) FROM ticket
     LEFT JOIN phase_ticket ON phase_ticket.id_ticket = ticket.id
     LEFT JOIN phase ON phase.id = phase_ticket.id_phase
@@ -406,7 +414,7 @@ class PhaseModel {
     AND customer.crm_contact_id = ${customer};
     `);
 
-      const tickets = await database.raw(`
+      const tickets = await this.database.raw(`
     SELECT ticket.id, phase_ticket.id_phase, ticket.id_status FROM ticket
     LEFT JOIN phase_ticket ON phase_ticket.id_ticket = ticket.id
     LEFT JOIN phase ON phase.id = phase_ticket.id_phase
@@ -421,7 +429,7 @@ class PhaseModel {
     AND customer.crm_contact_id = ${customer};
  `);
 
-      const total_tickets_fechados = await database.raw(`   
+      const total_tickets_fechados = await this.database.raw(`   
     SELECT COUNT(ticket.id) FROM ticket
     LEFT JOIN phase_ticket ON phase_ticket.id_ticket = ticket.id
     LEFT JOIN phase ON phase.id = phase_ticket.id_phase
@@ -438,7 +446,7 @@ class PhaseModel {
     AND customer.crm_contact_id = ${customer};
     `);
 
-      const phases = await database.raw(`   
+      const phases = await this.database.raw(`   
     SELECT phase.id FROM phase
     LEFT JOIN department_phase ON department_phase.id_phase = phase.id
     LEFT JOIN department ON department.id = department_phase.id_department
@@ -457,14 +465,14 @@ class PhaseModel {
         // total_tickets_atendimento: total_tickets_atendimento.rows[0].count,
       };
     } catch (err) {
-      console.log("dashs =>", err);
+      this.logger.error(err, "dashs");
       return false;
     }
   }
 
   async filter(department, id_company, customer) {
     if (customer) {
-      const tickets = await database.raw(`
+      const tickets = await this.database.raw(`
       SELECT ticket.id, phase_ticket.id_phase, ticket.id_status FROM ticket
       LEFT JOIN phase_ticket ON phase_ticket.id_ticket = ticket.id
       LEFT JOIN phase ON phase.id = phase_ticket.id_phase
@@ -480,7 +488,7 @@ class PhaseModel {
    `);
       return tickets.rows;
     } else {
-      const tickets = await database.raw(`
+      const tickets = await this.database.raw(`
       SELECT ticket.id, phase_ticket.id_phase, ticket.id_status FROM ticket
       LEFT JOIN phase_ticket ON phase_ticket.id_ticket = ticket.id
       LEFT JOIN phase ON phase.id = phase_ticket.id_phase
@@ -498,14 +506,14 @@ class PhaseModel {
 
   async getFormularios(id_phase, customer = false) {
     try {
-      const id_form_template = await database("phase")
+      const id_form_template = await this.database("phase")
         .select("id_form_template")
         .where("id", id_phase);
 
       if (id_form_template) {
         let result;
         if (customer) {
-          result = await database("phase_ticket")
+          result = await this.database("phase_ticket")
             .select("id_form")
             .leftJoin(
               "customer",
@@ -516,7 +524,7 @@ class PhaseModel {
             .andWhere("active", true)
             .andWhere("customer.crm_contact_id", customer);
         } else {
-          result = await database("phase_ticket")
+          result = await this.database("phase_ticket")
             .select("id_form")
             .where("id_phase", id_phase)
             .andWhere("active", true);
@@ -526,10 +534,8 @@ class PhaseModel {
       }
       return false;
     } catch (err) {
-      console.log("Error get formularios ===>", err);
+      this.logger.error(err, "Error get formularios ===>");
       return err;
     }
   }
 }
-
-module.exports = PhaseModel;

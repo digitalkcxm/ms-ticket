@@ -1,37 +1,42 @@
-const database = require("../config/database/database");
-const moment = require("moment");
-const { leftJoin } = require("../config/database/database");
-const res = require("express/lib/response");
+import moment from "moment";
 const tableName = "ticket";
-class TicketModel {
+export default class TicketModel {
+  constructor(database = {}, logger = {}) {
+    this.database = database;
+    this.logger = logger;
+  }
   async create(obj) {
     try {
-      return await database(tableName).returning(["id", "id_seq"]).insert(obj);
+      return await this.database(tableName)
+        .returning(["id", "id_seq"])
+        .insert(obj);
     } catch (err) {
-      console.log("Error 1111 when create ticket =>", err);
+      this.logger.error(err, "Error 1111 when create ticket.");
       return err;
     }
   }
   async createPhaseTicket(obj) {
     try {
-      return await database("phase_ticket").returning(["id"]).insert(obj);
+      return await this.database("phase_ticket").returning(["id"]).insert(obj);
     } catch (err) {
-      console.log("Error when create phase ticket =>", err);
+      this.logger.error(err, "Error when create phase ticket.");
       return err;
     }
   }
 
   async createResponsibleTicket(obj) {
     try {
-      return await database("responsible_ticket").returning(["id"]).insert(obj);
+      return await this.database("responsible_ticket")
+        .returning(["id"])
+        .insert(obj);
     } catch (err) {
-      console.log("Error when create responsible ticket =>", err);
+      this.logger.error(err, "Error when create responsible ticket.");
       return err;
     }
   }
   async getTicketById(id, id_company) {
     try {
-      return await database(tableName)
+      return await this.database(tableName)
         .select({
           id: `${tableName}.id`,
           id_seq: `${tableName}.id_seq`,
@@ -64,13 +69,13 @@ class TicketModel {
         .orderBy("phase_ticket.id", "desc")
         .limit(1);
     } catch (err) {
-      console.log("Error when get ticket by id => ", err);
+      this.logger.error(err, "Error when get ticket by id.");
       return err;
     }
   }
   async getTicketByIdSeq(id_seq, id_company) {
     try {
-      return await database(tableName)
+      return await this.database(tableName)
         .select({
           id: `${tableName}.id`,
           id_seq: `${tableName}.id_seq`,
@@ -103,13 +108,12 @@ class TicketModel {
         .orderBy("phase_ticket.id", "desc")
         .limit(1);
     } catch (err) {
-      console.log("Error when get ticket by id => ", err);
+      this.logger.error(err, "Error when get ticket by id.");
       return err;
     }
   }
 
   async getAllTickets(id_company, obj) {
-    console.log("TicketModel -> getAllTickets -> id_company", id_company);
     try {
       let stringWhere = `${tableName}.id_company = '${id_company}'  `;
 
@@ -130,7 +134,7 @@ class TicketModel {
           `AND ticket.created_at >= '${obj.range[0]}' AND ticket.created_at <= '${obj.range[1]}'`;
       }
 
-      return await database(tableName)
+      return await this.database(tableName)
         .select({
           id: `${tableName}.id`,
           id_seq: `${tableName}.id_seq`,
@@ -160,46 +164,46 @@ class TicketModel {
         )
         .whereRaw(stringWhere);
     } catch (err) {
-      console.log("Error when get ticket by id => ", err);
+      this.logger.error(err, "Error when get ticket by id.");
       return err;
     }
   }
 
   async getTypeAttachments(type) {
     try {
-      return await database("type_attachments").where("name", type);
+      return await this.database("type_attachments").where("name", type);
     } catch (err) {
-      console.log("Error when get type attachments by id => ", err);
+      this.logger.error(err, "Error when get type attachments by id.");
       return err;
     }
   }
 
   async updateTicket(obj, id, id_company) {
     try {
-      return await database(tableName)
+      return await this.database(tableName)
         .update(obj)
         .where("id", id)
         .andWhere("id_company", id_company);
     } catch (err) {
-      console.log("Update ticket => ", err);
+      this.logger.error(err, `Update ticket with ID ${id}.`);
       return err;
     }
   }
 
   async delResponsibleTicket(id_ticket) {
     try {
-      return await database("responsible_ticket")
+      return await this.database("responsible_ticket")
         .andWhere("id_ticket", id_ticket)
         .del();
     } catch (err) {
-      console.log("Error when get responsible Ticket =>", err);
+      this.logger.error(err, "Error when get responsible Ticket.");
       return err;
     }
   }
 
   async closedTicket(id_ticket, id_user) {
     try {
-      return await database(tableName)
+      return await this.database(tableName)
         .returning(["id"])
         .update({
           closed: true,
@@ -210,25 +214,25 @@ class TicketModel {
         })
         .where("id", id_ticket);
     } catch (err) {
-      console.log("Error when update Ticket to closed");
+      this.logger.error(err, "Error when update Ticket to closed");
       return err;
     }
   }
 
   async getAllTicketWhitoutCompanyId() {
     try {
-      return await database(tableName).select().where("sla", false);
+      return await this.database(tableName).select().where("sla", false);
     } catch (err) {
-      console.log("Error when catch all ticket =>", err);
+      this.logger.error(err, "Error when catch all ticket.");
       return err;
     }
   }
 
   async updateSlaTicket(obj, id) {
     try {
-      return await database(tableName).update(obj).where("id", id);
+      return await this.database(tableName).update(obj).where("id", id);
     } catch (err) {
-      console.log("Error when update sla ticket =>", err);
+      this.logger.error(err, "Error when update sla ticket.");
       return err;
     }
   }
@@ -253,7 +257,7 @@ class TicketModel {
           stringWhere +
           `AND ticket.created_at >= '${obj.range[0]}' AND ticket.created_at <= '${obj.range[1]}'`;
       }
-      return await database("ticket")
+      return await this.database("ticket")
         .select("users.id_users as id_user")
         .count("ticket.id as count")
         .leftJoin(
@@ -273,14 +277,14 @@ class TicketModel {
         .whereRaw(stringWhere)
         .groupBy("users.id_users");
     } catch (err) {
-      console.log("Error when get all responsible ticket => ", err);
+      this.logger.error(err, "Error when get all responsible ticket.");
       return err;
     }
   }
 
   async getTicketByPhase(id_phase) {
     try {
-      return await database("phase_ticket")
+      return await this.database("phase_ticket")
         .select({
           id: "ticket.id",
           id_seq: "ticket.id_seq",
@@ -305,7 +309,7 @@ class TicketModel {
         .where("phase_ticket.id_phase", id_phase)
         .andWhere("phase_ticket.active", true);
     } catch (err) {
-      console.log("Error when get Ticket by phase =>", err);
+      this.logger.error(err, "Error when get Ticket by phase.");
       return err;
     }
   }
@@ -315,7 +319,7 @@ class TicketModel {
       let newStatus;
       typeof status ? (newStatus = JSON.parse(status)) : (newStatus = status);
 
-      return await database("phase_ticket")
+      return await this.database("phase_ticket")
         .select({
           id: "ticket.id",
           id_seq: "ticket.id_seq",
@@ -339,7 +343,7 @@ class TicketModel {
         .andWhere("phase_ticket.id_phase", id_phase)
         .andWhere("phase_ticket.active", true);
     } catch (err) {
-      console.log("Error when get Ticket by phase =>", err);
+      this.logger.error(err, "Error when get Ticket by phase.");
       return err;
     }
   }
@@ -347,7 +351,7 @@ class TicketModel {
   async countTicket(id_phase, status, customer = false) {
     let result;
     if (customer) {
-      result = await database("phase_ticket")
+      result = await this.database("phase_ticket")
         .count("ticket.id")
         .leftJoin("ticket", "ticket.id", "phase_ticket.id_ticket")
         .leftJoin("customer", "customer.id_ticket", "phase_ticket.id_ticket")
@@ -356,7 +360,7 @@ class TicketModel {
         .andWhere("ticket.closed", status)
         .andWhere("customer.crm_contact_id", customer);
     } else {
-      result = await database("phase_ticket")
+      result = await this.database("phase_ticket")
         .count("ticket.id")
         .leftJoin("ticket", "ticket.id", "phase_ticket.id_ticket")
         .where("phase_ticket.id_phase", id_phase)
@@ -370,7 +374,7 @@ class TicketModel {
   async countAllTicket(id_phase, customer = false) {
     let result;
     if (customer) {
-      result = await database("phase_ticket")
+      result = await this.database("phase_ticket")
         .count("ticket.id")
         .leftJoin("ticket", "ticket.id", "phase_ticket.id_ticket")
         .leftJoin("customer", "customer.id_ticket", "phase_ticket.id_ticket")
@@ -378,7 +382,7 @@ class TicketModel {
         .andWhere("phase_ticket.active", true)
         .andWhere("customer.crm_contact_id", customer);
     } else {
-      result = await database("phase_ticket")
+      result = await this.database("phase_ticket")
         .count("ticket.id")
         .leftJoin("ticket", "ticket.id", "phase_ticket.id_ticket")
         .where("phase_ticket.id_phase", id_phase)
@@ -417,65 +421,71 @@ class TicketModel {
         .andWhere("customer.crm_contact_id", id)
         .orWhere("ticket.id_protocol", id);
     } catch (err) {
-      console.log("===>", err);
+      this.logger.error(err, "Error when get ticket by customer or protocol.");
       return err;
     }
   }
 
   async last_interaction() {
     try {
-      return await database("activities_ticket")
+      return await this.database("activities_ticket")
         .select("users.name")
         .leftJoin("users", "users.id", "activities_ticket.id_user")
         .orderBy("activities_ticket.created_at", "desc")
         .limit(1);
     } catch (err) {
-      console.log("====Error last interaction ===>", err);
+      this.logger.error(err, "Eggor get last interaction phase");
       return err;
     }
   }
 
   async first_interaction(id) {
     try {
-      return await database("activities_ticket")
+      return await this.database("activities_ticket")
         .select("created_at")
         .where("id_ticket", id)
         .orderBy("created_at", "asc")
         .limit(1);
     } catch (err) {
-      console.log("====Error last interaction ===>", err);
+      this.logger.error(
+        err,
+        `Error when get first interaction ticket with ID ${id}`
+      );
       return err;
     }
   }
 
   async last_interaction_ticket(id) {
     try {
-      return await database("activities_ticket")
+      return await this.database("activities_ticket")
         .select(["users.id_users", "users.name"])
         .leftJoin("users", "users.id", "activities_ticket.id_user")
         .where("id_ticket", id)
         .orderBy("activities_ticket.created_at", "desc")
         .limit(1);
     } catch (err) {
-      console.log("====Error last interaction ticket ===>", err);
+      this.logger.error(
+        err,
+        `Error when get last interaction ticket with ID ${id}`
+      );
       return err;
     }
   }
 
   async getTicketStatusCount(id_company) {
     try {
-      return await database("vw_dash_tickets")
+      return await this.database("vw_dash_tickets")
         .select("*")
-        .where({ id_company });
+        .where("id_company", id_company);
     } catch (err) {
-      console.log("status ====>", err);
+      this.logger.error(err, "Error when get view dash ticket.");
       return err;
     }
   }
 
   async getTicketByIDForm(id_form, id_phase) {
     try {
-      const data = await database("phase_ticket")
+      const data = await this.database("phase_ticket")
         .select({
           id: "ticket.id",
           id_seq: "ticket.id_seq",
@@ -499,14 +509,14 @@ class TicketModel {
 
       return data[0];
     } catch (err) {
-      console.log("Error when select ticket by id Form ====>", err);
+      this.logger.error(err,"Error when select ticket by id Form.");
       return err;
     }
   }
 
   async getHistoryTicket(id_ticket) {
     try {
-      return await database("phase_ticket")
+      return await this.database("phase_ticket")
         .select({
           id: "phase_ticket.id",
           id_phase: "phase_ticket.id_phase",
@@ -522,14 +532,14 @@ class TicketModel {
         .where("phase_ticket.id_ticket", id_ticket)
         .orderBy("phase_ticket.created_at", "desc");
     } catch (err) {
-      console.log("Error when select history ticket ===>", err);
+      this.logger.error(err,"Error when select history ticket.");
       return err;
     }
   }
 
   async getFormTicket(id_ticket) {
     try {
-      return await database("phase_ticket")
+      return await this.database("phase_ticket")
         .select({
           id_form: "id_form",
           id_phase: "id_phase",
@@ -537,14 +547,14 @@ class TicketModel {
         .where("id_ticket", id_ticket)
         .andWhere("active", true);
     } catch (err) {
-      console.log("Error when select history ticket ===>", err);
+      this.logger.error(err,"Error when select history ticket.");
       return err;
     }
   }
 
   async getFirstFormTicket(id_ticket) {
     try {
-      return await database("phase_ticket")
+      return await this.database("phase_ticket")
         .select(
           "phase.id",
           "phase.id_form_template",
@@ -557,46 +567,46 @@ class TicketModel {
         .andWhere("phase_ticket.active", true)
         .orderBy("phase_ticket.created_at", "asc");
     } catch (err) {
-      console.log("Error Get First Form Ticket ==>", err);
+      this.logger.error(err,"Error Get First Form Ticket.");
       return err;
     }
   }
 
   async getResponsibleByTicketAndUser(id_ticket, id_user) {
     try {
-      return await database("responsible_ticket")
+      return await this.database("responsible_ticket")
         .where("id_ticket", id_ticket)
         .andWhere("id_user", id_user);
     } catch (err) {
-      console.log("Error get responsible by ticket and user => ", err);
+      this.logger.error(err,"Error get responsible by ticket and user.");
       return err;
     }
   }
 
   async updateResponsible(id_ticket, id_user, obj) {
     try {
-      return await database("responsible_ticket")
+      return await this.database("responsible_ticket")
         .update(obj)
         .where("id_ticket", id_ticket)
         .andWhere("id_user", id_user);
     } catch (err) {
-      console.log("Error update responsible", err);
+      this.logger.error(err,"Error update responsible");
       return err;
     }
   }
 
   async linkProtocolToticket(obj) {
     try {
-      return await database("ticket_protocol").insert(obj);
+      return await this.database("ticket_protocol").insert(obj);
     } catch (err) {
-      console.log("Erro ao linkar o protocolo ao ticket", err);
+      this.logger.error(err,"Erro ao linkar o protocolo ao ticket");
       return err;
     }
   }
 
   async getProtocolTicket(id_ticket, id_company) {
     try {
-      return await database("ticket_protocol")
+      return await this.database("ticket_protocol")
         .select({
           id: "ticket_protocol.id",
           id_ticket: "ticket_protocol.id_ticket",
@@ -610,24 +620,23 @@ class TicketModel {
         .where("ticket_protocol.id_ticket", id_ticket)
         .andWhere("ticket_protocol.id_company", id_company);
     } catch (err) {
-      console.log("Erro ao linkar o protocolo ao ticket", err);
+      this.logger.error(err,"Erro ao linkar o protocolo ao ticket.");
       return err;
     }
   }
 
   async insertViewTicket(obj) {
     try {
-      return await database("view_ticket").insert(obj);
+      return await this.database("view_ticket").insert(obj);
     } catch (err) {
-      console.log("error insert view ticket =>", err);
+      this.logger.error(err,"error insert view ticket.");
       return false;
     }
   }
 
   async getViewTicket(id_ticket) {
     try {
-      console.log(id_ticket);
-      return await database("view_ticket")
+      return await this.database("view_ticket")
         .select({
           id_ticket: "view_ticket.id_ticket",
           start: "view_ticket.start",
@@ -638,14 +647,14 @@ class TicketModel {
         .leftJoin("users", "users.id", `view_ticket.id_user`)
         .where("id_ticket", id_ticket);
     } catch (err) {
-      console.log("error get view ticket =>", err);
+      this.logger.error(err,"error get view ticket.");
       return false;
     }
   }
 
   async getProtocolCreatedByTicket(id_ticket, id_company) {
     try {
-      return await database("ticket_protocol")
+      return await this.database("ticket_protocol")
         .select({
           id_protocol: "ticket_protocol.id_protocol",
           created_at: "ticket_protocol.created_at",
@@ -657,14 +666,14 @@ class TicketModel {
         .andWhere("ticket_protocol.id_company", id_company)
         .andWhere("ticket_protocol.created_by_ticket", true);
     } catch (err) {
-      console.log("Erro ao linkar o protocolo ao ticket", err);
+      this.logger.error(err,"Erro ao linkar o protocolo ao ticket.");
       return err;
     }
   }
 
   async getTicketCreatedByTicketFather(id_ticket, id_company) {
     try {
-      return await database("ticket")
+      return await this.database("ticket")
         .select({
           id_seq: "ticket.id_seq",
           id_user: "users.id_users",
@@ -676,14 +685,14 @@ class TicketModel {
         .andWhere("id_ticket_father", id_ticket)
         .andWhere("ticket.id_company", id_company);
     } catch (err) {
-      console.log("error get ticket created by ticket =>", err);
+      this.logger.error(err,"error get ticket created by ticket.");
       return [];
     }
   }
 
   async getStatusTicketById(id, id_company) {
     try {
-      return await database("ticket")
+      return await this.database("ticket")
         .select({
           created_by_ticket: "ticket.created_by_ticket",
           id_ticket_father: "ticket.id_ticket_father",
@@ -700,7 +709,7 @@ class TicketModel {
         .where(`ticket.id`, id)
         .andWhere(`ticket.id_company`, id_company);
     } catch (err) {
-      console.log("Error when get ticket by id => ", err);
+      this.logger.error(err,"Error when get ticket by id.");
       return err;
     }
   }
@@ -731,7 +740,7 @@ class TicketModel {
         ${default_where} CAST(customer.identification_document AS TEXT) LIKE '%${search}%'`;
       }
 
-      const result = await database.raw(`
+      const result = await this.database.raw(`
       select 
         ticket.id,
         ticket.id_seq,
@@ -755,17 +764,17 @@ class TicketModel {
       left join ticket_protocol on ticket_protocol.id_ticket = ticket.id
       left join status_ticket on status_ticket.id = ticket.id_status
       where ${query} order by ticket.created_at desc`);
-      console.log(result.rows);
+      
       return result.rows;
     } catch (err) {
-      console.log("Error when get ticket by id => ", err);
+      this.logger.error(err,"Error when get ticket by id.");
       return err;
     }
   }
 
   async getTicketByFatherToHistory(id_ticket, id_company) {
     try {
-      return await database("ticket")
+      return await this.database("ticket")
         .select({
           id_seq: "ticket.id_seq",
           id_user: "users.id_users",
@@ -785,14 +794,14 @@ class TicketModel {
         .andWhere("ticket.id_company", id_company)
         .andWhere("phase_ticket.active", true);
     } catch (err) {
-      console.log("error get ticket created by ticket =>", err);
+      this.logger.error(err,"error get ticket created by ticket.");
       return [];
     }
   }
 
   async getLastResponsibleTicket(id_ticket) {
     try {
-      const result = await database("responsible_ticket")
+      const result = await this.database("responsible_ticket")
         .select("users.name")
         .leftJoin("users", "users.id", "responsible_ticket.id_user")
         .where("responsible_ticket.id_ticket", id_ticket)
@@ -801,13 +810,8 @@ class TicketModel {
 
       return result[0];
     } catch (err) {
-      console.log(
-        "erro ao capturar o ultimo responsavel pelo ticket ===>",
-        err
-      );
+      this.logger.error(err,"Erro ao capturar o ultimo responsavel pelo ticket.");
       return err;
     }
   }
 }
-
-module.exports = TicketModel;

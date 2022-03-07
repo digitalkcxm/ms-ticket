@@ -1,8 +1,13 @@
-module.exports = async function (authorization, department, phase) {
-  const FilaController = require("../controllers/FilaController");
-  const filaController = new FilaController();
-
-  await  filaController.sendToQueue(
+import FilaController from "../controllers/FilaController.js";
+export default async function (
+  authorization,
+  department,
+  phase,
+  logger,
+  database
+) {
+  const filaController = new FilaController(logger, database);
+  await filaController.sendToQueue(
     {
       id: department,
       authorization: authorization,
@@ -13,9 +18,9 @@ module.exports = async function (authorization, department, phase) {
   await filaController.sendToQueue(
     {
       id: phase,
-      authorization: authorization
+      authorization: authorization,
     },
     "msticket:create_header"
   );
   return true;
-};
+}

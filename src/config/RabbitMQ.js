@@ -1,6 +1,6 @@
-const amqp = require("amqplib/callback_api")
+import amqp from "amqplib/callback_api.js"
 
-function queue() {
+export function queue() {
   amqp.connect(`amqp://${process.env.RABBITMQ_USER}:${process.env.RABBITMQ_PASSWORD}@${process.env.RABBITMQ_HOST}:${process.env.RABBITMQ_PORT}?heartbeat=20`, (err, conn) => {
     if (err) {
       console.error(">> [AMQP]", err.message)
@@ -27,4 +27,4 @@ function queue() {
   })
 }
 
-module.exports = { queue }
+

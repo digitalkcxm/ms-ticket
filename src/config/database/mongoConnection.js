@@ -1,8 +1,9 @@
-const MongoClient = require("mongodb").MongoClient;
+import MongoClient from "mongodb";
+MongoClient.MongoClient
 
-module.exports = async (app, callback) => {
-     let connectionMongo = `mongodb://${process.env.MONGO_USERNAME}:${process.env.MONGO_PASSWORD}@${process.env.MONGO_HOST}:${process.env.MONGO_PORT}/`
-    // let connectionMongo = "mongodb://localhost:27017/msticket";
+export default async (app, callback) => {
+    //  let connectionMongo = `mongodb://${process.env.MONGO_USERNAME}:${process.env.MONGO_PASSWORD}@${process.env.MONGO_HOST}:${process.env.MONGO_PORT}/`
+     let connectionMongo = "mongodb://localhost:27017/msticket";
 
   if (process.env.MONGO_STRINGCONNECTION_PARAMS)
     connectionMongo = `${connectionMongo}${process.env.MONGO_DATABASE}?${process.env.MONGO_STRINGCONNECTION_PARAMS}`;
@@ -21,6 +22,7 @@ module.exports = async (app, callback) => {
 
       app.locals.db = db;
       global.mongodb = db;
+       
       callback();
     }
   );

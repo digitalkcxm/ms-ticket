@@ -1,7 +1,9 @@
-require("dotenv").config()
+import dotenv from "dotenv"
 
 const environment = process.env.STATE_ENV
 
-const knex = require("knex")(require("../../../knexfile")[environment])
+import knex from "knex"
+import knexfile from "../../../knexfile.js"
 
-module.exports = knex
+export default knex(knexfile[environment])
+

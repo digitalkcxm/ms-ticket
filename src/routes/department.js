@@ -1,15 +1,16 @@
-const express = require("express");
-const router = express.Router();
+import express from "express";
+import { verifyCompany } from "../middlewares/VerifyCompany.js";
+import DepartmentController from "../controllers/DepartmentController.js";
 
-const { verifyCompany } = require("../middlewares/VerifyCompany");
-router.use(verifyCompany);
+export default function department(database = {}, logger = {}) {
+  const router = express.Router();
+  const departmentController = new DepartmentController(database, logger);
+  router.use((req, res, next) =>
+    verifyCompany(req, res, next, database, logger)
+  );
 
-const DepartmentController = require("../controllers/DepartmentController");
-const departmentController = new DepartmentController();
-
-router.get("/", (req, res) =>
-  departmentController.getCountSLADepartment(req, res)
-);
-
-
-module.exports = router
+  router.get("/", (req, res) =>
+    departmentController.getCountSLADepartment(req, res)
+  );
+  return router;
+}

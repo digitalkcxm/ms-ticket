@@ -1,20 +1,9 @@
-require("dotenv").config();
-require("./helpers/CronJob");
-const TicketController = require("./controllers/TicketController");
+import dotenv from "dotenv";
+import TicketController from "./controllers/TicketController.js";
 
-const { setTicketAtRedis } = new TicketController();
+import { server, database, logger } from "./config/server.js";
 
-const FilaController = require("./controllers/FilaController");
-const filaController = new FilaController();
+const ticketController = new TicketController(database, logger);
+ticketController.setTicketAtRedis();
 
-setTicketAtRedis();
-require("./config/server").server;
-
-setTimeout(() => {
-  filaController.consumerCreateActivity();
-  filaController.consumerCreateTicket();
-  filaController.consumerUpdateTicket();
-  filaController.consumerCreateAttachments();
-  filaController.consumerCreateDash();
-  filaController.consumerCreateHeader();
-}, 2000);
+server;

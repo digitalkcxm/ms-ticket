@@ -1,8 +1,9 @@
 {
   "name": "ms-ticket",
   "version": "1.0.0",
-  "description": "",
+  "description": "Workflow",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "migrate:latest": "./node_modules/.bin/run.env ./node_modules/.bin/knex migrate:latest",
     "migrate:rollback": "./node_modules/.bin/run.env ./node_modules/.bin/knex migrate:rollback",
@@ -19,16 +20,18 @@
     "body-parser": "^1.19.0",
     "cors": "^2.8.5",
     "cron": "^1.8.2",
-    "dotenv": "^8.2.0",
+    "dotenv": "^8.6.0",
     "express": "^4.17.1",
-    "express-validator": "^6.10.0",
-    "knex": "^0.21.5",
-    "moment": "^2.29.0",
-    "mongodb": "^3.6.2",
-    "mongoose": "^5.10.8",
-    "nodemon": "^2.0.4",
-    "pg": "^8.3.3",
+    "express-validator": "^6.13.0",
+    "knex": "^0.21.21",
+    "moment": "^2.29.1",
+    "mongodb": "^3.7.3",
+    "mongoose": "^5.13.13",
+    "nodemon": "^2.0.15",
+    "pg": "^8.7.1",
+    "pino": "^7.8.0",
+    "pino-pretty": "^7.5.1",
     "run.env": "^1.1.0",
-    "uuid": "^8.3.0"
+    "uuid": "^8.3.2"
   }
 }

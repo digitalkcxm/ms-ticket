@@ -1,23 +1,23 @@
-const { v1 } = require("uuid");
-const CompanyModel = require("../models/CompanyModel");
-const CustomerModel = require("../models/CustomerModel");
-const { validationResult } = require("express-validator");
+import { v1 } from "uuid";
+import moment from "moment";
+import SLAController from "./SLAController.js";
+import TicketModel from "../models/TicketModel.js";
+import { validationResult } from "express-validator";
+import CustomerModel from "../models/CustomerModel.js";
+import CallbackDigitalk from "../services/CallbackDigitalk.js";
+import PhaseController from "../controllers/PhaseController.js";
+import { formatTicketForPhase } from "../helpers/FormatTicket.js";
 
-const companyModel = new CompanyModel();
-const customerModel = new CustomerModel();
-const moment = require("moment");
+export default class CustomerController {
+  constructor(database = {}, logger = {}) {
+    this.logger = logger;
+    this.database = database;
+    this.ticketModel = new TicketModel(database, logger);
+    this.slaController = new SLAController(database, logger);
+    this.customerModel = new CustomerModel(database, logger);
+    this.phaseController = new PhaseController(database, logger);
+  }
 
-const { formatTicketForPhase } = require("../helpers/FormatTicket");
-
-const TicketModel = require("../models/TicketModel");
-const ticketModel = new TicketModel();
-
-const CallbackDigitalk = require("../services/CallbackDigitalk");
-const { ticketSLA, settingsSLA } = require("../helpers/SLAFormat");
-
-const PhaseController = require("../controllers/PhaseController");
-const phaseController = new PhaseController();
-class CustomerController {
   async create(req, res) {
     const errors = validationResult(req);
     if (!errors.isEmpty())
@@ -37,7 +37,7 @@ class CustomerController {
         updated_at: moment().format(),
       };
 
-      const result = await customerModel.create(obj);
+      const result = await this.customerModel.create(obj);
 
       if (result.length <= 0)
         return res
@@ -49,13 +49,15 @@ class CustomerController {
 
       obj.created_at = moment(obj.created_at).format("DD/MM/YYYY HH:mm:ss");
       obj.updated_at = moment(obj.updated_at).format("DD/MM/YYYY HH:mm:ss");
-      let ticket = await ticketModel.getTicketById(
+      let ticket = await this.ticketModel.getTicketById(
         req.body.id_ticket,
         req.headers.authorization
       );
       ticket = await formatTicketForPhase(
         { id: ticket[0].phase_id },
-        ticket[0]
+        ticket[0],
+        this.database,
+        this.logger
       );
 
       await CallbackDigitalk(
@@ -69,7 +71,7 @@ class CustomerController {
       );
       return res.status(200).send(obj);
     } catch (err) {
-      console.log("Error when manager customer info => ", err);
+      this.logger.error(err, "Error when manager customer info.");
       return res
         .status(400)
         .send({ error: "Error when manager customer info" });
@@ -78,7 +80,7 @@ class CustomerController {
 
   async getByID(req, res) {
     try {
-      const result = await customerModel.getTicketByIDCRMCustomer(
+      const result = await this.customerModel.getTicketByIDCRMCustomer(
         req.query.status,
         req.params.id,
         req.query.department
@@ -88,12 +90,11 @@ class CustomerController {
 
       const phases = [];
       for await (const x of result) {
-        console.log();
         if (phases.filter((y) => y.id === x.id).length <= 0) {
-          x.phase_sla = await settingsSLA(x.id);
-          x.sla = await ticketSLA(x.id, x.id_ticket);
+          x.phase_sla = await this.slaController.settingsSLA(x.id);
+          x.sla = await this.slaController.ticketSLA(x.id, x.id_ticket);
 
-          x.header = await phaseController.headerGenerate({
+          x.header = await this.phaseController.headerGenerate({
             id: x.id,
             authorization: req.body.authorization,
             customer: req.params.id,
@@ -159,14 +160,14 @@ class CustomerController {
       }
       return res.status(200).send(phases);
     } catch (err) {
-      console.log("Error when get company info => ", err);
+      this.logger.error(err, "Error when get company info.");
       return res.status(400).send({ error: "Error when get company info" });
     }
   }
 
   async getByIDCore(req, res) {
     try {
-      const result = await customerModel.getByIDCore(req.params.id_core);
+      const result = await this.customerModel.getByIDCore(req.params.id_core);
       if (result.length <= 0)
         return res.status(400).send({ error: "Error when get company info" });
 
@@ -179,14 +180,14 @@ class CustomerController {
 
       return res.status(200).send(result);
     } catch (err) {
-      console.log("Error when get company info => ", err);
+      this.logger.error(err, "Error when get company info.");
       return res.status(400).send({ error: "Error when get company info" });
     }
   }
 
   async getByTicket(req, res) {
     try {
-      const result = await customerModel.getAll(req.body.id_ticket);
+      const result = await this.customerModel.getAll(req.body.id_ticket);
       if (result.length <= 0) return res.status(400).send({ error: result });
 
       result[0].created_at = moment(result[0].created_at).format(
@@ -198,7 +199,7 @@ class CustomerController {
 
       return res.status(200).send(result);
     } catch (err) {
-      console.log("Error when get company info => ", err);
+      this.logger.error(err, "Error when get company info.");
       return res.status(400).send({ error: "Error when get company info" });
     }
   }
@@ -219,7 +220,7 @@ class CustomerController {
         updated_at: moment().format(),
       };
 
-      const result = await customerModel.update(obj, req.params.id);
+      const result = await this.customerModel.update(obj, req.params.id);
       if (result.name && result.name == "error")
         return res
           .status(500)
@@ -227,12 +228,10 @@ class CustomerController {
 
       return res.status(200).send(result);
     } catch (err) {
-      console.log("Error when manage object to update company => ", err);
+      this.logger.error(err, "Error when manage object to update company.");
       return res
         .status(400)
         .send({ error: "Error when manage object to update company" });
     }
   }
 }
-
-module.exports = CustomerController;

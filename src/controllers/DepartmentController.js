@@ -1,38 +1,43 @@
-const DepartmentModel = require("../models/DepartmentModel");
-const departmentModel = new DepartmentModel();
-const { counter_sla } = require("../helpers/SLAFormat");
+import SLAController from "./SLAController.js";
+import DepartmentModel from "../models/DepartmentModel.js";
+export default class DepartmentController {
+  constructor(database = {}, logger = {}) {
+    this.logger = logger;
+    this.slaController = new SLAController(database, logger);
+    this.departmentModel = new DepartmentModel(database, logger);
+  }
 
-class DepartmentController {
   async checkDepartmentCreated(department, company_id) {
     try {
-      let result = await departmentModel.getByID(department, company_id);
+      let result = await this.departmentModel.getByID(department, company_id);
       if (!result || result.length <= 0)
-        result = await departmentModel.create({
+        result = await this.departmentModel.create({
           id_company: company_id,
           id_department_core: department,
         });
 
       return result;
     } catch (err) {
-      console.log("Error when check department created =>", err);
+      this.logger.error(err, "Error when check department created.");
     }
   }
 
   async getCountSLADepartment(req, res) {
     try {
-      const departments = await departmentModel.getByIDCompany(
+      const departments = await this.departmentModel.getByIDCompany(
         req.headers.authorization
       );
       const obj = [];
       for await (const department of departments) {
-        const phases = await departmentModel.getDepartmentPhaseByDepartment(
-          department.id
-        );
+        const phases =
+          await this.departmentModel.getDepartmentPhaseByDepartment(
+            department.id
+          );
         let emdia = 0;
         let atrasado = 0;
 
         for await (const phase of phases) {
-          const sla = await counter_sla(phase.id_phase);
+          const sla = await this.slaController.counter_sla(phase.id_phase);
           emdia = parseInt(sla.emdia) + emdia;
           atrasado = parseInt(sla.atrasado) + atrasado;
         }
@@ -43,10 +48,8 @@ class DepartmentController {
       }
       return res.status(200).send(obj);
     } catch (err) {
-      console.log("Error get count sla department =>", err);
+      this.logger(err, "Error get count sla department.");
       return res.status(400).send({ error: "Houve um problema" });
     }
   }
 }
-
-module.exports = DepartmentController;

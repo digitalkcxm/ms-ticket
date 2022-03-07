@@ -1,23 +1,23 @@
-const axios = require("axios");
-const moment = require("moment");
-const amqp = require("amqplib/callback_api");
-const TicketController = require("./TicketController");
-const ticketController = new TicketController();
+import PhaseController from "./PhaseController.js";
+import TicketController from "./TicketController.js";
 
-const PhaseController = require("./PhaseController");
-const phaseController = new PhaseController();
-class FilaController {
+export default class FilaController {
+  constructor(database = {}, logger = {}) {
+    this.logger = logger;
+    this.phaseController = new PhaseController(database, logger);
+    this.ticketController = new TicketController(database, logger);
+  }
   async consumerCreateTicket() {
     const queueName = "msticket:create_ticket";
     try {
       global.amqpConn.assertQueue(queueName, { durable: true });
       global.amqpConn.consume(queueName, async (msg) => {
-        console.log("Consumindo create ticket");
-        await ticketController.queueCreate(JSON.parse(msg.content.toString()));
+        this.logger.info("Consumindo create ticket");
+        await this.ticketController.queueCreate(JSON.parse(msg.content.toString()));
         global.amqpConn.ack(msg);
       });
     } catch (err) {
-      console.log(err);
+      this.logger.error(err,"Error when consume message to create ticket.");
     }
   }
 
@@ -26,14 +26,14 @@ class FilaController {
     try {
       global.amqpConn.assertQueue(queueName, { durable: true });
       global.amqpConn.consume(queueName, async (msg) => {
-        console.log("Consumindo update ticket");
-        await ticketController.queueUpdateTicket(
+        this.logger.info("Consumindo update ticket");
+        await this.ticketController.queueUpdateTicket(
           JSON.parse(msg.content.toString())
         );
         global.amqpConn.ack(msg);
       });
     } catch (err) {
-      console.log(err);
+      this.logger.error(err,"Error when consume message to update ticket.");
     }
   }
 
@@ -42,14 +42,14 @@ class FilaController {
     try {
       global.amqpConn.assertQueue(queueName, { durable: true });
       global.amqpConn.consume(queueName, async (msg) => {
-        console.log("Consumindo create activities");
-        await ticketController.queueCreateActivities(
+        this.logger.info("Consumindo create activities");
+        await this.ticketController.queueCreateActivities(
           JSON.parse(msg.content.toString())
         );
         global.amqpConn.ack(msg);
       });
     } catch (err) {
-      console.log(err);
+      this.logger.error(err,"Error when consume message to create activity.");
     }
   }
 
@@ -58,14 +58,14 @@ class FilaController {
     try {
       global.amqpConn.assertQueue(queueName, { durable: true });
       global.amqpConn.consume(queueName, async (msg) => {
-        console.log("Consumindo create attachments");
-        await ticketController.queueCreateAttachments(
+        this.logger.info("Consumindo create attachments");
+        await this.ticketController.queueCreateAttachments(
           JSON.parse(msg.content.toString())
         );
         global.amqpConn.ack(msg);
       });
     } catch (err) {
-      console.log(err);
+      this.logger.error(err,"Error when consume message to create attachment.");
     }
   }
 
@@ -74,12 +74,12 @@ class FilaController {
     try {
       global.amqpConn.assertQueue(queueName, { durable: true });
       global.amqpConn.consume(queueName, async (msg) => {
-        console.log("Consumindo create dash");
-        await phaseController.dashGenerate(JSON.parse(msg.content.toString()));
+        this.logger.info("Consumindo create dash.");
+        await this.phaseController.dashGenerate(JSON.parse(msg.content.toString()));
         global.amqpConn.ack(msg);
       });
     } catch (err) {
-      console.log(err);
+      this.logger.error(err,"Error when consume message to create Dash.");
     }
   }
 
@@ -88,14 +88,14 @@ class FilaController {
     try {
       global.amqpConn.assertQueue(queueName, { durable: true });
       global.amqpConn.consume(queueName, async (msg) => {
-        console.log("Consumindo create header");
-        await phaseController.headerGenerate(
+        this.logger.info("Consumindo create header.");
+        await this.phaseController.headerGenerate(
           JSON.parse(msg.content.toString())
         );
         global.amqpConn.ack(msg);
       });
     } catch (err) {
-      console.log(err);
+      this.logger.error(err,"Error when consume message to create cache header phase.");
     }
   }
 
@@ -107,11 +107,9 @@ class FilaController {
       });
 
       return true;
-    } catch (error) {
-      console.log("ERRO AO PUBLICAR MENSAGEM NA FILA  ==>>", error);
+    } catch (err) {
+      this.logger.error(err,"ERRO AO PUBLICAR MENSAGEM NA FILA.");
       return false;
     }
   }
 }
-
-module.exports = FilaController;
