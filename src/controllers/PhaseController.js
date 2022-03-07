@@ -546,7 +546,7 @@ export default class PhaseController {
   }
 
   async _checkColumnsFormTemplate(newTemplate, db, template) {
-    const register = await this.formTemplate.findRegistes(template);
+    const register = await this.formTemplate.findRegister(template);
     const errors = [];
     if (newTemplate.length < register.column.length)
       errors.push(
@@ -586,7 +586,7 @@ export default class PhaseController {
     //   : 0;
 
     if (result.id_form_template) {
-      const register = await this.formTemplate.findRegistes(
+      const register = await this.formTemplate.findRegister(
         result.id_form_template
       );
 
@@ -709,7 +709,7 @@ export default class PhaseController {
     );
     for (const phase of result) {
       if (phase.id_form_template && phase.form) {
-        const register = await this.formTemplate.findRegistes(
+        const register = await this.formTemplate.findRegister(
           phase.id_form_template
         );
         if (register && register.column) phase.formTemplate = register.column;
@@ -1987,7 +1987,7 @@ export default class PhaseController {
     const result = await this.phaseModel.getFormularios(data.id, data.customer);
     let campos_calculados = {};
     if (result.id_form && result.id_form.length > 0) {
-      const register = await this.formTemplate.findRegistes(
+      const register = await this.formTemplate.findRegister(
         result.id_form[0].id_form_template
       );
 

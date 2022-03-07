@@ -1197,7 +1197,7 @@ export default class TicketController {
           req.headers.authorization
         );
         if (phase[0].form && phase[0].id_form_template) {
-          const register = await this.formTemplate.findRegistes(
+          const register = await this.formTemplate.findRegister(
             phase[0].id_form_template
           );
 
@@ -1293,7 +1293,7 @@ export default class TicketController {
           req.headers.authorization
         );
         if (phase[0].form && phase[0].id_form_template) {
-          const register = await this.formTemplate.findRegistes(
+          const register = await this.formTemplate.findRegister(
             phase[0].id_form_template
           );
 
@@ -1350,7 +1350,7 @@ export default class TicketController {
           history_phase[index].id_form
         );
 
-        const templateBefore = await this.formTemplate.findRegistes(
+        const templateBefore = await this.formTemplate.findRegister(
           history_phase[index].template
         );
         console.log("templateBefore =>", templateBefore);
@@ -1358,7 +1358,7 @@ export default class TicketController {
           history_phase[index + 1].id_form
         );
 
-        const templateAfter = await this.formTemplate.findRegistes(
+        const templateAfter = await this.formTemplate.findRegister(
           history_phase[index + 1].template
         );
         console.log("created at ----->", history_phase[index + 1]);
@@ -2315,7 +2315,7 @@ export default class TicketController {
       const errors = [];
 
       console.log(id_form_template)
-      const form_template = await this.formTemplate.findRegistes(
+      const form_template = await this.formTemplate.findRegister(
         id_form_template
       );
       console.log(form_template);
@@ -2341,7 +2341,7 @@ export default class TicketController {
   async _validateUpdate(db, id_form_template, form, id_form_ticket) {
     try {
       const errors = [];
-      const form_template = await this.formTemplate.findRegistes(
+      const form_template = await this.formTemplate.findRegister(
         id_form_template
       );
       
