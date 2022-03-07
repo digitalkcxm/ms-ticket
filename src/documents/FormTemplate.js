@@ -17,7 +17,7 @@ export default class FormTemplate {
     }
   }
 
-  async findRegistes(id) {
+  async findRegister(id) {
     try {
       id = JSON.parse(id);
       
