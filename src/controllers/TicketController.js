@@ -618,7 +618,7 @@ export default class TicketController {
               };
 
               if (separate.notify_close_message)
-                obj.message = phase[0].admin.notify_close_message;
+                obj.message = separate.notify_close_message;
               if (separate.notify_close_hsm)
                 obj.hsm_id = separate.notify_close_hsm;
               await CallbackDigitalk(obj, callback);
