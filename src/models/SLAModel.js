@@ -17,9 +17,10 @@ export default class SLAModel {
 
   async getSLASettings(idPhase) {
     try {
+      this.logger.info({msg:"id da fase.", data:idPhase})
       return await this.database("phase_sla_settings")
         .leftJoin("sla_type", "sla_type.id", "phase_sla_settings.id_sla_type")
-        .where("id_phase", idPhase)
+        .where("phase_sla_settings.id_phase", idPhase)
         .orderBy("phase_sla_settings.id_sla_type", "asc");
     } catch (err) {
       this.logger.error(err,"Get sla settings.");

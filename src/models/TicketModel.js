@@ -394,7 +394,7 @@ export default class TicketModel {
 
   async getTicketByCustomerOrProtocol(id) {
     try {
-      return database(tableName)
+      return this.database(tableName)
         .select({
           id: "ticket.id",
           id_seq: "ticket.id_seq",

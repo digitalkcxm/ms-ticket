@@ -92,6 +92,10 @@ export default class CustomerController {
       for await (const x of result) {
         if (phases.filter((y) => y.id === x.id).length <= 0) {
           x.phase_sla = await this.slaController.settingsSLA(x.id);
+          this.logger.info({
+            msg: "Id da fase na função get by id do customerController",
+            data: x.id,
+          });
           x.sla = await this.slaController.ticketSLA(x.id, x.id_ticket);
 
           x.header = await this.phaseController.headerGenerate({

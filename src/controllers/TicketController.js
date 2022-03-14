@@ -2255,7 +2255,7 @@ export default class TicketController {
         case 1:
           for (const ticket of tickets) {
             if (!ticket.interaction_time && ticket.limit_sla_time < moment()) {
-              slaModel.updateTicketSLA(
+              await this.slaModel.updateTicketSLA(
                 ticket.id_ticket,
                 { id_sla_status: sla_status.atrasado },
                 ticket.id_sla_type
@@ -2269,7 +2269,7 @@ export default class TicketController {
               ticket.interaction_time < ticket.limit_sla_time &&
               ticket.limit_sla_time < moment()
             ) {
-              slaModel.updateTicketSLA(
+              await this.slaModel.updateTicketSLA(
                 ticket.id_ticket,
                 { id_sla_status: sla_status.atrasado },
                 ticket.id_sla_type
@@ -2280,7 +2280,7 @@ export default class TicketController {
         case 3:
           for (const ticket of tickets) {
             if (ticket.limit_sla_time < moment()) {
-              slaModel.updateTicketSLA(
+              await this.slaModel.updateTicketSLA(
                 ticket.id_ticket,
                 { id_sla_status: sla_status.atrasado },
                 ticket.id_sla_type
