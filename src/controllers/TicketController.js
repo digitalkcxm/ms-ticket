@@ -1662,7 +1662,7 @@ export default class TicketController {
           .send({ error: "There is no ticket with this ID " });
 
       ticket = await formatTicketForPhase(
-        ticket,
+        { id: ticket[0].phase_id },
         ticket[0],
         this.database,
         this.logger
@@ -1882,7 +1882,7 @@ export default class TicketController {
       //   data.authorization
       // );
       ticket = await formatTicketForPhase(
-        ticket,
+        { id: ticket[0].phase_id },
         ticket[0],
         this.database,
         this.logger
@@ -2255,7 +2255,7 @@ export default class TicketController {
         case 1:
           for (const ticket of tickets) {
             if (!ticket.interaction_time && ticket.limit_sla_time < moment()) {
-              slaModel.updateTicketSLA(
+              await this.slaModel.updateTicketSLA(
                 ticket.id_ticket,
                 { id_sla_status: sla_status.atrasado },
                 ticket.id_sla_type
@@ -2269,7 +2269,7 @@ export default class TicketController {
               ticket.interaction_time < ticket.limit_sla_time &&
               ticket.limit_sla_time < moment()
             ) {
-              slaModel.updateTicketSLA(
+              await this.slaModel.updateTicketSLA(
                 ticket.id_ticket,
                 { id_sla_status: sla_status.atrasado },
                 ticket.id_sla_type
@@ -2280,7 +2280,7 @@ export default class TicketController {
         case 3:
           for (const ticket of tickets) {
             if (ticket.limit_sla_time < moment()) {
-              slaModel.updateTicketSLA(
+              await this.slaModel.updateTicketSLA(
                 ticket.id_ticket,
                 { id_sla_status: sla_status.atrasado },
                 ticket.id_sla_type
@@ -2437,7 +2437,7 @@ export default class TicketController {
       );
       for (let ticket of result) {
         ticket = await formatTicketForPhase(
-          [ticket],
+          { id: ticket.phase_id },
           ticket,
           this.database,
           this.logger

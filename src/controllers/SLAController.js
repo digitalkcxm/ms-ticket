@@ -178,6 +178,7 @@ export default class SLAController {
   }
 
   async ticketSLA(phase_id, ticket_id) {
+    
     const slas = await this.slaModel.getSLASettings(phase_id);
     let sla = {};
     if (slas && slas.length > 0) {
@@ -239,7 +240,7 @@ export default class SLAController {
     return sla;
   }
 
-  async ticketControl (value,id_ticket,id_phase) {
+  async ticketControl(value, id_ticket, id_phase) {
     const momentFormated = await newTime(value.time, value.id_unit_of_time);
     await this.slaModel.slaTicketControl({
       id_ticket: id_ticket,
@@ -250,13 +251,12 @@ export default class SLAController {
       created_at: moment(),
       updated_at: moment(),
     });
-  };
+  }
 
   async createSLAControl(id_phase, id_ticket) {
     const slaSettings = await this.slaModel.getSLASettings(id_phase);
 
     if (slaSettings && slaSettings.length > 0) {
-
       for await (const value of slaSettings) {
         switch (value.id_sla_type) {
           case 1:
@@ -266,7 +266,7 @@ export default class SLAController {
               1
             );
             if (getSLA && Array.isArray(getSLA) && getSLA.length <= 0) {
-              await this.ticketControl(value,id_ticket,id_phase);
+              await this.ticketControl(value, id_ticket, id_phase);
             }
             break;
           case 2:
@@ -283,11 +283,11 @@ export default class SLAController {
                   2
                 );
                 if (getSLA && Array.isArray(getSLA) && getSLA.length <= 0) {
-                  await this.ticketControl(value,id_ticket,id_phase);
+                  await this.ticketControl(value, id_ticket, id_phase);
                 }
               }
             } else {
-              await this.ticketControl(value,id_ticket,id_phase);
+              await this.ticketControl(value, id_ticket, id_phase);
             }
             break;
           case 3:
@@ -304,11 +304,11 @@ export default class SLAController {
                   3
                 );
                 if (getSLA && Array.isArray(getSLA) && getSLA.length <= 0) {
-                  await this.ticketControl(value,id_ticket,id_phase);
+                  await this.ticketControl(value, id_ticket, id_phase);
                 }
               }
             } else {
-              await this.ticketControl(value,id_ticket,id_phase);
+              await this.ticketControl(value, id_ticket, id_phase);
             }
             break;
           default:
@@ -322,7 +322,11 @@ export default class SLAController {
   // Função responsavel por atualizar o controle de sla do ticket.
   async updateSLA(id_ticket, id_phase, activity = false) {
     // Busca a configuração de sla do ticket pela phase e id_do ticket, primeiramente pela opção de inicialização do ticket.
-    let slaTicket = await this.slaModel.getByPhaseTicket(id_phase, id_ticket, 1);
+    let slaTicket = await this.slaModel.getByPhaseTicket(
+      id_phase,
+      id_ticket,
+      1
+    );
 
     // Inicializa uma variavel de obj.
     let obj;
@@ -350,7 +354,11 @@ export default class SLAController {
 
       await this.createSLAControl(id_phase, id_ticket);
       if (activity) {
-        slaTicket = await this.slaModel.getByPhaseTicket(id_phase, id_ticket, 2);
+        slaTicket = await this.slaModel.getByPhaseTicket(
+          id_phase,
+          id_ticket,
+          2
+        );
         if (
           slaTicket &&
           slaTicket.length > 0 &&
