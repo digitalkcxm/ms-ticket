@@ -2436,9 +2436,10 @@ export default class TicketController {
         req.params.id
       );
       for (let ticket of result) {
+        this.logger.info({msg:"get tickt by customer or protocol, object ticket result", data:ticket})
         ticket = await formatTicketForPhase(
-          { id: ticket[0].phase_id },
-          ticket[0],
+          { id: ticket.phase_id },
+          ticket,
           this.database,
           this.logger
         );
