@@ -178,10 +178,7 @@ export default class SLAController {
   }
 
   async ticketSLA(phase_id, ticket_id) {
-    this.logger.info({
-      msg: "Parametros da função ticket sla.",
-      data: phase_id,
-    });
+    
     const slas = await this.slaModel.getSLASettings(phase_id);
     let sla = {};
     if (slas && slas.length > 0) {
