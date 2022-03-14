@@ -411,6 +411,7 @@ export default class TicketModel {
           display_name: "ticket.display_name",
           id_ticket_father: "ticket.id_ticket_father",
           id_tab: `ticket.id_tab`,
+          phase_id: "phase.id",
         })
         .leftJoin("users", "users.id", "ticket.id_user")
         .leftJoin("phase_ticket", "phase_ticket.id_ticket", `${tableName}.id`)
@@ -509,7 +510,7 @@ export default class TicketModel {
 
       return data[0];
     } catch (err) {
-      this.logger.error(err,"Error when select ticket by id Form.");
+      this.logger.error(err, "Error when select ticket by id Form.");
       return err;
     }
   }
@@ -532,7 +533,7 @@ export default class TicketModel {
         .where("phase_ticket.id_ticket", id_ticket)
         .orderBy("phase_ticket.created_at", "desc");
     } catch (err) {
-      this.logger.error(err,"Error when select history ticket.");
+      this.logger.error(err, "Error when select history ticket.");
       return err;
     }
   }
@@ -547,7 +548,7 @@ export default class TicketModel {
         .where("id_ticket", id_ticket)
         .andWhere("active", true);
     } catch (err) {
-      this.logger.error(err,"Error when select history ticket.");
+      this.logger.error(err, "Error when select history ticket.");
       return err;
     }
   }
@@ -567,7 +568,7 @@ export default class TicketModel {
         .andWhere("phase_ticket.active", true)
         .orderBy("phase_ticket.created_at", "asc");
     } catch (err) {
-      this.logger.error(err,"Error Get First Form Ticket.");
+      this.logger.error(err, "Error Get First Form Ticket.");
       return err;
     }
   }
@@ -578,7 +579,7 @@ export default class TicketModel {
         .where("id_ticket", id_ticket)
         .andWhere("id_user", id_user);
     } catch (err) {
-      this.logger.error(err,"Error get responsible by ticket and user.");
+      this.logger.error(err, "Error get responsible by ticket and user.");
       return err;
     }
   }
@@ -590,7 +591,7 @@ export default class TicketModel {
         .where("id_ticket", id_ticket)
         .andWhere("id_user", id_user);
     } catch (err) {
-      this.logger.error(err,"Error update responsible");
+      this.logger.error(err, "Error update responsible");
       return err;
     }
   }
@@ -599,7 +600,7 @@ export default class TicketModel {
     try {
       return await this.database("ticket_protocol").insert(obj);
     } catch (err) {
-      this.logger.error(err,"Erro ao linkar o protocolo ao ticket");
+      this.logger.error(err, "Erro ao linkar o protocolo ao ticket");
       return err;
     }
   }
@@ -620,7 +621,7 @@ export default class TicketModel {
         .where("ticket_protocol.id_ticket", id_ticket)
         .andWhere("ticket_protocol.id_company", id_company);
     } catch (err) {
-      this.logger.error(err,"Erro ao linkar o protocolo ao ticket.");
+      this.logger.error(err, "Erro ao linkar o protocolo ao ticket.");
       return err;
     }
   }
@@ -629,7 +630,7 @@ export default class TicketModel {
     try {
       return await this.database("view_ticket").insert(obj);
     } catch (err) {
-      this.logger.error(err,"error insert view ticket.");
+      this.logger.error(err, "error insert view ticket.");
       return false;
     }
   }
@@ -647,7 +648,7 @@ export default class TicketModel {
         .leftJoin("users", "users.id", `view_ticket.id_user`)
         .where("id_ticket", id_ticket);
     } catch (err) {
-      this.logger.error(err,"error get view ticket.");
+      this.logger.error(err, "error get view ticket.");
       return false;
     }
   }
@@ -666,7 +667,7 @@ export default class TicketModel {
         .andWhere("ticket_protocol.id_company", id_company)
         .andWhere("ticket_protocol.created_by_ticket", true);
     } catch (err) {
-      this.logger.error(err,"Erro ao linkar o protocolo ao ticket.");
+      this.logger.error(err, "Erro ao linkar o protocolo ao ticket.");
       return err;
     }
   }
@@ -685,7 +686,7 @@ export default class TicketModel {
         .andWhere("id_ticket_father", id_ticket)
         .andWhere("ticket.id_company", id_company);
     } catch (err) {
-      this.logger.error(err,"error get ticket created by ticket.");
+      this.logger.error(err, "error get ticket created by ticket.");
       return [];
     }
   }
@@ -709,7 +710,7 @@ export default class TicketModel {
         .where(`ticket.id`, id)
         .andWhere(`ticket.id_company`, id_company);
     } catch (err) {
-      this.logger.error(err,"Error when get ticket by id.");
+      this.logger.error(err, "Error when get ticket by id.");
       return err;
     }
   }
@@ -764,10 +765,10 @@ export default class TicketModel {
       left join ticket_protocol on ticket_protocol.id_ticket = ticket.id
       left join status_ticket on status_ticket.id = ticket.id_status
       where ${query} order by ticket.created_at desc`);
-      
+
       return result.rows;
     } catch (err) {
-      this.logger.error(err,"Error when get ticket by id.");
+      this.logger.error(err, "Error when get ticket by id.");
       return err;
     }
   }
@@ -794,7 +795,7 @@ export default class TicketModel {
         .andWhere("ticket.id_company", id_company)
         .andWhere("phase_ticket.active", true);
     } catch (err) {
-      this.logger.error(err,"error get ticket created by ticket.");
+      this.logger.error(err, "error get ticket created by ticket.");
       return [];
     }
   }
@@ -810,7 +811,10 @@ export default class TicketModel {
 
       return result[0];
     } catch (err) {
-      this.logger.error(err,"Erro ao capturar o ultimo responsavel pelo ticket.");
+      this.logger.error(
+        err,
+        "Erro ao capturar o ultimo responsavel pelo ticket."
+      );
       return err;
     }
   }

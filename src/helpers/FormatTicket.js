@@ -15,7 +15,7 @@ import SLAController from "../controllers/SLAController.js";
 export async function formatTicketForPhase(phase, ticket, database, logger) {
   const ticketModel = new TicketModel(database, logger);
   const slaController = new SLAController(database, logger);
-  this.logger.info({
+  logger.info({
     msg: "Fase da função formatTicketForPhase.",
     data: phase,
   });

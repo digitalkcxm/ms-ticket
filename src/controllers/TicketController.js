@@ -1662,7 +1662,7 @@ export default class TicketController {
           .send({ error: "There is no ticket with this ID " });
 
       ticket = await formatTicketForPhase(
-        ticket,
+        { id: ticket[0].phase_id },
         ticket[0],
         this.database,
         this.logger
@@ -1882,7 +1882,7 @@ export default class TicketController {
       //   data.authorization
       // );
       ticket = await formatTicketForPhase(
-        ticket,
+        { id: ticket[0].phase_id },
         ticket[0],
         this.database,
         this.logger
@@ -2437,8 +2437,8 @@ export default class TicketController {
       );
       for (let ticket of result) {
         ticket = await formatTicketForPhase(
-          [ticket],
-          ticket,
+          { id: ticket[0].phase_id },
+          ticket[0],
           this.database,
           this.logger
         );
