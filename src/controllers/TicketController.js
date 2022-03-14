@@ -457,6 +457,8 @@ export default class TicketController {
             obj.message = phase[0].customer.notify_open_message;
           if (phase[0].customer.notify_open_hsm)
             obj.hsm_id = phase[0].customer.notify_open_hsm;
+          if (phase[0].customer.channels)
+            obj.channels = phase[0].customer.channels;
 
           await CallbackDigitalk(obj, callback);
         }
@@ -468,6 +470,7 @@ export default class TicketController {
               obj.message = phase[0].admin.notify_open_message;
             if (phase[0].admin.notify_open_hsm)
               obj.hsm_id = phase[0].admin.notify_open_hsm;
+            if (phase[0].admin.channels) obj.channels = phase[0].admin.channels;
 
             await CallbackDigitalk(obj, callback);
           }
@@ -489,6 +492,7 @@ export default class TicketController {
                 obj.message = separate.notify_open_message;
               if (separate.notify_open_hsm)
                 obj.hsm_id = separate.notify_open_hsm;
+              if (separate.channels) obj.channels = separate.channels;
 
               await CallbackDigitalk(obj, callback);
             }
@@ -520,6 +524,8 @@ export default class TicketController {
             obj.message = phase[0].customer.notify_progress_message;
           if (phase[0].customer.notify_progress_hsm)
             obj.hsm_id = phase[0].customer.notify_progress_hsm;
+          if (phase[0].customer.channels)
+            obj.channels = phase[0].customer.channels;
 
           await CallbackDigitalk(obj, callback);
         }
@@ -531,6 +537,7 @@ export default class TicketController {
               obj.message = phase[0].admin.notify_progress_message;
             if (phase[0].admin.notify_progress_hsm)
               obj.hsm_id = phase[0].admin.notify_progress_hsm;
+            if (phase[0].admin.channels) obj.channels = phase[0].admin.channels;
 
             await CallbackDigitalk(obj, callback);
           }
@@ -556,6 +563,8 @@ export default class TicketController {
                 obj.message = separate.notify_progress_message;
               if (separate.notify_progress_hsm)
                 obj.hsm_id = separate.notify_progress_hsm;
+              if (separate.channels) obj.channels = separate.channels;
+
               await CallbackDigitalk(obj, callback);
             }
           }
@@ -588,6 +597,8 @@ export default class TicketController {
             obj.message = phase[0].customer.notify_close_message;
           if (phase[0].customer.notify_close_hsm)
             obj.hsm_id = phase[0].customer.notify_close_hsm;
+          if (phase[0].customer.channels)
+            obj.channels = phase[0].customer.channels;
 
           await CallbackDigitalk(obj, callback);
         }
@@ -599,7 +610,7 @@ export default class TicketController {
               obj.message = phase[0].admin.notify_close_message;
             if (phase[0].admin.notify_close_hsm)
               obj.hsm_id = phase[0].admin.notify_close_hsm;
-
+            if (phase[0].admin.channels) obj.channels = phase[0].admin.channels;
             await CallbackDigitalk(obj, callback);
           }
         }
@@ -621,6 +632,9 @@ export default class TicketController {
                 obj.message = separate.notify_close_message;
               if (separate.notify_close_hsm)
                 obj.hsm_id = separate.notify_close_hsm;
+                if (separate.channels) obj.channels = separate.channels;
+
+
               await CallbackDigitalk(obj, callback);
             }
           }
@@ -652,7 +666,7 @@ export default class TicketController {
             obj.message = phase[0].customer.notify_start_activity_message;
           if (phase[0].customer.notify_start_activity_hsm)
             obj.hsm_id = phase[0].customer.notify_start_activity_hsm;
-
+            if (phase[0].customer.channels) obj.channels = phase[0].customer.channels;
           await CallbackDigitalk(obj, callback);
         }
 
@@ -660,9 +674,10 @@ export default class TicketController {
           if (phase[0].admin && phase[0].admin.notify_open) {
             obj = { ...obj, notified: "admin" };
             if (phase[0].admin.notify_start_activity_message)
-            obj.message = phase[0].admin.notify_start_activity_message;
-          if (phase[0].admin.notify_start_activity_hsm)
-            obj.hsm_id = phase[0].admin.notify_start_activity_hsm;
+              obj.message = phase[0].admin.notify_start_activity_message;
+            if (phase[0].admin.notify_start_activity_hsm)
+              obj.hsm_id = phase[0].admin.notify_start_activity_hsm;
+              if (phase[0].admin.channels) obj.channels = phase[0].admin.channels;
             await CallbackDigitalk(obj, callback);
           }
         }
@@ -684,9 +699,11 @@ export default class TicketController {
                 phone: phone.length > 0 ? phone[0].phone : "",
               };
               if (separate.notify_start_activity_message)
-              obj.message = separate.notify_start_activity_message;
-            if (separate.notify_start_activity_hsm)
-              obj.hsm_id = separate.notify_start_activity_hsm;
+                obj.message = separate.notify_start_activity_message;
+              if (separate.notify_start_activity_hsm)
+                obj.hsm_id = separate.notify_start_activity_hsm;
+                if (separate.channels) obj.channels = phase[0].admin.channels;
+
               await CallbackDigitalk(obj, callback);
             }
           }
@@ -717,18 +734,18 @@ export default class TicketController {
             obj.message = phase[0].customer.notify_start_activity_message;
           if (phase[0].customer.notify_start_activity_hsm)
             obj.hsm_id = phase[0].customer.notify_start_activity_hsm;
-
+            if (phase[0].customer.channels) obj.channels = phase[0].customer.channels;
           await CallbackDigitalk(obj, callback);
         }
 
         if (phase[0].admin && phase[0].admin.notify_first_reply) {
           if (phase[0].admin && phase[0].admin.notify_open) {
-
             obj = { ...obj, notified: "admin" };
             if (phase[0].admin.notify_start_activity_message)
-            obj.message = phase[0].admin.notify_start_activity_message;
-          if (phase[0].admin.notify_start_activity_hsm)
-            obj.hsm_id = phase[0].admin.notify_start_activity_hsm;
+              obj.message = phase[0].admin.notify_start_activity_message;
+            if (phase[0].admin.notify_start_activity_hsm)
+              obj.hsm_id = phase[0].admin.notify_start_activity_hsm;
+              if (phase[0].admin.channels) obj.channels = phase[0].admin.channels;
             await CallbackDigitalk(obj, callback);
           }
         }
@@ -747,9 +764,10 @@ export default class TicketController {
               };
 
               if (separate.notify_start_activity_message)
-              obj.message = separate.notify_start_activity_message;
-            if (separate.notify_start_activity_hsm)
-              obj.hsm_id = separate.notify_start_activity_hsm;
+                obj.message = separate.notify_start_activity_message;
+              if (separate.notify_start_activity_hsm)
+                obj.hsm_id = separate.notify_start_activity_hsm;
+                if (separate.channels) obj.channels = separate.channels;
               await CallbackDigitalk(obj, callback);
             }
           }
