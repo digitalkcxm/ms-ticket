@@ -1,5 +1,5 @@
 exports.up = async function (knex) {
-    const tipos = ["smartflow"];
+    const tipos = ["Smartflow"];
     return await Promise.all(
       tipos.map((name) => knex("type_user").insert({ name }))
     );
