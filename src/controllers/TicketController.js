@@ -2826,6 +2826,7 @@ export default class TicketController {
         id_protocol: ticket[0].id_protocol,
         type: "ticket",
         sla_status: sla_status(slaInfo.sla),
+        status:ticket[0].status,
         customer: await this.customerModel.getAll(ticket[0].id),
       });
 
@@ -2862,6 +2863,7 @@ export default class TicketController {
           display_name: father_ticket[0].display_name,
           id_protocol: father_ticket[0].id_protocol,
           type: "ticket",
+          status:father_ticket[0].status,
           customer: await this.customerModel.getAll(father_ticket[0].id),
         });
       }
