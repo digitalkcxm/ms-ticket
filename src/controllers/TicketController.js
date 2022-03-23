@@ -2684,7 +2684,7 @@ export default class TicketController {
       if (!req.body.id_ticket || !req.body.id_protocol || !req.body.id_user)
         return res.status(400).send({ error: "Houve algum problema" });
 
-      const ticket = await this.ticketModel.getTicketByIdSeq(
+      const ticket = await this.ticketModel.getTicketById(
         req.body.id_ticket,
         req.headers.authorization
       );
@@ -2838,11 +2838,34 @@ export default class TicketController {
         );
       if (child_tickets && child_tickets.length > 0) {
         for (const child_ticket of child_tickets) {
+          
           child_ticket.created_at = moment(child_ticket.created_at).format(
             "DD/MM/YYYY HH:mm:ss"
           );
           child_ticket.type = "ticket";
-          ticket[0].history.push(child_ticket);
+          const slaInfo = await formatTicketForPhase(
+            { id: child_ticket[0].phase_id },
+            child_ticket[0],
+            this.database,
+            this.logger
+          );
+    
+          history.push(child_ticket);
+          history.push({
+            id_seq: ticket[0].id_seq,
+            id_user: ticket[0].id_user,
+            user: ticket[0].name,
+            created_at: ticket[0].created_at,
+            closed: ticket[0].closed,
+            department_origin: ticket[0].department_origin,
+            phase_name: ticket[0].phase,
+            display_name: ticket[0].display_name,
+            id_protocol: ticket[0].id_protocol,
+            type: "ticket",
+            sla_status: sla_status(slaInfo.sla),
+            status:ticket[0].status,
+            customer: await this.customerModel.getAll(ticket[0].id),
+          });
         }
       }
 
@@ -2883,7 +2906,7 @@ export default class TicketController {
                 req.headers.authorization
               );
               if (ticketRelated && ticketRelated.length > 0) {
-                ticket[0].history.push({
+                history.push({
                   id_seq: ticketRelated[0].id_seq,
                   id_user: ticketRelated[0].id_user,
                   user: ticketRelated[0].name,
