@@ -2831,43 +2831,43 @@ export default class TicketController {
         customer: await this.customerModel.getAll(ticket[0].id),
       });
 
-      const child_tickets =
-        await this.ticketModel.getTicketCreatedByTicketFather(
-          req.params.id,
-          req.headers.authorization
-        );
-      if (child_tickets && child_tickets.length > 0) {
-        for (const child_ticket of child_tickets) {
+      // const child_tickets =
+      //   await this.ticketModel.getTicketCreatedByTicketFather(
+      //     req.params.id,
+      //     req.headers.authorization
+      //   );
+      // if (child_tickets && child_tickets.length > 0) {
+      //   for (const child_ticket of child_tickets) {
           
-          child_ticket.created_at = moment(child_ticket.created_at).format(
-            "DD/MM/YYYY HH:mm:ss"
-          );
-          child_ticket.type = "ticket";
-          const slaInfo = await formatTicketForPhase(
-            { id: child_ticket[0].phase_id },
-            child_ticket[0],
-            this.database,
-            this.logger
-          );
+      //     child_ticket.created_at = moment(child_ticket.created_at).format(
+      //       "DD/MM/YYYY HH:mm:ss"
+      //     );
+      //     child_ticket.type = "ticket";
+      //     const slaInfo = await formatTicketForPhase(
+      //       { id: child_ticket[0].phase_id },
+      //       child_ticket[0],
+      //       this.database,
+      //       this.logger
+      //     );
     
-          history.push(child_ticket);
-          history.push({
-            id_seq: ticket[0].id_seq,
-            id_user: ticket[0].id_user,
-            user: ticket[0].name,
-            created_at: ticket[0].created_at,
-            closed: ticket[0].closed,
-            department_origin: ticket[0].department_origin,
-            phase_name: ticket[0].phase,
-            display_name: ticket[0].display_name,
-            id_protocol: ticket[0].id_protocol,
-            type: "ticket",
-            sla_status: sla_status(slaInfo.sla),
-            status:ticket[0].status,
-            customer: await this.customerModel.getAll(ticket[0].id),
-          });
-        }
-      }
+      //     history.push(child_ticket);
+      //     history.push({
+      //       id_seq: ticket[0].id_seq,
+      //       id_user: ticket[0].id_user,
+      //       user: ticket[0].name,
+      //       created_at: ticket[0].created_at,
+      //       closed: ticket[0].closed,
+      //       department_origin: ticket[0].department_origin,
+      //       phase_name: ticket[0].phase,
+      //       display_name: ticket[0].display_name,
+      //       id_protocol: ticket[0].id_protocol,
+      //       type: "ticket",
+      //       sla_status: sla_status(slaInfo.sla),
+      //       status:ticket[0].status,
+      //       customer: await this.customerModel.getAll(ticket[0].id),
+      //     });
+      //   }
+      // }
 
       const father_ticket = await this.ticketModel.getTicketById(
         ticket[0].id_ticket_father,
