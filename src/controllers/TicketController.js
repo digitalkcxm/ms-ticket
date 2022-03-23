@@ -274,7 +274,8 @@ export default class TicketController {
 
       if (data.id_ticket_father) {
         const ticketFather = await this.ticketModel.getTicketById(
-          data.id_ticket_father
+          data.id_ticket_father,
+          data.authorization
         );
         if (
           ticketFather &&
