@@ -2892,42 +2892,42 @@ export default class TicketController {
         });
       }
 
-      const customers = await this.customerModel.getAll(req.params.id);
-      if (customers && customers.length > 0) {
-        for (const customer of customers) {
-          const customersRelated =
-            await this.customerModel.getByIdentification_document(
-              customer.identification_document
-            );
-          if (customersRelated && customersRelated.length > 0) {
-            for (const customerRelated of customersRelated) {
-              const ticketRelated = await this.ticketModel.getTicketById(
-                customerRelated.id_ticket,
-                req.headers.authorization
-              );
-              if (ticketRelated && ticketRelated.length > 0) {
-                history.push({
-                  id_seq: ticketRelated[0].id_seq,
-                  id_user: ticketRelated[0].id_user,
-                  user: ticketRelated[0].name,
-                  created_at: moment(ticketRelated[0].created_at).format(
-                    "DD/MM/YYYY HH:mm:ss"
-                  ),
-                  closed: ticketRelated[0].closed,
-                  department_origin: ticketRelated[0].department_origin,
-                  phase_name: ticketRelated[0].phase,
-                  display_name: ticketRelated[0].display_name,
-                  id_protocol: ticketRelated[0].id_protocol,
-                  type: "ticket",
-                  customer: await this.customerModel.getAll(
-                    ticketRelated[0].id
-                  ),
-                });
-              }
-            }
-          }
-        }
-      }
+      // const customers = await this.customerModel.getAll(req.params.id);
+      // if (customers && customers.length > 0) {
+      //   for (const customer of customers) {
+      //     const customersRelated =
+      //       await this.customerModel.getByIdentification_document(
+      //         customer.identification_document
+      //       );
+      //     if (customersRelated && customersRelated.length > 0) {
+      //       for (const customerRelated of customersRelated) {
+      //         const ticketRelated = await this.ticketModel.getTicketById(
+      //           customerRelated.id_ticket,
+      //           req.headers.authorization
+      //         );
+      //         if (ticketRelated && ticketRelated.length > 0) {
+      //           history.push({
+      //             id_seq: ticketRelated[0].id_seq,
+      //             id_user: ticketRelated[0].id_user,
+      //             user: ticketRelated[0].name,
+      //             created_at: moment(ticketRelated[0].created_at).format(
+      //               "DD/MM/YYYY HH:mm:ss"
+      //             ),
+      //             closed: ticketRelated[0].closed,
+      //             department_origin: ticketRelated[0].department_origin,
+      //             phase_name: ticketRelated[0].phase,
+      //             display_name: ticketRelated[0].display_name,
+      //             id_protocol: ticketRelated[0].id_protocol,
+      //             type: "ticket",
+      //             customer: await this.customerModel.getAll(
+      //               ticketRelated[0].id
+      //             ),
+      //           });
+      //         }
+      //       }
+      //     }
+      //   }
+      // }
 
       const protocols = await this.ticketModel.getProtocolTicket(
         req.params.id,

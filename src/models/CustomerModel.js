@@ -59,7 +59,6 @@ export default class CustomerModel {
           "updated_at"
         )
         .where({ identification_document: identification_document })
-        .whereNot("id_ticket", id_ticket)
         .orderBy("updated_at", "desc");
     } catch (err) {
       this.logger.error(err, "Error get customer by identification document.");
