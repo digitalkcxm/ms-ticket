@@ -42,7 +42,7 @@ export default class CustomerModel {
     }
   }
 
-  async getByIdentification_document(identification_document, id_ticket) {
+  async getByIdentification_document(identification_document) {
     try {
       return await this.database(tableName)
         .select(

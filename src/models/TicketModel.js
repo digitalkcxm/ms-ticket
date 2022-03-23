@@ -665,7 +665,7 @@ export default class TicketModel {
         .leftJoin("users", "users.id", `ticket_protocol.id_user`)
         .where("ticket_protocol.id_ticket", id_ticket)
         .andWhere("ticket_protocol.id_company", id_company)
-        .andWhere("ticket_protocol.created_by_ticket", true);
+        
     } catch (err) {
       this.logger.error(err, "Erro ao linkar o protocolo ao ticket.");
       return err;
@@ -674,17 +674,39 @@ export default class TicketModel {
 
   async getTicketCreatedByTicketFather(id_ticket, id_company) {
     try {
-      return await this.database("ticket")
+      await this.database(tableName)
         .select({
-          id_seq: "ticket.id_seq",
+          id: `${tableName}.id`,
+          id_seq: `${tableName}.id_seq`,
+          id_company: `${tableName}.id_company`,
+          phase_id: "phase_ticket.id_phase",
+          phase: "phase.name",
           id_user: "users.id_users",
-          user: "users.name",
-          created_at: "ticket.created_at",
+          name: "users.name",
+          sla_time: "phase.sla_time",
+          id_unit_of_time: "phase.id_unit_of_time",
+          form: "phase.form",
+          closed: `${tableName}.closed`,
+          department_origin: "department.id_department_core",
+          created_at: `${tableName}.created_at`,
+          updated_at: `${tableName}.updated_at`,
+          start_ticket: "ticket.start_ticket",
+          display_name: "ticket.display_name",
+          id_ticket_father: "ticket.id_ticket_father",
+          id_protocol: "ticket.id_protocol",
+          status: "status_ticket.name",
+          id_tab: "ticket.id_tab",
         })
-        .leftJoin("users", "users.id", `ticket.id_user`)
-        .where("created_by_ticket", true)
-        .andWhere("id_ticket_father", id_ticket)
-        .andWhere("ticket.id_company", id_company);
+        .leftJoin("users", "users.id", `${tableName}.id_user`)
+        .leftJoin("phase_ticket", "phase_ticket.id_ticket", `${tableName}.id`)
+        .leftJoin("phase", "phase.id", "phase_ticket.id_phase")
+        .leftJoin("department", "department.id", "ticket.department_origin")
+        .leftJoin("status_ticket", "status_ticket.id", "ticket.id_status")
+        .and(`${tableName}.id_ticket_father`, id_ticket)
+        .andWhere(`${tableName}.id_company`, id_company)
+        .orderBy("phase_ticket.id", "desc")
+        .limit(1);
+
     } catch (err) {
       this.logger.error(err, "error get ticket created by ticket.");
       return [];
