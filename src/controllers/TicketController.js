@@ -1552,7 +1552,8 @@ export default class TicketController {
     );
     if (ticket[0].created_by_ticket) {
       const ticketFather = await this.ticketModel.getTicketById(
-        ticket[0].id_ticket_father
+        ticket[0].id_ticket_father,
+        id_company
       );
       obj.push({
         type: "start",
