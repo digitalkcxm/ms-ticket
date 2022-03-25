@@ -163,6 +163,9 @@ export default class PhaseModel {
           icon: "phase.icon",
           id_form_template: "phase.id_form_template",
           sla_time: "phase.sla_time",
+          department_can_create_protocol:
+            "phase.department_can_create_protocol",
+          department_can_create_ticket: "phase.department_can_create_ticket",
         })
         .leftJoin("phase", "phase.id", "department_phase.id_phase")
         .where("department_phase.id_department", id_department)
