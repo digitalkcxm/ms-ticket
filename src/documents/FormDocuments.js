@@ -19,9 +19,8 @@ export default class FormDocuments {
   async findRegister(id) {
     try {
       id = JSON.parse(id);
-      return await this._db
-        .collection(collection)
-        .findOne({ _id: ObjectID(id) });
+
+      return await global.mongodb.collection(collection).findOne({ _id: new ObjectID(id) });
     } catch (err) {
       console.log("Find Form register=>", err);
       return err;
