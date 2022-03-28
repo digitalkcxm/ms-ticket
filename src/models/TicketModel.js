@@ -477,7 +477,7 @@ export default class TicketModel {
     try {
       return await this.database("vw_dash_tickets")
         .select("*")
-        .where("id_company", id_company);
+        .where("id_company", id_company).limit(1);
     } catch (err) {
       this.logger.error(err, "Error when get view dash ticket.");
       return err;

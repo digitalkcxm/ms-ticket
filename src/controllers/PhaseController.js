@@ -13,7 +13,7 @@ import UserController from "./UserController.js";
 import TicketModel from "../models/TicketModel.js";
 import { validationResult } from "express-validator";
 import FormTemplate from "../documents/FormTemplate.js";
-// import FormDocuments from "../documents/FormDocuments.js";
+import FormDocuments from "../documents/FormDocuments.js";
 import DepartmentModel from "../models/DepartmentModel.js";
 import TypeColumnModel from "../models/TypeColumnModel.js";
 import DepartmentController from "./DepartmentController.js";
@@ -34,6 +34,7 @@ export default class PhaseController {
     this.departmentModel = new DepartmentModel(database, logger);
     this.departmentController = new DepartmentController(database, logger);
     this.formTemplate = new FormTemplate(logger);
+    this.formDocuments = new FormDocuments()
   }
   async create(req, res) {
     // Validação do corpo da requisição.
@@ -1992,21 +1993,27 @@ export default class PhaseController {
       );
 
       if (register && register.column) {
+        console.log("register ===>",register)
         const campos_calculaveis = register.column.filter((x) => x.calculable);
         if (campos_calculaveis.length > 0) {
           for await (const forms of result.forms) {
-            const documents = await this.formTemplate.findRegister(
+            console.log("forms.id_form===>",forms.id_form)
+            const documents = await this.formDocuments.findRegister(
               forms.id_form
             );
-            for (const campo of campos_calculaveis) {
-              if (!campos_calculados[campo.column])
-                campos_calculados[campo.column] = 0;
 
-              campos_calculados[campo.column] =
-                parseInt(campos_calculados[campo.column]) +
-                parseInt(documents[campo.column]);
+            if(documents){
+              for (const campo of campos_calculaveis) {
+                if (!campos_calculados[campo.column])
+                  campos_calculados[campo.column] = 0;
+  
+                campos_calculados[campo.column] =
+                  parseInt(campos_calculados[campo.column]) +
+                  parseInt(documents[campo.column]);
+              }
             }
-          }
+            }
+            
         }
       }
     }
