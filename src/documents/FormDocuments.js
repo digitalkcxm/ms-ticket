@@ -18,7 +18,6 @@ export default class FormDocuments {
 
   async findRegister(id) {
     try {
-      console.log("id ===>",id)
       id = JSON.parse(id);
 
       return await global.mongodb.collection(collection).findOne({ _id: new ObjectID(id) });
