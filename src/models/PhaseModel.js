@@ -44,7 +44,7 @@ export default class PhaseModel {
           id_department: "department.id_department_core",
         })
         .leftJoin("unit_of_time", "unit_of_time.id", "phase.id_unit_of_time")
-        .leftJoin("department_phase", "department_phase.id_phase", "phase.id")
+        .leftJoin("department_phase", "department_phase.id_phase", "phase.id" )
         .leftJoin(
           "department",
           "department.id",

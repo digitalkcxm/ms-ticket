@@ -420,9 +420,11 @@ export default class TicketController {
   }
 
   async _notify(id_ticket, id_phase, id_company, action, callback) {
+    console.log("params ====>",id_phase, id_company)
     const phase = await this.phaseModel.getPhaseById(id_phase, id_company);
     const ticket = await this.ticketModel.getTicketById(id_ticket, id_company);
 
+    console.log("======>",phase)
     let obj = {
       type: "notification",
       id_ticket: ticket[0].id_seq,
@@ -1271,7 +1273,8 @@ export default class TicketController {
             result.form_template = register.column;
 
             for (const x of result.form_template) {
-              const type = await this.typeColumnModel.getTypeByID(x.type);
+              console.log("x.type ====>",x.type)
+              const type = await this.typeColumnModel.getTypeByName(x.type);
 
               type && Array.isArray(type) && type.length > 0
                 ? (x.type = type[0].name)
@@ -1367,7 +1370,7 @@ export default class TicketController {
             result.form_template = register.column;
 
             for (const x of result.form_template) {
-              const type = await this.typeColumnModel.getTypeByID(x.type);
+              const type = await this.typeColumnModel.getTypeByName(x.type);
 
               type && Array.isArray(type) && type.length > 0
                 ? (x.type = type[0].name)
@@ -2608,7 +2611,7 @@ export default class TicketController {
 
         await this._notify(
           ticket[0].id,
-          ticket[0].id_phase,
+          ticket[0].phase_id,
           req.headers.authorization,
           "start_activity",
           req.company[0].callback
@@ -2616,7 +2619,7 @@ export default class TicketController {
         await CallbackDigitalk(
           {
             type: "socket",
-            channel: `phase_${ticket[0].id_phase}`,
+            channel: `phase_${ticket[0].phase_id}`,
             event: "update_ticket",
             obj: ticket[0],
           },
