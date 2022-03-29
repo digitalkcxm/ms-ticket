@@ -2619,7 +2619,7 @@ export default class TicketController {
         await CallbackDigitalk(
           {
             type: "socket",
-            channel: `phase_${ticket[0].id_phase}`,
+            channel: `phase_${ticket[0].phase_id}`,
             event: "update_ticket",
             obj: ticket[0],
           },
