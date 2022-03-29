@@ -420,9 +420,11 @@ export default class TicketController {
   }
 
   async _notify(id_ticket, id_phase, id_company, action, callback) {
+    console.log("params ====>",id_phase, id_company)
     const phase = await this.phaseModel.getPhaseById(id_phase, id_company);
     const ticket = await this.ticketModel.getTicketById(id_ticket, id_company);
 
+    console.log("======>",phase)
     let obj = {
       type: "notification",
       id_ticket: ticket[0].id_seq,
@@ -2609,7 +2611,7 @@ export default class TicketController {
 
         await this._notify(
           ticket[0].id,
-          ticket[0].id_phase,
+          ticket[0].phase_id,
           req.headers.authorization,
           "start_activity",
           req.company[0].callback
