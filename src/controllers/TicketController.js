@@ -1271,7 +1271,8 @@ export default class TicketController {
             result.form_template = register.column;
 
             for (const x of result.form_template) {
-              const type = await this.typeColumnModel.getTypeByID(x.type);
+              console.log("x.type ====>",x.type)
+              const type = await this.typeColumnModel.getTypeByName(x.type);
 
               type && Array.isArray(type) && type.length > 0
                 ? (x.type = type[0].name)
@@ -1367,7 +1368,7 @@ export default class TicketController {
             result.form_template = register.column;
 
             for (const x of result.form_template) {
-              const type = await this.typeColumnModel.getTypeByID(x.type);
+              const type = await this.typeColumnModel.getTypeByName(x.type);
 
               type && Array.isArray(type) && type.length > 0
                 ? (x.type = type[0].name)
