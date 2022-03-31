@@ -13,16 +13,16 @@ export default class UnitOfTimeModel {
         
         switch (id_unit_of_time) {
             case 1:
-                return "seconds"
+                return ["seconds","Segundos"]
                 break;
             case 2:
-                return "minutes"
+                return ["minutes","Minutos"]
                 break;
             case 3:
-                return "hours"
+                return ["hours","Horas"]
                 break;
             case 4:
-                return "days"
+                return ["days","Dias"]
                 break;
             default:
                 break;

@@ -144,7 +144,7 @@ export default class SLAController {
           sla = {
             ...sla,
             1: {
-              unit_of_time,
+              unit_of_time[1],
               time: value.time,
               active: true,
             },
@@ -154,7 +154,7 @@ export default class SLAController {
           sla = {
             ...sla,
             2: {
-              unit_of_time,
+              unit_of_time[1],
               time: value.time,
               active: true,
             },
@@ -164,7 +164,7 @@ export default class SLAController {
           sla = {
             ...sla,
             3: {
-              unit_of_time,
+              unit_of_time[1],
               time: value.time,
               active: true,
             },
@@ -309,7 +309,7 @@ export default class SLAController {
   async updateSLA(id_ticket, id_phase, sla_type) {
     // Busca a configuração de sla do ticket pela phase e id_do ticket, primeiramente pela opção de inicialização do ticket.
     let controleSLA = await this.slaModel.getByPhaseTicket(id_phase, id_ticket);
-    console.log("controleSLA =====>", controleSLA);
+    
     // valida se existe controle de sla, e se é um array.
     if (controleSLA && Array.isArray(controleSLA) && controleSLA.length > 0) {
       for (const sla of controleSLA) {
