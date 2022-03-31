@@ -315,9 +315,10 @@ export default class SLAController {
       for (const sla of controleSLA) {
         // valida se a configuração de sla está ativa, caso não esteja não pode sofrer ação.
         if (!sla.interaction_time) {
-          let obj = { interaction_time: moment() };
+          
+          let obj = {  };
 
-          if (sla_type === sla.id_sla_type) obj = { ...obj, active: false };
+          if (sla_type === sla.id_sla_type) obj = { ...obj, active: false, interaction_time: moment() };
 
           // Valida se o sla está atrasado ou em dia.
           if (sla.limit_sla_time < moment()) {
