@@ -1552,63 +1552,67 @@ export default class TicketController {
         let slaTicket = await this.slaModel.getByPhaseTicket(
           ticket[0].phase_id,
           ticket[0].id,
-          3
+          1
         );
-        let obj;
-        if (slaTicket && Array.isArray(slaTicket) && slaTicket.length > 0) {
-          if (slaTicket[0].limit_sla_time < moment()) {
-            obj = {
-              id_sla_status: sla_status.atrasado,
-              active: false,
-              interaction_time: moment(),
-            };
-          } else if (slaTicket[0].limit_sla_time > moment()) {
-            obj = {
-              id_sla_status: sla_status.emdia,
-              active: false,
-              interaction_time: moment(),
-            };
-          }
-          await this.slaModel.updateTicketSLA(
-            ticket[0].id,
-            obj,
-            slaTicket.id_sla_type,
-            ticket[0].phase_id
-          );
-        }
+        // let obj;
+        // if (slaTicket && Array.isArray(slaTicket) && slaTicket.length > 0) {
+        //   if (slaTicket[0].limit_sla_time < moment()) {
+        //     obj = {
+        //       id_sla_status: sla_status.atrasado,
+        //       active: false,
+        //       interaction_time: moment(),
+        //     };
+        //   } else if (slaTicket[0].limit_sla_time > moment()) {
+        //     obj = {
+        //       id_sla_status: sla_status.emdia,
+        //       active: false,
+        //       interaction_time: moment(),
+        //     };
+        //   }
+        //   await this.slaModel.updateTicketSLA(
+        //     ticket[0].id,
+        //     obj,
+        //     slaTicket.id_sla_type,
+        //     ticket[0].phase_id
+        //   );
+        // }
 
-        // Uma nova verificação para saber se o sla de resposta se manteve no tempo determinado.
-        slaTicket = await this.slaModel.getByPhaseTicket(
-          ticket[0].phase_id,
+        // // Uma nova verificação para saber se o sla de resposta se manteve no tempo determinado.
+        // slaTicket = await this.slaModel.getByPhaseTicket(
+        //   ticket[0].phase_id,
+        //   ticket[0].id,
+        //   2
+        // );
+
+        // if (
+        //   slaTicket &&
+        //   Array.isArray(slaTicket) &&
+        //   slaTicket.length > 0 &&
+        //   !slaTicket[0].interaction_time
+        // ) {
+        //   if (slaTicket[0].limit_sla_time < moment()) {
+        //     obj = {
+        //       id_sla_status: sla_status.atrasado,
+        //       active: false,
+        //     };
+        //   } else if (slaTicket[0].limit_sla_time > moment()) {
+        //     obj = {
+        //       id_sla_status: sla_status.emdia,
+        //       active: false,
+        //     };
+        //   }
+        //   await this.slaModel.updateTicketSLA(
+        //     ticket[0].id,
+        //     obj,
+        //     slaTicket.id_sla_type,
+        //     ticket[0].phase_id
+        //   );
+        // }
+        await this.slaController.updateSLA(
           ticket[0].id,
-          2
+          ticket[0].phase_id,
+          false
         );
-
-        if (
-          slaTicket &&
-          Array.isArray(slaTicket) &&
-          slaTicket.length > 0 &&
-          !slaTicket[0].interaction_time
-        ) {
-          if (slaTicket[0].limit_sla_time < moment()) {
-            obj = {
-              id_sla_status: sla_status.atrasado,
-              active: false,
-            };
-          } else if (slaTicket[0].limit_sla_time > moment()) {
-            obj = {
-              id_sla_status: sla_status.emdia,
-              active: false,
-            };
-          }
-          await this.slaModel.updateTicketSLA(
-            ticket[0].id,
-            obj,
-            slaTicket.id_sla_type,
-            ticket[0].phase_id
-          );
-        }
-
         await this.slaModel.disableSLA(ticket[0].id);
         ticket[0] = await formatTicketForPhase(
           { id: ticket[0].phase_id },
