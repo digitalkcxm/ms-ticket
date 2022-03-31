@@ -249,8 +249,8 @@ export default class SLAController {
         id_sla_type: value.id_sla_type,
         id_sla_status: sla_status.emdia,
         limit_sla_time: momentFormated,
-        created_at: moment(),
-        updated_at: moment(),
+        created_at: moment().add(1, 'seconds'),
+        updated_at: moment().add(1, 'seconds'),
       });  
     } catch (err) {
       this.logger.error(err,"Error when create sla control.")

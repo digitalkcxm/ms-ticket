@@ -171,6 +171,8 @@ export default class TicketController {
       );
 
       if (result && result.length > 0 && result[0].id) {
+        await this.slaController.createSLAControl(phase[0].id, obj.id);
+
         ticket = await formatTicketForPhase(
           { id: phase[0].id },
           ticket[0],
