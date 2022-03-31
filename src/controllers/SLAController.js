@@ -278,7 +278,8 @@ export default class SLAController {
                 await this.ticketControl(value, id_ticket, id_phase);
               }
               break;
-            case 2 ,3:
+            case 2:
+            case 3:
               if (getSLA.filter((x) => x.id_sla_type === 1 && !x.active).length > 0) {
 
                   if (
