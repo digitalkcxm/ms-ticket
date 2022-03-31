@@ -144,7 +144,7 @@ export default class SLAController {
           sla = {
             ...sla,
             1: {
-              unit_of_time[1],
+              unit_of_time: unit_of_time[1],
               time: value.time,
               active: true,
             },
@@ -154,7 +154,7 @@ export default class SLAController {
           sla = {
             ...sla,
             2: {
-              unit_of_time[1],
+              unit_of_time: unit_of_time[1],
               time: value.time,
               active: true,
             },
@@ -164,7 +164,7 @@ export default class SLAController {
           sla = {
             ...sla,
             3: {
-              unit_of_time[1],
+              unit_of_time: unit_of_time[1],
               time: value.time,
               active: true,
             },
