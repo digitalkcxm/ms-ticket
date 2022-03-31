@@ -188,49 +188,54 @@ export default class SLAController {
         );
 
         if (ticket && ticket.length > 0) {
-          switch (value.id_sla_type) {
-            case 1:
-              sla = {
-                ...sla,
-                1: {
-                  name: value.name,
-                  status: ticket[0].name,
-                  limit_sla_time: moment(ticket[0].limit_sla_time).format(
-                    "DD/MM/YYYY HH:mm:ss"
-                  ),
-                  active: ticket[0].active,
-                },
-              };
-              break;
-            case 2:
-              sla = {
-                ...sla,
-                2: {
-                  name: value.name,
-                  status: ticket[0].name,
-                  limit_sla_time: moment(ticket[0].limit_sla_time).format(
-                    "DD/MM/YYYY HH:mm:ss"
-                  ),
-                  active: ticket[0].active,
-                },
-              };
-              break;
-            case 3:
-              sla = {
-                ...sla,
-                3: {
-                  name: value.name,
-                  status: ticket[0].name,
-                  limit_sla_time: moment(ticket[0].limit_sla_time).format(
-                    "DD/MM/YYYY HH:mm:ss"
-                  ),
-                  active: ticket[0].active,
-                },
-              };
-              break;
-            default:
-              break;
+          const controleSLA = ticket.filter(x=> x.id_sla_type === value.id_sla_type )
+
+          if(Array.isArray(controleSLA) && controleSLA.length > 0){
+            switch (value.id_sla_type) {
+              case 1:
+                sla = {
+                  ...sla,
+                  1: {
+                    name: value.name,
+                    status: controleSLA[0].name,
+                    limit_sla_time: moment(ticket[0].limit_sla_time).format(
+                      "DD/MM/YYYY HH:mm:ss"
+                    ),
+                    active: controleSLA[0].active,
+                  },
+                };
+                break;
+              case 2:
+                sla = {
+                  ...sla,
+                  2: {
+                    name: value.name,
+                    status: controleSLA[0].name,
+                    limit_sla_time: moment(controleSLA[0].limit_sla_time).format(
+                      "DD/MM/YYYY HH:mm:ss"
+                    ),
+                    active: controleSLA[0].active,
+                  },
+                };
+                break;
+              case 3:
+                sla = {
+                  ...sla,
+                  3: {
+                    name: value.name,
+                    status: controleSLA[0].name,
+                    limit_sla_time: moment(controleSLA[0].limit_sla_time).format(
+                      "DD/MM/YYYY HH:mm:ss"
+                    ),
+                    active: controleSLA[0].active,
+                  },
+                };
+                break;
+              default:
+                break;
+            }
           }
+
         }
       }
     }
