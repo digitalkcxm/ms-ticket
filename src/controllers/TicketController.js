@@ -1552,7 +1552,7 @@ export default class TicketController {
         await this.slaController.updateSLA(
           ticket[0].id,
           ticket[0].phase_id,
-          1
+          3
         );
 
         await this.slaModel.disableSLA(ticket[0].id);
