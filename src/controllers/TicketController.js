@@ -989,14 +989,14 @@ export default class TicketController {
 
       result.activities.sort((a, b) => {
         if (
-          moment(a.created_at, "DD/MM/YYYY HH:mm:ss").format("X") ===
-          moment(b.created_at, "DD/MM/YYYY HH:mm:ss").format("X")
+          moment(a.created_at, "DD/MM/YYYY HH:mm:ss").format("x") ===
+          moment(b.created_at, "DD/MM/YYYY HH:mm:ss").format("x")
         ) {
           return a.id;
         } else {
           return (
-            moment(a.created_at, "DD/MM/YYYY HH:mm:ss").format("X") -
-            moment(b.created_at, "DD/MM/YYYY HH:mm:ss").format("X")
+            moment(a.created_at, "DD/MM/YYYY HH:mm:ss").format("x") -
+            moment(b.created_at, "DD/MM/YYYY HH:mm:ss").format("x")
           );
         }
       });
@@ -1140,7 +1140,7 @@ export default class TicketController {
             "DD/MM/YYYY HH:mm:ss"
           ),
           interaction_time: sla.interaction_time
-            ? moment(sla.interaction_time).format("DD/MM~/YYYY HH:mm:ss")
+            ? moment(sla.interaction_time).format("DD/MM/YYYY HH:mm:ss")
             : "",
           created_at: sla.created_at
             ? moment(sla.created_at).format("DD/MM/YYYY HH:mm:ss")
