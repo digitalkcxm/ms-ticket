@@ -66,6 +66,20 @@ export default class SLAModel {
     }
   }
 
+  // async getByPhaseTicket(id_phase, id_ticket, id_sla_type) {
+  //   try {
+  //     return await this.database("ticket_sla_control as tsc")
+  //       .leftJoin("phase_ticket as pt", "pt.id_ticket", "tsc.id_ticket")
+  //       .leftJoin("sla_status as ss", "ss.id", "tsc.id_sla_status")
+  //       .where("tsc.id_phase", id_phase)
+  //       .andWhere("tsc.id_ticket", id_ticket)
+  //       .andWhere("pt.active", true)
+  //       .andWhere("tsc.id_sla_type", id_sla_type);
+  //   } catch (err) {
+  //     this.logger.error(err,"error when get sla's.");
+  //     return err;
+  //   }
+  // }
   async getByPhaseTicket(id_phase, id_ticket, id_sla_type) {
     try {
       return await this.database("ticket_sla_control as tsc")
@@ -74,7 +88,7 @@ export default class SLAModel {
         .where("tsc.id_phase", id_phase)
         .andWhere("tsc.id_ticket", id_ticket)
         .andWhere("pt.active", true)
-        .andWhere("tsc.id_sla_type", id_sla_type);
+        
     } catch (err) {
       this.logger.error(err,"error when get sla's.");
       return err;
