@@ -1969,7 +1969,7 @@ export default class TicketController {
           req.body.id_ticket,
           req.headers.authorization
         );
-        console.log("req.body =>", req.body);
+        
         if (ticket && ticket.length > 0 && !ticket[0].start_ticket) {
           ticket[0].start_ticket = time;
           await this.ticketModel.updateTicket(

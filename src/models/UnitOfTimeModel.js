@@ -13,42 +13,20 @@ export default class UnitOfTimeModel {
         
         switch (id_unit_of_time) {
             case 1:
-                return "seconds"
+                return ["seconds","Segundos"]
                 break;
             case 2:
-                return "minutes"
+                return ["minutes","Minutos"]
                 break;
             case 3:
-                return "hours"
+                return ["hours","Horas"]
                 break;
             case 4:
-                return "days"
+                return ["days","Dias"]
                 break;
             default:
                 break;
         }
 
-    }
-
-    async checkUnitOfTimeByName(unit_of_time){
-        let type = ""
-        switch (unit_of_time) {
-            case 'seconds':
-                type = 1
-                break;
-            case 'minutes':
-                type = 2
-                break;
-            case 'hours':
-                type = 3
-                break;
-            case 'days':
-                type = 4
-                break;
-            default:
-                break;
-        }
-
-        return type
     }
 }
