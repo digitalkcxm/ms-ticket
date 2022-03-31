@@ -814,66 +814,12 @@ export default class PhaseController {
         if (!ticket.closed) {
           await this.ticketModel.closedTicket(ticket.id);
 
-          let slaTicket = await this.slaModel.getByPhaseTicket(
-            req.params.id,
+          await this.slaController.updateSLA(
             ticket.id,
+            req.params.id,
             3
           );
-          let obj;
-          if (slaTicket && Array.isArray(slaTicket) && slaTicket.length > 0) {
-            if (slaTicket[0].limit_sla_time < moment()) {
-              obj = {
-                id_sla_status: sla_status.atrasado,
-                active: false,
-                interaction_time: moment(),
-              };
-            } else if (slaTicket[0].limit_sla_time > moment()) {
-              obj = {
-                id_sla_status: sla_status.emdia,
-                active: false,
-                interaction_time: moment(),
-              };
-            }
-            await this.slaModel.updateTicketSLA(
-              ticket.id,
-              obj,
-              slaTicket.id_sla_type,
-              req.params.id
-            );
-          }
-
-          // Uma nova verificação para saber se o sla de resposta se manteve no tempo determinado.
-          slaTicket = await this.slaModel.getByPhaseTicket(
-            req.params.id,
-            ticket.id,
-            2
-          );
-
-          if (
-            slaTicket &&
-            Array.isArray(slaTicket) &&
-            slaTicket.length > 0 &&
-            !slaTicket[0].interaction_time
-          ) {
-            if (slaTicket[0].limit_sla_time < moment()) {
-              obj = {
-                id_sla_status: sla_status.atrasado,
-                active: false,
-              };
-            } else if (slaTicket[0].limit_sla_time > moment()) {
-              obj = {
-                id_sla_status: sla_status.emdia,
-                active: false,
-              };
-            }
-            await this.slaModel.updateTicketSLA(
-              ticket.id,
-              obj,
-              slaTicket.id_sla_type,
-              req.params.id
-            );
-          }
-
+  
           await this.slaModel.disableSLA(ticket.id);
         }
       }

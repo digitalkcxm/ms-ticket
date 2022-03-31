@@ -171,6 +171,8 @@ export default class TicketController {
       );
 
       if (result && result.length > 0 && result[0].id) {
+        await this.slaController.createSLAControl(phase[0].id, obj.id);
+
         ticket = await formatTicketForPhase(
           { id: phase[0].id },
           ticket[0],
@@ -683,7 +685,7 @@ export default class TicketController {
         await this.slaController.updateSLA(
           data.id_ticket,
           ticket[0].phase_id,
-          true
+          2
         );
 
         obj = {
@@ -799,7 +801,7 @@ export default class TicketController {
       await this.slaController.updateSLA(
         data.id_ticket,
         ticket[0].phase_id,
-        true
+        2
       );
 
       if (result && result.length > 0) {
@@ -1339,7 +1341,7 @@ export default class TicketController {
 
       if (!phase || phase.length <= 0) return false;
 
-      await this.slaController.updateSLA(ticket.id, ticket.phase_id);
+      await this.slaController.updateSLA(ticket.id, ticket.phase_id,2);
       console.log(
         "if de troca de fases -----> ",
         ticket.phase_id != phase[0].id
@@ -1547,65 +1549,11 @@ export default class TicketController {
           req.headers.authorization
         );
 
-        let slaTicket = await this.slaModel.getByPhaseTicket(
-          ticket[0].phase_id,
+        await this.slaController.updateSLA(
           ticket[0].id,
+          ticket[0].phase_id,
           3
         );
-        let obj;
-        if (slaTicket && Array.isArray(slaTicket) && slaTicket.length > 0) {
-          if (slaTicket[0].limit_sla_time < moment()) {
-            obj = {
-              id_sla_status: sla_status.atrasado,
-              active: false,
-              interaction_time: moment(),
-            };
-          } else if (slaTicket[0].limit_sla_time > moment()) {
-            obj = {
-              id_sla_status: sla_status.emdia,
-              active: false,
-              interaction_time: moment(),
-            };
-          }
-          await this.slaModel.updateTicketSLA(
-            ticket[0].id,
-            obj,
-            slaTicket.id_sla_type,
-            ticket[0].phase_id
-          );
-        }
-
-        // Uma nova verificação para saber se o sla de resposta se manteve no tempo determinado.
-        slaTicket = await this.slaModel.getByPhaseTicket(
-          ticket[0].phase_id,
-          ticket[0].id,
-          2
-        );
-
-        if (
-          slaTicket &&
-          Array.isArray(slaTicket) &&
-          slaTicket.length > 0 &&
-          !slaTicket[0].interaction_time
-        ) {
-          if (slaTicket[0].limit_sla_time < moment()) {
-            obj = {
-              id_sla_status: sla_status.atrasado,
-              active: false,
-            };
-          } else if (slaTicket[0].limit_sla_time > moment()) {
-            obj = {
-              id_sla_status: sla_status.emdia,
-              active: false,
-            };
-          }
-          await this.slaModel.updateTicketSLA(
-            ticket[0].id,
-            obj,
-            slaTicket.id_sla_type,
-            ticket[0].phase_id
-          );
-        }
 
         await this.slaModel.disableSLA(ticket[0].id);
         ticket[0] = await formatTicketForPhase(
@@ -2032,7 +1980,8 @@ export default class TicketController {
 
           await this.slaController.updateSLA(
             req.body.id_ticket,
-            ticket[0].phase_id
+            ticket[0].phase_id,
+            1
           );
         }
 
