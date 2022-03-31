@@ -260,60 +260,35 @@ export default class SLAController {
   async createSLAControl(id_phase, id_ticket) {
     try {
       const slaSettings = await this.slaModel.getSLASettings(id_phase);
-
       if (slaSettings && slaSettings.length > 0) {
+        const getSLA = await this.slaModel.getByPhaseTicket(
+          id_phase,
+          id_ticket
+        );
+
         for await (const value of slaSettings) {
           switch (value.id_sla_type) {
             case 1:
-              const getSLA = await this.slaModel.getByPhaseTicket(
-                id_phase,
-                id_ticket,
-                1
-              );
-              if (getSLA && Array.isArray(getSLA) && getSLA.length <= 0) {
+              if (
+                getSLA &&
+                Array.isArray(getSLA) &&
+                getSLA.filter((x) => x.id_sla_type === value.id_sla_type)
+                  .length <= 0
+              ) {
                 await this.ticketControl(value, id_ticket, id_phase);
               }
               break;
-            case 2:
-              if (slaSettings.filter((x) => x.id_sla_type === 1)) {
-                let getSLA = await this.slaModel.getByPhaseTicket(
-                  id_phase,
-                  id_ticket,
-                  1
-                );
-                if (getSLA[0] && getSLA[0].interaction_time) {
-                  getSLA = await this.slaModel.getByPhaseTicket(
-                    id_phase,
-                    id_ticket,
-                    2
-                  );
-                  if (getSLA && Array.isArray(getSLA) && getSLA.length <= 0) {
+            case 2 ,3:
+              if (getSLA.filter((x) => x.id_sla_type === 1 && !x.active).length > 0) {
+
+                  if (
+                    getSLA &&
+                    Array.isArray(getSLA) &&
+                    getSLA.filter((x) => x.id_sla_type === value.id_sla_type)
+                      .length <= 0
+                  ) {
                     await this.ticketControl(value, id_ticket, id_phase);
                   }
-                }
-              } else {
-                await this.ticketControl(value, id_ticket, id_phase);
-              }
-              break;
-            case 3:
-              if (slaSettings.filter((x) => x.id_sla_type === 1)) {
-                let getSLA = await this.slaModel.getByPhaseTicket(
-                  id_phase,
-                  id_ticket,
-                  1
-                );
-                if (getSLA[0] && getSLA[0].interaction_time) {
-                  getSLA = await this.slaModel.getByPhaseTicket(
-                    id_phase,
-                    id_ticket,
-                    3
-                  );
-                  if (getSLA && Array.isArray(getSLA) && getSLA.length <= 0) {
-                    await this.ticketControl(value, id_ticket, id_phase);
-                  }
-                }
-              } else {
-                await this.ticketControl(value, id_ticket, id_phase);
               }
               break;
             default:
@@ -428,17 +403,15 @@ export default class SLAController {
   async updateSLA(id_ticket, id_phase, sla_type) {
     // Busca a configuração de sla do ticket pela phase e id_do ticket, primeiramente pela opção de inicialização do ticket.
     let controleSLA = await this.slaModel.getByPhaseTicket(id_phase, id_ticket);
-
+    console.log("controleSLA =====>", controleSLA);
     // valida se existe controle de sla, e se é um array.
     if (controleSLA && Array.isArray(controleSLA) && controleSLA.length > 0) {
       for (const sla of controleSLA) {
-
         // valida se a configuração de sla está ativa, caso não esteja não pode sofrer ação.
         if (sla.active) {
-          let obj = {interaction_time: moment() };
+          let obj = { interaction_time: moment() };
 
-          if(sla_type === sla.id_sla_type)
-          obj = {...obj,  active: false}
+          if (sla_type === sla.id_sla_type) obj = { ...obj, active: false };
 
           // Valida se o sla está atrasado ou em dia.
           if (sla.limit_sla_time < moment()) {
@@ -448,7 +421,12 @@ export default class SLAController {
           }
 
           // Atualiza o controle de sla do ticket
-          await this.slaModel.updateTicketSLA(id_ticket, obj, sla.id_sla_type, id_phase);
+          await this.slaModel.updateTicketSLA(
+            id_ticket,
+            obj,
+            sla.id_sla_type,
+            id_phase
+          );
 
           await this.createSLAControl(id_phase, id_ticket);
         }

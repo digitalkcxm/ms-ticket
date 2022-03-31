@@ -88,6 +88,7 @@ export default class SLAModel {
         .where("tsc.id_phase", id_phase)
         .andWhere("tsc.id_ticket", id_ticket)
         .andWhere("pt.active", true)
+        .orderBy("tsc.id_sla_type","asc")
         
     } catch (err) {
       this.logger.error(err,"error when get sla's.");
