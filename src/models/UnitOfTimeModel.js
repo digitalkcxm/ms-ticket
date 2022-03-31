@@ -29,26 +29,4 @@ export default class UnitOfTimeModel {
         }
 
     }
-
-    async checkUnitOfTimeByName(unit_of_time){
-        let type = ""
-        switch (unit_of_time) {
-            case 'seconds':
-                type = 1
-                break;
-            case 'minutes':
-                type = 2
-                break;
-            case 'hours':
-                type = 3
-                break;
-            case 'days':
-                type = 4
-                break;
-            default:
-                break;
-        }
-
-        return type
-    }
 }
