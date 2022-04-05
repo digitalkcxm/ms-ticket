@@ -5,7 +5,9 @@ const redis = asyncRedis.createClient(
   process.env.REDIS_PORT,
   process.env.REDIS_HOST
 );
+
 import cache from "../helpers/Cache.js";
+import TabModel from "../models/TabModel.js"
 import SLAModel from "../models/SLAModel.js";
 import UserModel from "../models/UserModel.js";
 import SLAController from "./SLAController.js";
@@ -23,7 +25,6 @@ import DepartmentController from "./DepartmentController.js";
 import AttachmentsModel from "../models/AttachmentsModel.js";
 import CallbackDigitalk from "../services/CallbackDigitalk.js";
 import { formatTicketForPhase } from "../helpers/FormatTicket.js";
-
 const sla_status = {
   emdia: 1,
   atrasado: 2,
@@ -34,6 +35,8 @@ export default class TicketController {
   constructor(database = {}, logger = {}) {
     this.logger = logger;
     this.database = database;
+    this.tabModel = new TabModel(database)
+    this.formTemplate = new FormTemplate(logger);
     this.slaModel = new SLAModel(database, logger);
     this.userModel = new UserModel(database, logger);
     this.phaseModel = new PhaseModel(database, logger);
@@ -46,7 +49,7 @@ export default class TicketController {
     this.activitiesModel = new ActivitiesModel(database, logger);
     this.attachmentsModel = new AttachmentsModel(database, logger);
     this.departmentController = new DepartmentController(database, logger);
-    this.formTemplate = new FormTemplate(logger);
+    
   }
   //Remover assim que função da fila funcionar direitinho
 
@@ -265,11 +268,11 @@ export default class TicketController {
   }
 
   async _notify(id_ticket, id_phase, id_company, action, callback) {
-    console.log("params ====>",id_phase, id_company)
+    console.log("params ====>", id_phase, id_company);
     const phase = await this.phaseModel.getPhaseById(id_phase, id_company);
     const ticket = await this.ticketModel.getTicketById(id_ticket, id_company);
 
-    console.log("======>",phase)
+    console.log("======>", phase);
     let obj = {
       type: "notification",
       id_ticket: ticket[0].id_seq,
@@ -480,8 +483,7 @@ export default class TicketController {
                 obj.message = separate.notify_close_message;
               if (separate.notify_close_hsm)
                 obj.hsm_id = separate.notify_close_hsm;
-                if (separate.channels) obj.channels = separate.channels;
-
+              if (separate.channels) obj.channels = separate.channels;
 
               await CallbackDigitalk(obj, callback);
             }
@@ -514,7 +516,8 @@ export default class TicketController {
             obj.message = phase[0].customer.notify_start_activity_message;
           if (phase[0].customer.notify_start_activity_hsm)
             obj.hsm_id = phase[0].customer.notify_start_activity_hsm;
-            if (phase[0].customer.channels) obj.channels = phase[0].customer.channels;
+          if (phase[0].customer.channels)
+            obj.channels = phase[0].customer.channels;
           await CallbackDigitalk(obj, callback);
         }
 
@@ -525,7 +528,7 @@ export default class TicketController {
               obj.message = phase[0].admin.notify_start_activity_message;
             if (phase[0].admin.notify_start_activity_hsm)
               obj.hsm_id = phase[0].admin.notify_start_activity_hsm;
-              if (phase[0].admin.channels) obj.channels = phase[0].admin.channels;
+            if (phase[0].admin.channels) obj.channels = phase[0].admin.channels;
             await CallbackDigitalk(obj, callback);
           }
         }
@@ -550,7 +553,7 @@ export default class TicketController {
                 obj.message = separate.notify_start_activity_message;
               if (separate.notify_start_activity_hsm)
                 obj.hsm_id = separate.notify_start_activity_hsm;
-                if (separate.channels) obj.channels = phase[0].admin.channels;
+              if (separate.channels) obj.channels = phase[0].admin.channels;
 
               await CallbackDigitalk(obj, callback);
             }
@@ -582,7 +585,8 @@ export default class TicketController {
             obj.message = phase[0].customer.notify_start_activity_message;
           if (phase[0].customer.notify_start_activity_hsm)
             obj.hsm_id = phase[0].customer.notify_start_activity_hsm;
-            if (phase[0].customer.channels) obj.channels = phase[0].customer.channels;
+          if (phase[0].customer.channels)
+            obj.channels = phase[0].customer.channels;
           await CallbackDigitalk(obj, callback);
         }
 
@@ -593,7 +597,7 @@ export default class TicketController {
               obj.message = phase[0].admin.notify_start_activity_message;
             if (phase[0].admin.notify_start_activity_hsm)
               obj.hsm_id = phase[0].admin.notify_start_activity_hsm;
-              if (phase[0].admin.channels) obj.channels = phase[0].admin.channels;
+            if (phase[0].admin.channels) obj.channels = phase[0].admin.channels;
             await CallbackDigitalk(obj, callback);
           }
         }
@@ -615,7 +619,7 @@ export default class TicketController {
                 obj.message = separate.notify_start_activity_message;
               if (separate.notify_start_activity_hsm)
                 obj.hsm_id = separate.notify_start_activity_hsm;
-                if (separate.channels) obj.channels = separate.channels;
+              if (separate.channels) obj.channels = separate.channels;
               await CallbackDigitalk(obj, callback);
             }
           }
@@ -626,7 +630,6 @@ export default class TicketController {
         break;
     }
   }
-
 
   async queueCreateActivities(data) {
     try {
@@ -798,11 +801,7 @@ export default class TicketController {
 
       let result = await this.attachmentsModel.create(obj);
 
-      await this.slaController.updateSLA(
-        data.id_ticket,
-        ticket[0].phase_id,
-        2
-      );
+      await this.slaController.updateSLA(data.id_ticket, ticket[0].phase_id, 2);
 
       if (result && result.length > 0) {
         obj.id = result[0].id;
@@ -887,7 +886,8 @@ export default class TicketController {
       result.activities = await this._activities(
         result.id,
         req.app.locals.db,
-        req.headers.authorization
+        req.headers.authorization,
+        result.id_tab
       );
 
       result.activities.sort((a, b) => {
@@ -925,8 +925,14 @@ export default class TicketController {
             result.form_template = register.column;
 
             for (const x of result.form_template) {
-              console.log("x.type ====>",x.type)
-              const type = await this.typeColumnModel.getTypeByName(x.type);
+              console.log("x.type ====>", x.type);
+              let type
+              if(isNumber(x.type)){
+                type = await this.typeColumnModel.getTypeByID(x.type);
+              }else{
+                type = await this.typeColumnModel.getTypeByName(x.type);
+              }
+              
 
               type && Array.isArray(type) && type.length > 0
                 ? (x.type = type[0].name)
@@ -984,7 +990,8 @@ export default class TicketController {
       result.activities = await this._activities(
         result.id,
         req.app.locals.db,
-        req.headers.authorization
+        req.headers.authorization,
+        result.id_tab
       );
 
       result.activities.sort((a, b) => {
@@ -1043,7 +1050,7 @@ export default class TicketController {
     }
   }
 
-  async _activities(id_ticket, db, id_company) {
+  async _activities(id_ticket, db, id_company,tab = false) {
     const obj = [];
 
     const activities = await this.activitiesModel.getActivities(id_ticket);
@@ -1244,6 +1251,22 @@ export default class TicketController {
       });
     }
 
+    if(tab){
+     const tab = await this.tabModel.getByTicket(id_ticket)
+     if(Array.isArray(tab) && tab.length > 0){
+       obj.push({
+         type:"tab",
+         id_ticket: id_ticket,
+         id_tab:tab[0].id_tab,
+         description:tab[0].description,
+         id_user:tab[0].id_user,
+         created_at:moment(tab[0].created_at).format(
+          "DD/MM/YYYY HH:mm:ss"
+        ),
+       })
+     }
+    }
+
     return obj;
   }
 
@@ -1297,7 +1320,6 @@ export default class TicketController {
     }
   }
 
-
   async queueUpdateTicket(data) {
     try {
       const companyVerified = await this.companyModel.getByIdActive(
@@ -1341,7 +1363,7 @@ export default class TicketController {
 
       if (!phase || phase.length <= 0) return false;
 
-      await this.slaController.updateSLA(ticket.id, ticket.phase_id,2);
+      await this.slaController.updateSLA(ticket.id, ticket.phase_id, 2);
       console.log(
         "if de troca de fases -----> ",
         ticket.phase_id != phase[0].id
@@ -1549,11 +1571,7 @@ export default class TicketController {
           req.headers.authorization
         );
 
-        await this.slaController.updateSLA(
-          ticket[0].id,
-          ticket[0].phase_id,
-          3
-        );
+        await this.slaController.updateSLA(ticket[0].id, ticket[0].phase_id, 3);
 
         await this.slaModel.disableSLA(ticket[0].id);
         ticket[0] = await formatTicketForPhase(
@@ -1969,7 +1987,7 @@ export default class TicketController {
           req.body.id_ticket,
           req.headers.authorization
         );
-        
+
         if (ticket && ticket.length > 0 && !ticket[0].start_ticket) {
           ticket[0].start_ticket = time;
           await this.ticketModel.updateTicket(
@@ -2217,8 +2235,9 @@ export default class TicketController {
         id_protocol: ticket[0].id_protocol,
         type: "ticket",
         sla_status: sla_status(slaInfo.sla),
-        status:ticket[0].status,
+        status: ticket[0].status,
         customer: await this.customerModel.getAll(ticket[0].id),
+        id_tab: ticket[0].id_tab
       });
 
       // const child_tickets =
@@ -2228,7 +2247,7 @@ export default class TicketController {
       //   );
       // if (child_tickets && child_tickets.length > 0) {
       //   for (const child_ticket of child_tickets) {
-          
+
       //     child_ticket.created_at = moment(child_ticket.created_at).format(
       //       "DD/MM/YYYY HH:mm:ss"
       //     );
@@ -2239,7 +2258,7 @@ export default class TicketController {
       //       this.database,
       //       this.logger
       //     );
-    
+
       //     history.push(child_ticket);
       //     history.push({
       //       id_seq: ticket[0].id_seq,
@@ -2277,8 +2296,9 @@ export default class TicketController {
           display_name: father_ticket[0].display_name,
           id_protocol: father_ticket[0].id_protocol,
           type: "ticket",
-          status:father_ticket[0].status,
+          status: father_ticket[0].status,
           customer: await this.customerModel.getAll(father_ticket[0].id),
+          id_tab: father_ticket[0].id_tab
         });
       }
 
@@ -2348,22 +2368,51 @@ export default class TicketController {
 
   async tab(req, res) {
     try {
-      const ticket = await this.ticketModel.getTicketById(req.body.id_ticket);
+      const ticket = await this.ticketModel.getTicketById(req.body.id_ticket,req.headers.authorization);
       if (ticket.length <= 0)
-        return res.status(500).send({ error: "Não existe ticket com esse ID" });
+        return res.status(500).send({ error: "Não existe ticket com esse ID." });
 
-      await this.ticketModel.updateTicket(
-        { id_tab: req.body.id_tab, updated_at: moment().format() },
-        req.body.id_ticket,
-        req.headers.authorization
-      );
+        
+      if (!ticket[0].id_tab) {
+        let id_user = await this.userController.checkUserCreated(
+          req.body.id_user,
+          req.headers.authorization,
+          req.body.name ? req.body.name : "",
+          req.body.phone ? req.body.phone : "",
+          req.body.email ? req.body.email : "",
+          req.body.type_user ? req.body.type_user : 1
+        );
+        const new_tab = await this.tabModel.create({
+          id_user: id_user.id,
+          id_ticket: req.body.id_ticket,
 
-      return res.status(200).send(req.body);
+          id_tab: req.body.id_tab,
+          description: req.body.description,
+        });
+
+        if (Array.isArray(new_tab) && new_tab.length > 0 && new_tab[0].id) {
+          await this.ticketModel.updateTicket(
+            { id_tab: req.body.id_tab, updated_at: moment().format() },
+            req.body.id_ticket,
+            req.headers.authorization
+          );
+
+          return res.status(200).send({
+            id_ticket: req.body.id_ticket,
+            id_tab: req.body.id_tab
+          });
+        }
+
+        return res.status(400).send({ error: "Erro ao criar a tabulção." });
+
+      } else {
+        return res.status(400).send({ error: "Ticket já foi tabulado." });
+      }
     } catch (err) {
       console.log("tab err ====> ", err);
       return res
         .status(500)
-        .send({ error: "Ocorreu um erro ao tabular o ticket" });
+        .send({ error: "Ocorreu um erro ao tabular o ticket." });
     }
   }
 }
