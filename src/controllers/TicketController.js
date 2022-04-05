@@ -2237,6 +2237,7 @@ export default class TicketController {
         sla_status: sla_status(slaInfo.sla),
         status: ticket[0].status,
         customer: await this.customerModel.getAll(ticket[0].id),
+        id_tab: ticket[0].id_tab
       });
 
       // const child_tickets =
@@ -2297,6 +2298,7 @@ export default class TicketController {
           type: "ticket",
           status: father_ticket[0].status,
           customer: await this.customerModel.getAll(father_ticket[0].id),
+          id_tab: father_ticket[0].id_tab
         });
       }
 
