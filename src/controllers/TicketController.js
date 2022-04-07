@@ -925,7 +925,7 @@ export default class TicketController {
             result.form_template = register.column;
 
             for (const x of result.form_template) {
-              console.log("x.type ====>", x.type);
+              
               let type
               if(!isNaN(x.type)){
                 type = await this.typeColumnModel.getTypeByID(x.type);
