@@ -179,13 +179,15 @@ export default class PhaseController {
     const keys = Object.keys(obj);
 
     const slaSettings = async function (sla, type, slaModel) {
-      await slaModel.slaPhaseSettings({
-        id_phase: idPhase,
-        id_sla_type: type,
-        id_unit_of_time: sla.unit_of_time,
-        time: sla.time,
-        active: sla.active,
-      });
+      if( sla.unit_of_time && sla.time){
+        await slaModel.slaPhaseSettings({
+          id_phase: idPhase,
+          id_sla_type: type,
+          id_unit_of_time: sla.unit_of_time,
+          time: sla.time,
+          active: sla.active,
+        });
+      }
       return true;
     };
 
@@ -549,27 +551,31 @@ export default class PhaseController {
   async _checkColumnsFormTemplate(newTemplate, db, template) {
     const register = await this.formTemplate.findRegister(template);
     const errors = [];
-    if (newTemplate.length < register.column.length)
+    
+    if(register && register.column){
+      if (newTemplate.length < register.column.length)
       errors.push(
         "Não é possivel remover campos do formulario, apenas inativa-los"
       );
 
-    register.column.map((valueA) => {
-      let validate = 0;
-      newTemplate.map((valueB) =>
-        valueA.column == valueB.column ? validate++ : ""
-      );
-
-      if (validate <= 0)
-        errors.push(
-          `A coluna ${valueA.label} não pode ser removido ou o valor do campo column não pode ser alterado, apenas inativado`
+      register.column.map((valueA) => {
+        let validate = 0;
+        newTemplate.map((valueB) =>
+          valueA.column == valueB.column ? validate++ : ""
         );
+  
+        if (validate <= 0)
+          errors.push(
+            `A coluna ${valueA.label} não pode ser removido ou o valor do campo column não pode ser alterado, apenas inativado`
+          );
+  
+        if (validate > 1)
+          errors.push(
+            `A coluna ${valueA.label} não pode ser igual a um ja criado`
+          );
+      });
+    }
 
-      if (validate > 1)
-        errors.push(
-          `A coluna ${valueA.label} não pode ser igual a um ja criado`
-        );
-    });
     if (errors.length > 0) return errors;
 
     return register;
