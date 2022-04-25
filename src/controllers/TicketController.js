@@ -7,7 +7,7 @@ const redis = asyncRedis.createClient(
 );
 
 import cache from "../helpers/Cache.js";
-import TabModel from "../models/TabModel.js"
+import TabModel from "../models/TabModel.js";
 import SLAModel from "../models/SLAModel.js";
 import UserModel from "../models/UserModel.js";
 import SLAController from "./SLAController.js";
@@ -15,16 +15,17 @@ import UserController from "./UserController.js";
 import PhaseModel from "../models/PhaseModel.js";
 import TicketModel from "../models/TicketModel.js";
 import CompanyModel from "../models/CompanyModel.js";
-import { validationResult } from "express-validator";
 import CustomerModel from "../models/CustomerModel.js";
 import FormTemplate from "../documents/FormTemplate.js";
 import FormDocuments from "../documents/FormDocuments.js";
 import ActivitiesModel from "../models/ActivitiesModel.js";
 import TypeColumnModel from "../models/TypeColumnModel.js";
+import ResponsibleModel from "../models/ResponsibleModel.js";
 import DepartmentController from "./DepartmentController.js";
 import AttachmentsModel from "../models/AttachmentsModel.js";
 import CallbackDigitalk from "../services/CallbackDigitalk.js";
 import { formatTicketForPhase } from "../helpers/FormatTicket.js";
+
 const sla_status = {
   emdia: 1,
   atrasado: 2,
@@ -35,7 +36,7 @@ export default class TicketController {
   constructor(database = {}, logger = {}) {
     this.logger = logger;
     this.database = database;
-    this.tabModel = new TabModel(database)
+    this.tabModel = new TabModel(database);
     this.formTemplate = new FormTemplate(logger);
     this.slaModel = new SLAModel(database, logger);
     this.userModel = new UserModel(database, logger);
@@ -48,6 +49,7 @@ export default class TicketController {
     this.typeColumnModel = new TypeColumnModel(database, logger);
     this.activitiesModel = new ActivitiesModel(database, logger);
     this.attachmentsModel = new AttachmentsModel(database, logger);
+    this.responsibleModel  = new ResponsibleModel(database, logger);
     this.departmentController = new DepartmentController(database, logger);
     
   }
@@ -55,10 +57,6 @@ export default class TicketController {
 
   async queueCreate(data) {
     try {
-      let userResponsible = [];
-
-      console.log("data =x=>", data);
-
       const companyVerified = await this.companyModel.getByIdActive(
         data.authorization
       );
@@ -149,7 +147,14 @@ export default class TicketController {
           data.authorization
         );
       }
-      // await this._createResponsibles(userResponsible, obj.id);
+      if (data.responsible) {
+        await this._createResponsibles(
+          data.responsible,
+          obj.id,
+          data.authorization,
+          id_user
+        );
+      }
 
       if (data.customer) {
         await this._createCustomers(data.customer, obj.id);
@@ -221,17 +226,29 @@ export default class TicketController {
     }
   }
 
-  async _createResponsibles(userResponsible = null, ticket_id) {
+  async _createResponsibles(userResponsible = null, ticket_id, authorization,act_user) {
     try {
-      await this.ticketModel.delResponsibleTicket(ticket_id);
-      if (userResponsible.length > 0) {
-        userResponsible.map(async (user) => {
+      if (Array.isArray(userResponsible) && userResponsible.length > 0) {
+        for (const user of userResponsible) {
+          let id_user = await this.userController.checkUserCreated(
+            user.id_user,
+            authorization,
+            user.name ? user.name : "",
+            user.phone ? user.phone : "",
+            user.email ? user.email : "",
+            1
+          );
+
           await this.ticketModel.createResponsibleTicket({
             id_ticket: ticket_id,
-            id_user: user,
+            id_user: id_user.id,
             id_type_of_responsible: 2,
+            active: true,
+            created_at: moment(),
+            updated_at: moment(),
+            id_user_add:act_user
           });
-        });
+        }
       }
 
       return true;
@@ -925,14 +942,12 @@ export default class TicketController {
             result.form_template = register.column;
 
             for (const x of result.form_template) {
-              
-              let type
-              if(!isNaN(x.type)){
+              let type;
+              if (!isNaN(x.type)) {
                 type = await this.typeColumnModel.getTypeByID(x.type);
-              }else{
+              } else {
                 type = await this.typeColumnModel.getTypeByName(x.type);
               }
-              
 
               type && Array.isArray(type) && type.length > 0
                 ? (x.type = type[0].name)
@@ -945,6 +960,10 @@ export default class TicketController {
         ).findRegister(form[0].id_form);
         delete result.form_data._id;
       }
+
+      result.responsibles = await this.responsibleModel.getActiveResponsibleByTicket(result.id)
+      result.responsibles.map(x => {delete x.created_at; delete x.updated_at; delete x.active; delete x.id})
+
       console.log("result =>", result);
       return res.status(200).send(result);
     } catch (err) {
@@ -1043,6 +1062,8 @@ export default class TicketController {
         delete result.form_data._id;
       }
 
+      result.responsibles = await this.responsibleModel.getActiveResponsibleByTicket(result.id)
+      result.responsibles.map(x => {delete x.created_at; delete x.updated_at; delete x.active; delete x.id})
       return res.status(200).send(result);
     } catch (err) {
       console.log("Error when select ticket by id =>", err);
@@ -1050,7 +1071,7 @@ export default class TicketController {
     }
   }
 
-  async _activities(id_ticket, db, id_company,tab = false) {
+  async _activities(id_ticket, db, id_company, tab = false) {
     const obj = [];
 
     const activities = await this.activitiesModel.getActivities(id_ticket);
@@ -1251,22 +1272,42 @@ export default class TicketController {
       });
     }
 
-    if(tab){
-     const tab = await this.tabModel.getByTicket(id_ticket)
-     if(Array.isArray(tab) && tab.length > 0){
-       obj.push({
-         type:"tab",
-         id_ticket: id_ticket,
-         id_tab:tab[0].id_tab,
-         description:tab[0].description,
-         id_user:tab[0].id_user,
-         created_at:moment(tab[0].created_at).format(
-          "DD/MM/YYYY HH:mm:ss"
-        ),
-       })
-     }
+    if (tab) {
+      const tab = await this.tabModel.getByTicket(id_ticket);
+      if (Array.isArray(tab) && tab.length > 0) {
+        obj.push({
+          type: "tab",
+          id_ticket: id_ticket,
+          id_tab: tab[0].id_tab,
+          description: tab[0].description,
+          id_user: tab[0].id_user,
+          created_at: moment(tab[0].created_at).format("DD/MM/YYYY HH:mm:ss"),
+        });
+      }
     }
 
+    const responsaveis = await this.responsibleModel.getAllResponsibleByTicket(id_ticket)
+    for(const responsavel of responsaveis){
+      if(responsavel.active){
+        obj.push({
+          type: "add_responsible",
+          id_ticket: id_ticket,
+          id_user: responsavel.id_user,
+          name: responsavel.name,
+          id_user_add: responsavel.id_user_add,
+          created_at: moment(responsavel.created_at).format("DD/MM/YYYY HH:mm:ss"),
+        });
+      }else{
+        obj.push({
+          type: "remove_responsible",
+          id_ticket: id_ticket,
+          id_user: responsavel.id_user,
+          name: responsavel.name,
+          id_user_add: responsavel.id_user_remove,
+          created_at: moment(responsavel.updated_at).format("DD/MM/YYYY HH:mm:ss"),
+        });
+      }
+    }
     return obj;
   }
 
@@ -2064,6 +2105,8 @@ export default class TicketController {
             id_user: result.id,
             id_type_of_responsible: 2,
             start_ticket: time,
+            active: true,
+            id_user_add: result.id,
           });
           return res
             .status(200)
@@ -2237,7 +2280,7 @@ export default class TicketController {
         sla_status: sla_status(slaInfo.sla),
         status: ticket[0].status,
         customer: await this.customerModel.getAll(ticket[0].id),
-        id_tab: ticket[0].id_tab
+        id_tab: ticket[0].id_tab,
       });
 
       // const child_tickets =
@@ -2298,7 +2341,7 @@ export default class TicketController {
           type: "ticket",
           status: father_ticket[0].status,
           customer: await this.customerModel.getAll(father_ticket[0].id),
-          id_tab: father_ticket[0].id_tab
+          id_tab: father_ticket[0].id_tab,
         });
       }
 
@@ -2368,11 +2411,15 @@ export default class TicketController {
 
   async tab(req, res) {
     try {
-      const ticket = await this.ticketModel.getTicketById(req.body.id_ticket,req.headers.authorization);
+      const ticket = await this.ticketModel.getTicketById(
+        req.body.id_ticket,
+        req.headers.authorization
+      );
       if (ticket.length <= 0)
-        return res.status(500).send({ error: "Não existe ticket com esse ID." });
+        return res
+          .status(500)
+          .send({ error: "Não existe ticket com esse ID." });
 
-        
       if (!ticket[0].id_tab) {
         let id_user = await this.userController.checkUserCreated(
           req.body.id_user,
@@ -2399,12 +2446,11 @@ export default class TicketController {
 
           return res.status(200).send({
             id_ticket: req.body.id_ticket,
-            id_tab: req.body.id_tab
+            id_tab: req.body.id_tab,
           });
         }
 
         return res.status(400).send({ error: "Erro ao criar a tabulção." });
-
       } else {
         return res.status(400).send({ error: "Ticket já foi tabulado." });
       }
