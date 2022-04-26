@@ -41,11 +41,11 @@ export default class ResponsibleController {
       removeResponsible.forEach((x) => {
         this.responsibleModel.disableResponsible(x.id, act_user.id);
       });
-
+      
       const addResponsible = await req.body.responsible.filter(
         (x) => !responsibleCheck.find((y) => y.id_user === x.id_user)
       );
-
+      
       for (const user of addResponsible) {
         const result = await this.userController.checkUserCreated(
           user.id_user,
@@ -65,8 +65,8 @@ export default class ResponsibleController {
           updated_at: moment(),
           id_user_add: act_user.id,
         });
-      }
 
+      }
       return res.status(200).send(req.body);
     } catch (err) {
       this.logger.error(err, "Erro ao vincular o ticket ao usuario.");
