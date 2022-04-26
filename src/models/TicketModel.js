@@ -28,7 +28,7 @@ export default class TicketModel {
     try {
       return await this.database("responsible_ticket")
         .returning(["id"])
-        .insert(obj);
+        .insert(JSON.parse(obj));
     } catch (err) {
       this.logger.error(err, "Error when create responsible ticket.");
       return err;

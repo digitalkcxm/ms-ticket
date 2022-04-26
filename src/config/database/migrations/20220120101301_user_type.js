@@ -9,7 +9,7 @@ exports.up = async function (knex) {
     );
   };
   
-  exports.down = function (knex) {
+exports.down = function (knex) {
     return knex.schema.dropTableIfExists("type_user");
   };
   

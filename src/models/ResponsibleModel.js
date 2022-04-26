@@ -15,6 +15,8 @@ export default class ResponsibleModel {
           active: "responsible_ticket.active",
           created_at: "responsible_ticket.created_at",
           updated_at: "responsible_ticket.updated_at",
+          id_user_add: "responsible_ticket.id_user_add",
+          id_user_remove: "responsible_ticket.id_user_remove",
         })
         .leftJoin("users", "users.id", "responsible_ticket.id_user")
         .where("responsible_ticket.id_ticket", id_ticket)

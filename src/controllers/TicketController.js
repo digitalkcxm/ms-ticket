@@ -244,9 +244,9 @@ export default class TicketController {
             id_user: id_user.id,
             id_type_of_responsible: 2,
             active: true,
-            created_at: moment(),
-            updated_at: moment(),
-            id_user_add:act_user
+            created_at: moment().add(1,'seconds'),
+            updated_at: moment().add(1,'seconds'),
+            id_user_add:act_user.id
           });
         }
       }
@@ -1288,22 +1288,27 @@ export default class TicketController {
 
     const responsaveis = await this.responsibleModel.getAllResponsibleByTicket(id_ticket)
     for(const responsavel of responsaveis){
+      
       if(responsavel.active){
+        const user_add = await this.userModel.getById(responsavel.id_user_add, id_company)
         obj.push({
           type: "add_responsible",
           id_ticket: id_ticket,
           id_user: responsavel.id_user,
           name: responsavel.name,
-          id_user_add: responsavel.id_user_add,
+          id_user_add: user_add[0].id_user,
+          user_add: user_add[0].name,
           created_at: moment(responsavel.created_at).format("DD/MM/YYYY HH:mm:ss"),
         });
       }else{
+        const user_remove = await this.userModel.getById(responsavel.id_user_remove, id_company)
         obj.push({
           type: "remove_responsible",
           id_ticket: id_ticket,
           id_user: responsavel.id_user,
           name: responsavel.name,
-          id_user_add: responsavel.id_user_remove,
+          id_user_remove: user_remove[0].id_user,
+          user_remove: user_remove[0].name,
           created_at: moment(responsavel.updated_at).format("DD/MM/YYYY HH:mm:ss"),
         });
       }
@@ -1499,7 +1504,7 @@ export default class TicketController {
       } else {
         if (data.form && Object.keys(data.form).length > 0) {
           const firstPhase = await this.ticketModel.getFirstFormTicket(
-            ticket[0].id
+            ticket.id
           );
           if (firstPhase[0].form) {
             let errors = await this._validateUpdate(
@@ -1508,12 +1513,14 @@ export default class TicketController {
               data.form,
               firstPhase[0].id_form
             );
+            console.log("errors ====>",errors)
             if (errors.length > 0) return false;
 
-            await new FormDocuments(global.mongodb).updateRegister(
+            const resultUpdate = await new FormDocuments(global.mongodb).updateRegister(
               firstPhase[0].id_form,
               data.form
             );
+            console.log(resultUpdate)
           }
         }
       }
@@ -1862,16 +1869,17 @@ export default class TicketController {
       const form_register = await new FormDocuments(db).findRegister(
         id_form_ticket
       );
-      for (let column of form_template.column) {
-        column.required && form[column.column]
-          ? ""
-          : errors.push(`O campo ${column.label} é obrigatório`);
+      // for (let column of form_template.column) {
+      //   console.log(column)
+      //   column.required && form[column.column]
+      //     ? ""
+      //     : errors.push(`O campo ${column.label} é obrigatório`);
 
-        if (form[column.column] != form_register[column.column])
-          !column.editable && form[column.column]
-            ? errors.push(`O campo ${column.label} não é editavel`)
-            : "";
-      }
+      //   if (form[column.column] != form_register[column.column])
+      //     !column.editable && form[column.column]
+      //       ? errors.push(`O campo ${column.label} não é editavel`)
+      //       : "";
+      // }
       return errors;
     } catch (err) {
       console.log("Error when generate Doc =>", err);
