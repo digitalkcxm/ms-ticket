@@ -576,6 +576,7 @@ export default class TicketModel {
   async getResponsibleByTicketAndUser(id_ticket, id_user) {
     try {
       return await this.database("responsible_ticket")
+
         .where("id_ticket", id_ticket)
         .andWhere("id_user", id_user);
     } catch (err) {
@@ -730,6 +731,7 @@ export default class TicketModel {
         ${default_where} customer.email ILIKE '%${search}%' OR 
         ${default_where} customer.identification_document ILIKE '%${search}%' OR
         ${default_where} ticket.display_name ILIKE '%${search}%'`;
+        
       } else {
         query = `
         ${default_where} CAST(ticket.id_seq AS TEXT) LIKE '%${search}%' OR 

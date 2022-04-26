@@ -72,8 +72,7 @@ export default class PhaseController {
 
       if (req.body.form) {
         const templateValidate = await this._formPhase(
-          req.body.column,
-          req.app.locals.db
+          req.body.column
         );
 
         if (!templateValidate) {
@@ -151,7 +150,7 @@ export default class PhaseController {
     });
   }
 
-  async _formPhase(column, db) {
+  async _formPhase(column) {
     const errorsColumns = await templateValidate(
       column,
       this.database,
@@ -179,13 +178,15 @@ export default class PhaseController {
     const keys = Object.keys(obj);
 
     const slaSettings = async function (sla, type, slaModel) {
-      await slaModel.slaPhaseSettings({
-        id_phase: idPhase,
-        id_sla_type: type,
-        id_unit_of_time: sla.unit_of_time,
-        time: sla.time,
-        active: sla.active,
-      });
+      if( sla.unit_of_time && sla.time){
+        await slaModel.slaPhaseSettings({
+          id_phase: idPhase,
+          id_sla_type: type,
+          id_unit_of_time: sla.unit_of_time,
+          time: sla.time,
+          active: sla.active,
+        });
+      }
       return true;
     };
 
@@ -479,20 +480,34 @@ export default class PhaseController {
         req.params.id,
         req.headers.authorization
       );
-      if (req.body.form && req.body.column) {
-        let validations = await this._checkColumnsFormTemplate(
-          req.body.column,
-          req.app.locals.db,
-          phase[0].id_form_template
-        );
-        if (validations.length > 0)
-          return res.status(400).send({ error: validations });
 
-        validations.column = req.body.column;
-        await this.formTemplate.updateRegister(validations._id, validations);
-        phase[0].department = req.body.department;
-        phase[0].formTemplate = req.body.column;
-        delete phase[0].id_form_template;
+      if (req.body.form && req.body.column) {
+        if(phase[0].id_form_template){
+          console.log("id_form_template ===>",phase[0].id_form_template)
+          let validations = await this._checkColumnsFormTemplate(
+            req.body.column,
+            phase[0].id_form_template
+          );
+          if (validations.length > 0)
+            return res.status(400).send({ error: validations });
+  
+          validations.column = req.body.column;
+          await this.formTemplate.updateRegister(validations._id, validations);
+          phase[0].department = req.body.department;
+          phase[0].formTemplate = req.body.column;
+          delete phase[0].id_form_template;
+        }else{
+          const templateValidate = await this._formPhase(
+            req.body.column
+          );
+  
+          if (!templateValidate) {
+            return res.status(400).send({ errors: templateValidate });
+          }
+          this.logger.info("Return of validate template", templateValidate);
+          obj.id_form_template = templateValidate;
+        }
+        
       }
 
       await cache(
@@ -546,30 +561,32 @@ export default class PhaseController {
     }
   }
 
-  async _checkColumnsFormTemplate(newTemplate, db, template) {
+  async _checkColumnsFormTemplate(newTemplate, template) {
     const register = await this.formTemplate.findRegister(template);
     const errors = [];
-    if (newTemplate.length < register.column.length)
+    
+      if (newTemplate.length < register.column.length)
       errors.push(
         "Não é possivel remover campos do formulario, apenas inativa-los"
       );
 
-    register.column.map((valueA) => {
-      let validate = 0;
-      newTemplate.map((valueB) =>
-        valueA.column == valueB.column ? validate++ : ""
-      );
-
-      if (validate <= 0)
-        errors.push(
-          `A coluna ${valueA.label} não pode ser removido ou o valor do campo column não pode ser alterado, apenas inativado`
+      register.column.map((valueA) => {
+        let validate = 0;
+        newTemplate.map((valueB) =>
+          valueA.column == valueB.column ? validate++ : ""
         );
+  
+        if (validate <= 0)
+          errors.push(
+            `A coluna ${valueA.label} não pode ser removido ou o valor do campo column não pode ser alterado, apenas inativado`
+          );
+  
+        if (validate > 1)
+          errors.push(
+            `A coluna ${valueA.label} não pode ser igual a um ja criado`
+          );
+      });
 
-      if (validate > 1)
-        errors.push(
-          `A coluna ${valueA.label} não pode ser igual a um ja criado`
-        );
-    });
     if (errors.length > 0) return errors;
 
     return register;
@@ -684,12 +701,12 @@ export default class PhaseController {
         let phases;
         for (const department of departments) {
           phases.concat(
-            await this._phaseForCache(department, authorization, db)
+            await this._phaseForCache(department, authorization)
           );
         }
         return phases;
       } else {
-        return await this._phaseForCache(departments, authorization, db);
+        return await this._phaseForCache(departments, authorization);
       }
     } catch (err) {
       this.logger.error(err);
@@ -697,7 +714,7 @@ export default class PhaseController {
     }
   }
 
-  async _phaseForCache(departments, authorization, db) {
+  async _phaseForCache(departments, authorization) {
     const phases = [];
     const department_id = await this.departmentModel.getByID(
       departments,

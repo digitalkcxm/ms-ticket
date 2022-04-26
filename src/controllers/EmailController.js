@@ -25,34 +25,6 @@ export default class EmailController {
     }
   }
 
-  // async incomingEmail(req, res) {
-  //     try {
-  //         if (!req.body.chat.id)
-  //             return res.status(400).send({ error: "There was an error" })
-
-  //         let id_ticket = await emailModel.getByChatId(req.body.chat.id)
-  //         if (!id_ticket || id_ticket.length <= 0)
-  //             return res.status(400).send({ error: "There was an error" })
-
-  //         let obj = {
-  //             "text": req.body.body,
-  //             "id_ticket": id_ticket[0].id_ticket,
-  //             "id_chat": id_ticket[0].id,
-  //             "created_at": moment().format(),
-  //             "updated_at": moment().format()
-  //         }
-
-  //         let result = await ticketModel.create(obj, "activities_ticket")
-  //         if (!result && !result[0])
-  //             return res.status(400).send({ error: "There was an error" })
-
-  //         return res.status(200).send("Ok")
-  //     } catch (err) {
-  //         console.log("Incoming Error =>", err)
-  //         return res.status(400).send({ error: "There was an error" })
-  //     }
-  // }
-
   async formatEmail(
     created_at,
     sla,
