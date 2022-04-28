@@ -56,8 +56,7 @@ export default function ticket(database = {}, logger = {}) {
   );
 
   router.post("/tab", (req, res) => ticketController.tab(req, res));
-  router.post("/", (req, res) => ticketController.create(req, res));
-  //router.put("/:id",  ticketController.queueUpdateTicket)
+  
 
   return router;
 }
