@@ -1,5 +1,6 @@
 import axios from  "axios";
 export default async (obj, callback) => {
+  console.log(obj)
   try {
     return await axios({
       method: "post",

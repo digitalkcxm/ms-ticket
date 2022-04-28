@@ -59,6 +59,7 @@ export default class PhaseController {
         notification_customer: req.body.customer,
         notification_admin: req.body.admin,
         notification_separate: { separate: req.body.separate },
+        notification_responsible: req.body.responsible,
         department_can_create_protocol: {
           department: req.body.department_can_create_protocol,
         },
