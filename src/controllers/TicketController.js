@@ -950,27 +950,29 @@ export default class TicketController {
 
     const responsaveis = await this.responsibleModel.getAllResponsibleByTicket(id_ticket)
     for(const responsavel of responsaveis){
+      let user_add = ''
+      if(responsavel.id_user_add) user_add = await this.userModel.getById(responsavel.id_user_add, id_company)
 
-      const user_add = await this.userModel.getById(responsavel.id_user_add, id_company)
       obj.push({
         type: "add_responsible",
         id_ticket: id_ticket,
         id_user: responsavel.id_user,
         name: responsavel.name,
-        id_user_add: user_add[0].id_user,
-        user_add: user_add[0].name,
+        id_user_add: user_add ?  user_add[0].id_user : responsavel.id_user,
+        user_add: user_add ? user_add[0].name : responsavel.name,
         created_at: moment(responsavel.created_at).format("DD/MM/YYYY HH:mm:ss"),
       });
 
       if(!responsavel.active){
-        const user_remove = await this.userModel.getById(responsavel.id_user_remove, id_company)
+        let user_remove = ""
+        if(responsavel.id_user_remove) user_remove = await this.userModel.getById(responsavel.id_user_remove, id_company)
         obj.push({
           type: "remove_responsible",
           id_ticket: id_ticket,
           id_user: responsavel.id_user,
           name: responsavel.name,
-          id_user_remove: user_remove[0].id_user,
-          user_remove: user_remove[0].name,
+          id_user_remove: user_remove ? user_remove[0].id_user: responsavel.id_user,
+          user_remove: user_remove ? user_remove[0].name : responsavel.name,
           created_at: moment(responsavel.updated_at).format("DD/MM/YYYY HH:mm:ss"),
         });
       }
