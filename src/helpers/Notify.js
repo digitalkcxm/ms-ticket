@@ -26,7 +26,7 @@ export default async function Notify(
   };
 
   perfis.map((x) =>
-    handleMassage(obj, action, x, ticket[0], phase[0], callback)
+      handleMassage(obj, action, x, ticket[0], phase[0], callback)
   );
 }
 
@@ -38,6 +38,7 @@ const handleMassage = async function (
   phase,
   callback
 ) {
+  console.log("perfil", perfil)
   obj = {
     ...obj,
     message: `
