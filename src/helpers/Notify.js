@@ -26,7 +26,7 @@ export default async function Notify(
   };
 
   perfis.map((x) =>
-    handleMassage(obj, action, x, ticket[0], phase[0], callback)
+      handleMassage(obj, action, x, ticket[0], phase[0], callback)
   );
 }
 

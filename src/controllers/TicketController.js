@@ -318,7 +318,7 @@ export default class TicketController {
       if (!ticket || ticket.length <= 0) return false;
 
       if (!ticket[0].start_ticket) {
-        await this.Notify(
+        await Notify(
           ticket[0].id,
           ticket[0].phase_id,
           data.authorization,
@@ -387,7 +387,7 @@ export default class TicketController {
           companyVerified[0].callback
         );
 
-        await this.Notify(
+        await Notify(
           ticket[0].id,
           ticket[0].phase_id,
           data.authorization,
@@ -437,7 +437,7 @@ export default class TicketController {
       if (!ticket || ticket.length <= 0) return false;
 
       if (!ticket[0].start_ticket) {
-        await this.Notify(
+        await Notify(
           ticket[0].id,
           ticket[0].phase_id,
           data.authorization,
@@ -505,7 +505,7 @@ export default class TicketController {
           companyVerified[0].callback
         );
 
-        await this.Notify(
+        await Notify(
           ticket[0].id,
           ticket[0].phase_id,
           data.authorization,
@@ -1154,7 +1154,7 @@ export default class TicketController {
           companyVerified[0].callback
         );
 
-        await this.Notify(
+        await Notify(
           ticket.id,
           phase[0].id,
           data.authorization,
@@ -1201,7 +1201,7 @@ export default class TicketController {
         ticket.phase_id
       );
 
-      await this.Notify(
+      await Notify(
         ticket.id,
         phase[0].id,
         data.authorization,
@@ -1214,7 +1214,7 @@ export default class TicketController {
         }
       );
       if (!ticket.start_ticket) {
-        await this.Notify(
+        await Notify(
           ticket.id,
           phase[0].id,
           data.authorization,
@@ -1304,7 +1304,7 @@ export default class TicketController {
           this.logger
         );
 
-        await this.Notify(
+        await Notify(
           ticket[0].id,
           ticket[0].phase_id,
           req.headers.authorization,
@@ -1742,7 +1742,7 @@ export default class TicketController {
           ticket[0].phase_id
         );
 
-        await this.Notify(
+        await Notify(
           ticket[0].id,
           ticket[0].phase_id,
           req.headers.authorization,

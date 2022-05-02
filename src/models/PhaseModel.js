@@ -34,6 +34,7 @@ export default class PhaseModel {
           updated_at: "phase.updated_at",
           customer: "phase.notification_customer",
           admin: "phase.notification_admin",
+          responsible: "phase.notification_responsible",
           separate: "phase.notification_separate",
           department_can_create_protocol:
             "phase.department_can_create_protocol",
@@ -205,6 +206,7 @@ export default class PhaseModel {
           "phase.visible_new_ticket",
           "phase.notification_customer as customer",
           "phase.notification_admin as admin",
+          "phase.notification_responsible as responsible",
           "phase.notification_separate as separate",
           "phase.department_can_create_protocol",
           "phase.department_can_create_ticket",
@@ -234,6 +236,7 @@ export default class PhaseModel {
           "phase.visible_new_ticket",
           "phase.notification_customer as customer",
           "phase.notification_admin as admin",
+          "phase.notification_responsible as responsible",
           "phase.notification_separate as separate",
           "phase.department_can_create_protocol",
           "phase.department_can_create_ticket",

@@ -366,6 +366,7 @@ export default class PhaseController {
         visible_new_ticket: req.body.visible_new_ticket,
         notification_customer: req.body.customer,
         notification_admin: req.body.admin,
+        notification_responsible: req.body.responsible,
         notification_separate: { separate: req.body.separate },
         department_can_create_protocol: {
           department: req.body.department_can_create_protocol,
