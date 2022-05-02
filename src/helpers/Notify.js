@@ -72,6 +72,7 @@ const handleMassage = async function (
       }
     }
   } else {
+    console.log("teste perfil",phase)
     if (phase[perfil] && phase[perfil][`notify_${action}`]) {
       obj = {
         ...obj,

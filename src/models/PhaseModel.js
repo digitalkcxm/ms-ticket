@@ -34,6 +34,7 @@ export default class PhaseModel {
           updated_at: "phase.updated_at",
           customer: "phase.notification_customer",
           admin: "phase.notification_admin",
+          responsible: "phase.notification_responsible",
           separate: "phase.notification_separate",
           department_can_create_protocol:
             "phase.department_can_create_protocol",
