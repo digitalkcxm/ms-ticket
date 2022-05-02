@@ -38,7 +38,6 @@ const handleMassage = async function (
   phase,
   callback
 ) {
-  console.log("perfil", perfil)
   obj = {
     ...obj,
     message: `
@@ -72,7 +71,6 @@ const handleMassage = async function (
       }
     }
   } else {
-    console.log("teste perfil",phase)
     if (phase[perfil] && phase[perfil][`notify_${action}`]) {
       obj = {
         ...obj,
