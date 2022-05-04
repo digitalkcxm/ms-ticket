@@ -34,7 +34,7 @@ export default class PhaseController {
     this.departmentModel = new DepartmentModel(database, logger);
     this.departmentController = new DepartmentController(database, logger);
     this.formTemplate = new FormTemplate(logger);
-    this.formDocuments = new FormDocuments()
+    this.formDocuments = new FormDocuments();
   }
   async create(req, res) {
     // Validação do corpo da requisição.
@@ -72,9 +72,7 @@ export default class PhaseController {
       // Executa uma validação no formulario passado pelo cliente.
 
       if (req.body.form) {
-        const templateValidate = await this._formPhase(
-          req.body.column
-        );
+        const templateValidate = await this._formPhase(req.body.column);
 
         if (!templateValidate) {
           return res.status(400).send({ errors: templateValidate });
@@ -179,7 +177,7 @@ export default class PhaseController {
     const keys = Object.keys(obj);
 
     const slaSettings = async function (sla, type, slaModel) {
-      if( sla.unit_of_time && sla.time){
+      if (sla.unit_of_time && sla.time) {
         await slaModel.slaPhaseSettings({
           id_phase: idPhase,
           id_sla_type: type,
@@ -484,32 +482,29 @@ export default class PhaseController {
       );
 
       if (req.body.form && req.body.column) {
-        if(phase[0].id_form_template){
-          console.log("id_form_template ===>",phase[0].id_form_template)
+        if (phase[0].id_form_template) {
+          console.log("id_form_template ===>", phase[0].id_form_template);
           let validations = await this._checkColumnsFormTemplate(
             req.body.column,
             phase[0].id_form_template
           );
           if (validations.length > 0)
             return res.status(400).send({ error: validations });
-  
+
           validations.column = req.body.column;
           await this.formTemplate.updateRegister(validations._id, validations);
           phase[0].department = req.body.department;
           phase[0].formTemplate = req.body.column;
           delete phase[0].id_form_template;
-        }else{
-          const templateValidate = await this._formPhase(
-            req.body.column
-          );
-  
+        } else {
+          const templateValidate = await this._formPhase(req.body.column);
+
           if (!templateValidate) {
             return res.status(400).send({ errors: templateValidate });
           }
           this.logger.info("Return of validate template", templateValidate);
           obj.id_form_template = templateValidate;
         }
-        
       }
 
       await cache(
@@ -566,28 +561,28 @@ export default class PhaseController {
   async _checkColumnsFormTemplate(newTemplate, template) {
     const register = await this.formTemplate.findRegister(template);
     const errors = [];
-    
-      if (newTemplate.length < register.column.length)
+
+    if (newTemplate.length < register.column.length)
       errors.push(
         "Não é possivel remover campos do formulario, apenas inativa-los"
       );
 
-      register.column.map((valueA) => {
-        let validate = 0;
-        newTemplate.map((valueB) =>
-          valueA.column == valueB.column ? validate++ : ""
+    register.column.map((valueA) => {
+      let validate = 0;
+      newTemplate.map((valueB) =>
+        valueA.column == valueB.column ? validate++ : ""
+      );
+
+      if (validate <= 0)
+        errors.push(
+          `A coluna ${valueA.label} não pode ser removido ou o valor do campo column não pode ser alterado, apenas inativado`
         );
-  
-        if (validate <= 0)
-          errors.push(
-            `A coluna ${valueA.label} não pode ser removido ou o valor do campo column não pode ser alterado, apenas inativado`
-          );
-  
-        if (validate > 1)
-          errors.push(
-            `A coluna ${valueA.label} não pode ser igual a um ja criado`
-          );
-      });
+
+      if (validate > 1)
+        errors.push(
+          `A coluna ${valueA.label} não pode ser igual a um ja criado`
+        );
+    });
 
     if (errors.length > 0) return errors;
 
@@ -702,9 +697,7 @@ export default class PhaseController {
       if (departments.length > 0 && Array.isArray(departments)) {
         let phases;
         for (const department of departments) {
-          phases.concat(
-            await this._phaseForCache(department, authorization)
-          );
+          phases.concat(await this._phaseForCache(department, authorization));
         }
         return phases;
       } else {
@@ -833,12 +826,8 @@ export default class PhaseController {
         if (!ticket.closed) {
           await this.ticketModel.closedTicket(ticket.id);
 
-          await this.slaController.updateSLA(
-            ticket.id,
-            req.params.id,
-            3
-          );
-  
+          await this.slaController.updateSLA(ticket.id, req.params.id, 3);
+
           await this.slaModel.disableSLA(ticket.id);
         }
       }
@@ -1958,27 +1947,26 @@ export default class PhaseController {
       );
 
       if (register && register.column) {
-        
         const campos_calculaveis = register.column.filter((x) => x.calculable);
         if (campos_calculaveis.length > 0) {
           for await (const forms of result.forms) {
-        
             const documents = await this.formDocuments.findRegister(
               forms.id_form
             );
 
-            if(documents){
+            if (documents) {
               for (const campo of campos_calculaveis) {
                 if (!campos_calculados[campo.column])
                   campos_calculados[campo.column] = 0;
-  
-                campos_calculados[campo.column] =
-                  parseInt(campos_calculados[campo.column]) +
-                  parseInt(documents[campo.column]);
+
+                if (parseInt(documents[campo.column])) {
+                  campos_calculados[campo.column] =
+                    parseInt(campos_calculados[campo.column]) +
+                    parseInt(documents[campo.column]);
+                }
               }
             }
-            }
-            
+          }
         }
       }
     }
