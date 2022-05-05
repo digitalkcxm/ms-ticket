@@ -36,6 +36,11 @@ export default function ticket(database = {}, logger = {}) {
   );
   router.get("/", (req, res) => ticketController.getAllTicket(req, res));
 
+  router.post("/", async (req, res) => {
+    const result = await ticketController.queueCreate(req.body)
+    return res.status(201).json(result)
+  });
+
   router.post("/activities", (req, res) =>
     ticketController.createActivities(req, res)
   );
