@@ -1102,6 +1102,8 @@ export default class TicketController {
           data.email ? data.email : "",
           data.type_user ? data.type_user : 1
         );
+        await this.phaseModel.disablePhaseTicket(data.id);
+
         let phase_id = await this.ticketModel.createPhaseTicket({
           id_phase: phase[0].id,
           id_ticket: data.id,
