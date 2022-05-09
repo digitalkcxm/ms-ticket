@@ -596,9 +596,8 @@ export default class PhaseController {
   async _formatPhase(result, mongodb, search = false, status, authorization) {
     status = JSON.parse(status);
 
-    result.openTickets =[]
-    result.closeTickets =[]
     result.header = {};
+    result.ticket = [];
 
     result.sla = await this.slaController.settingsSLA(result.id);
 
@@ -626,22 +625,38 @@ export default class PhaseController {
     }
 
     if (!search) {
+      let openTickets = "";
       if (status && Array.isArray(status)) {
-        await status.map(async (x) =>
+        for await (const x of status) {
           !x
-            ? (result.openTickets = await this.ticketModel.getTicketByPhaseAndStatus(result.id,[x]))
-            : (result.closeTickets = await formatClosedTickets(
+            ? (openTickets = await this.ticketModel.getTicketByPhaseAndStatus(
+                result.id,
+                [x]
+              ))
+            : (result.ticket = await formatClosedTickets(
                 redis,
                 authorization,
                 result,
                 this
-              ))
-        );
+              ));
+        }
       } else {
-        result.openTickets = await this.ticketModel.getTicketByPhase(result.id);
+        openTickets = await this.ticketModel.getTicketByPhase(result.id);
       }
-      if(result.openTickets && Array.isArray(result.openTickets) && result.openTickets.length > 0)
-      result.openTickets.map(async ticket => await formatTicketForPhase(result, ticket, this.database, this.logger))
+      
+      if (openTickets && Array.isArray(openTickets) && openTickets.length > 0) {
+        
+        for await(const ticket of openTickets){
+          result.ticket.push(
+            await formatTicketForPhase(
+              result,
+              ticket,
+              this.database,
+              this.logger
+            )
+          )
+            }
+      }
     }
 
     result.department_can_create_protocol &&
@@ -676,6 +691,7 @@ export default class PhaseController {
     result.created_at = moment(result.created_at).format("DD/MM/YYYY HH:mm:ss");
     result.updated_at = moment(result.updated_at).format("DD/MM/YYYY HH:mm:ss");
     delete result.id_form_template;
+
     return result;
   }
 
