@@ -1288,8 +1288,13 @@ export default class TicketController {
         user.id
       );
 
-      if (result && result[0].id) {
+      if (result && result[0].id) {{
         await redis.del(`msTicket:ticket:${result[0].id}`);
+        await redis.del(
+          `msTicket:header:${authorization}:closeTickets:${phase.id}`
+        );
+      }
+        
 
         let ticket = await this.ticketModel.getTicketById(
           req.params.id,
