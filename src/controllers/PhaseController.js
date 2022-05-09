@@ -19,7 +19,10 @@ import TypeColumnModel from "../models/TypeColumnModel.js";
 import DepartmentController from "./DepartmentController.js";
 import templateValidate from "../helpers/TemplateValidate.js";
 import CallbackDigitalk from "../services/CallbackDigitalk.js";
-import { formatTicketForPhase } from "../helpers/FormatTicket.js";
+import {
+  formatTicketForPhase,
+  formatClosedTickets,
+} from "../helpers/FormatTicket.js";
 
 export default class PhaseController {
   constructor(database = {}, logger = {}) {
@@ -332,12 +335,13 @@ export default class PhaseController {
   }
   // departments = JSON.parse(departments)
   async _queryDepartment(department, authorization, status, db, enable) {
+    console.time("getPhase");
     let result = await this.phaseModel.getAllPhasesByDepartmentID(
       department,
       authorization,
       enable
     );
-
+    console.timeEnd("getPhase");
     for (let phase of result) {
       phase = await this._formatPhase(phase, db, false, status, authorization);
     }
@@ -590,15 +594,13 @@ export default class PhaseController {
   }
 
   async _formatPhase(result, mongodb, search = false, status, authorization) {
-    result.ticket = [];
+    status = JSON.parse(status);
+
+    result.openTickets =[]
+    result.closeTickets =[]
     result.header = {};
 
     result.sla = await this.slaController.settingsSLA(result.id);
-    // const department = await this.phaseModel.getDepartmentPhase(result.id);
-
-    // department.length > 0
-    //   ? (result.department = department[0].id_department)
-    //   : 0;
 
     if (result.id_form_template) {
       const register = await this.formTemplate.findRegister(
@@ -624,22 +626,22 @@ export default class PhaseController {
     }
 
     if (!search) {
-      let tickets = "";
-      if (status) {
-        tickets = await this.ticketModel.getTicketByPhaseAndStatus(
-          result.id,
-          status
+      if (status && Array.isArray(status)) {
+        await status.map(async (x) =>
+          !x
+            ? (result.openTickets = await this.ticketModel.getTicketByPhaseAndStatus(result.id,[x]))
+            : (result.closeTickets = await formatClosedTickets(
+                redis,
+                authorization,
+                result,
+                this
+              ))
         );
       } else {
-        tickets = await this.ticketModel.getTicketByPhase(result.id);
+        result.openTickets = await this.ticketModel.getTicketByPhase(result.id);
       }
-
-      for await (let ticket of tickets) {
-        result.ticket.push(
-          await formatTicketForPhase(result, ticket, this.database, this.logger)
-        );
-        // if (ticket) const getByPhaseTicket(id_phase, id_ticket);
-      }
+      if(result.openTickets && Array.isArray(result.openTickets) && result.openTickets.length > 0)
+      result.openTickets.map(async ticket => await formatTicketForPhase(result, ticket, this.database, this.logger))
     }
 
     result.department_can_create_protocol &&

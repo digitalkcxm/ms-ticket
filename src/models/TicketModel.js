@@ -316,9 +316,7 @@ export default class TicketModel {
 
   async getTicketByPhaseAndStatus(id_phase, status) {
     try {
-      let newStatus;
-      typeof status ? (newStatus = JSON.parse(status)) : (newStatus = status);
-
+      console.log("status", status);
       return await this.database("phase_ticket")
         .select({
           id: "ticket.id",
@@ -339,7 +337,7 @@ export default class TicketModel {
         .leftJoin("ticket", "ticket.id", "phase_ticket.id_ticket")
         .leftJoin("users", "users.id", "ticket.id_user")
         .leftJoin("status_ticket", "status_ticket.id", "ticket.id_status")
-        .whereIn("ticket.closed", newStatus)
+        .whereIn("ticket.closed", status)
         .andWhere("phase_ticket.id_phase", id_phase)
         .andWhere("phase_ticket.active", true);
     } catch (err) {
@@ -477,7 +475,8 @@ export default class TicketModel {
     try {
       return await this.database("vw_dash_tickets")
         .select("*")
-        .where("id_company", id_company).limit(1);
+        .where("id_company", id_company)
+        .limit(1);
     } catch (err) {
       this.logger.error(err, "Error when get view dash ticket.");
       return err;
@@ -665,7 +664,7 @@ export default class TicketModel {
         })
         .leftJoin("users", "users.id", `ticket_protocol.id_user`)
         .where("ticket_protocol.id_ticket", id_ticket)
-        .andWhere("ticket_protocol.id_company", id_company)
+        .andWhere("ticket_protocol.id_company", id_company);
     } catch (err) {
       this.logger.error(err, "Erro ao linkar o protocolo ao ticket.");
       return err;
@@ -731,7 +730,6 @@ export default class TicketModel {
         ${default_where} customer.email ILIKE '%${search}%' OR 
         ${default_where} customer.identification_document ILIKE '%${search}%' OR
         ${default_where} ticket.display_name ILIKE '%${search}%'`;
-        
       } else {
         query = `
         ${default_where} CAST(ticket.id_seq AS TEXT) LIKE '%${search}%' OR 
