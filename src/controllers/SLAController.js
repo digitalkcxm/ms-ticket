@@ -123,7 +123,7 @@ export default class SLAController {
     } else {
       const ticket = await this.ticketModel.getTicketByPhaseAndStatus(
         phase_id,
-        JSON.stringify([closed])
+        [closed]
       );
       obj.sem_sla = obj.sem_sla + ticket.length;
     }
