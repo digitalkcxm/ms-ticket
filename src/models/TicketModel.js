@@ -720,17 +720,13 @@ export default class TicketModel {
         query = `
         ${default_where} users.name ILIKE '%${search}%' OR 
         ${default_where} customer.name ILIKE '%${search}%' OR 
-        ${default_where} customer.email ILIKE '%${search}%' OR 
-        ${default_where} customer.identification_document ILIKE '%${search}%' OR
         ${default_where} ticket.display_name ILIKE '%${search}%'`;
       } else {
         query = `
         ${default_where} CAST(ticket.id_seq AS TEXT) LIKE '%${search}%' OR 
         ${default_where} CAST(ticket.id_protocol AS TEXT) LIKE '%${search}%' OR
         ${default_where} CAST(ticket.id_user AS TEXT) LIKE '%${search}%' OR
-        ${default_where} CAST(ticket_protocol.id_protocol AS TEXT) LIKE '%${search}%' OR
-        ${default_where} CAST(customer.phone AS TEXT) LIKE '%${search}%' OR
-        ${default_where} CAST(customer.identification_document AS TEXT) LIKE '%${search}%'`;
+        ${default_where} CAST(ticket_protocol.id_protocol AS TEXT) LIKE '%${search}%'`;
       }
 
       const result = await this.database.raw(`
@@ -750,7 +746,8 @@ export default class TicketModel {
         ticket.display_name,
         status_ticket.name as status
       from ticket
-      left join users on users.id = ticket.id_user
+      left join responsible_ticket as rt on rt.id_ticket = ticket.id
+      left join users on users.id = rt.id_user
       left join phase_ticket on phase_ticket.id_ticket = ticket.id
       left join phase on phase.id = phase_ticket.id_phase
       left join customer on customer.id_ticket = ticket.id
