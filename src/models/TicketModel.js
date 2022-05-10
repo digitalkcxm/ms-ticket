@@ -791,22 +791,4 @@ export default class TicketModel {
       return [];
     }
   }
-
-  async getLastResponsibleTicket(id_ticket) {
-    try {
-      const result = await this.database("responsible_ticket")
-        .select("users.name")
-        .leftJoin("users", "users.id", "responsible_ticket.id_user")
-        .where("responsible_ticket.id_ticket", id_ticket)
-        .orderBy("responsible_ticket.id", "desc")
-
-      return result[0];
-    } catch (err) {
-      this.logger.error(
-        err,
-        "Erro ao capturar o ultimo responsavel pelo ticket."
-      );
-      return err;
-    }
-  }
 }

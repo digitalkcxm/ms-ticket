@@ -19,26 +19,23 @@ import TypeColumnModel from "../models/TypeColumnModel.js";
 import DepartmentController from "./DepartmentController.js";
 import templateValidate from "../helpers/TemplateValidate.js";
 import CallbackDigitalk from "../services/CallbackDigitalk.js";
-import {
-  formatTicketForPhase,
-  formatClosedTickets,
-  phaseFormat
-} from "../helpers/FormatTicket.js";
+import FormatTicket from "../helpers/FormatTicket.js";
 
 export default class PhaseController {
   constructor(database = {}, logger = {}) {
     this.logger = logger;
     this.database = database;
+    this.formDocuments = new FormDocuments();
+    this.formTemplate = new FormTemplate(logger);
     this.slaModel = new SLAModel(database, logger);
     this.phaseModel = new PhaseModel(database, logger);
     this.ticketModel = new TicketModel(database, logger);
+    this.formatTicket = new FormatTicket(database,logger)
     this.slaController = new SLAController(database, logger);
     this.userController = new UserController(database, logger);
     this.typeColumnModel = new TypeColumnModel(database, logger);
     this.departmentModel = new DepartmentModel(database, logger);
     this.departmentController = new DepartmentController(database, logger);
-    this.formTemplate = new FormTemplate(logger);
-    this.formDocuments = new FormDocuments();
   }
   async create(req, res) {
     // Validação do corpo da requisição.
@@ -257,7 +254,7 @@ export default class PhaseController {
           );
           for await (let ticket of tickets) {
             result[i].ticket.push(
-              await formatTicketForPhase(
+              await this.formatTicket.formatTicketForPhase(
                 result[i],
                 ticket,
                 this.database,
@@ -634,7 +631,7 @@ export default class PhaseController {
                 result.id,
                 [x]
               ))
-            : (result.ticket = await formatClosedTickets(
+            : (result.ticket = await this.formatTicket.formatClosedTickets(
                 redis,
                 authorization,
                 result,
@@ -648,7 +645,7 @@ export default class PhaseController {
       
       if (openTickets && Array.isArray(openTickets) && openTickets.length > 0) {
         console.time("TicketFormat")
-        result.ticket = await phaseFormat({id: result.id, sla: result.sla},openTickets,this)
+        result.ticket = await this.formatTicket.phaseFormat({id: result.id, sla: result.sla},openTickets,this)
         console.timeEnd("TicketFormat")
       }
     }
@@ -1310,7 +1307,7 @@ export default class PhaseController {
           obj[i].id,
           req.headers.authorization
         );
-        obj[i] = await formatTicketForPhase(
+        obj[i] = await this.formatTicket.formatTicketForPhase(
           { id: obj[i][0].phase_id },
           obj[i][0],
           this.database,
