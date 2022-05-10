@@ -619,7 +619,6 @@ export default class PhaseController {
       result.ticket = [];
       let openTickets = "";
       if (status && Array.isArray(status)) {
-        console.time("ticket");
         for await (const x of status) {
           !x
             ? (openTickets = await this.ticketModel.getTicketByPhaseAndStatus(
@@ -633,19 +632,16 @@ export default class PhaseController {
                 this
               ));
         }
-        console.timeEnd("ticket");
       } else {
         openTickets = await this.ticketModel.getTicketByPhase(result.id);
       }
 
       if (openTickets && Array.isArray(openTickets) && openTickets.length > 0) {
-        console.time("TicketFormat");
         result.ticket = await this.formatTicket.phaseFormat(
           { id: result.id, sla: result.sla },
           openTickets,
           this
         );
-        console.timeEnd("TicketFormat");
       }
     }
 
