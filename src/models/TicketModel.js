@@ -323,6 +323,7 @@ export default class TicketModel {
           id_user: "users.id_users",
           user: "users.name",
           closed: "ticket.closed",
+          created_at: "ticket.created_at",
           updated_at: "ticket.updated_at",
           display_name: "ticket.display_name",
           status: "status_ticket.name",
