@@ -257,8 +257,6 @@ export default class PhaseController {
             { id: result[i].id, sla: result[i].sla },
             tickets
           );
-          
-          console.log('teste',result[i].ticket);
           result[i] = await this._formatPhase(
             result[i],
             req.app.locals.db,
@@ -266,7 +264,6 @@ export default class PhaseController {
             false,
             req.headers.authorization
           );
-          console.log('teste',result[i].ticket);
         }
         // }
       } else if (req.query.department) {
