@@ -22,6 +22,7 @@ import CallbackDigitalk from "../services/CallbackDigitalk.js";
 import {
   formatTicketForPhase,
   formatClosedTickets,
+  phaseFormat
 } from "../helpers/FormatTicket.js";
 
 export default class PhaseController {
@@ -335,13 +336,12 @@ export default class PhaseController {
   }
   // departments = JSON.parse(departments)
   async _queryDepartment(department, authorization, status, db, enable) {
-    console.time("getPhase");
+
     let result = await this.phaseModel.getAllPhasesByDepartmentID(
       department,
       authorization,
       enable
     );
-    console.timeEnd("getPhase");
     for (let phase of result) {
       phase = await this._formatPhase(phase, db, false, status, authorization);
     }
@@ -627,6 +627,7 @@ export default class PhaseController {
     if (!search) {
       let openTickets = "";
       if (status && Array.isArray(status)) {
+        console.time('ticket')
         for await (const x of status) {
           !x
             ? (openTickets = await this.ticketModel.getTicketByPhaseAndStatus(
@@ -640,22 +641,15 @@ export default class PhaseController {
                 this
               ));
         }
+        console.timeEnd('ticket')
       } else {
         openTickets = await this.ticketModel.getTicketByPhase(result.id);
-      }
+      } 
       
       if (openTickets && Array.isArray(openTickets) && openTickets.length > 0) {
-        
-        for await(const ticket of openTickets){
-          result.ticket.push(
-            await formatTicketForPhase(
-              result,
-              ticket,
-              this.database,
-              this.logger
-            )
-          )
-            }
+        console.time("TicketFormat")
+        result.ticket = await phaseFormat({id: result.id, sla: result.sla},openTickets,this)
+        console.timeEnd("TicketFormat")
       }
     }
 

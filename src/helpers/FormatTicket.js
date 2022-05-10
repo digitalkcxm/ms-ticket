@@ -1,6 +1,6 @@
 import moment from "moment";
 
-import TicketModel from "../models/TicketModel.js";
+
 
 // const UnitOfTimeModel = require("../models/UnitOfTimeModel");
 
@@ -10,30 +10,23 @@ import TicketModel from "../models/TicketModel.js";
 // const ActivitiesModel = require("../models/ActivitiesModel");
 // const activitiesModel = new ActivitiesModel();
 
-import SLAController from "../controllers/SLAController.js";
 
-export async function formatTicketForPhase(phase, ticket, database, logger) {
-  const ticketModel = new TicketModel(database, logger);
-  const slaController = new SLAController(database, logger);
+export async function phaseFormat(phase, tickets, props){
+  
+  phase.sla && await tickets.map(ticket => props.slaController.ticketSLA(phase.id,ticket.id)) 
 
-  ticket.sla = await slaController.ticketSLA(phase.id, ticket.id);
+  await tickets.map(ticket =>  (ticket.responsible = props.ticketModel.getLastResponsibleTicket(ticket.id)) && (ticket.updated_at = moment(ticket.updated_at).format("DD/MM/YYYY HH:mm:ss")))
+  
+  return tickets
+}
 
-  ticket.start_ticket
-    ? (ticket.start_ticket = moment(ticket.start_ticket).format(
-        "DD/MM/YYYY HH:mm:ss"
-      ))
-    : "";
-  ticket.created_at = moment(ticket.created_at).format("DD/MM/YYYY HH:mm:ss");
+export async function formatTicketForPhase(phase, ticket,props) {
+  
+  phase.sla && (ticket.sla = await props.slaController.ticketSLA(phase.id, ticket.id))
+
+  // ticket.created_at = moment(ticket.created_at).format("DD/MM/YYYY HH:mm:ss");
   ticket.updated_at = moment(ticket.updated_at).format("DD/MM/YYYY HH:mm:ss");
-  const responsible = await ticketModel.getLastResponsibleTicket(ticket.id);
-
-  responsible && responsible.name
-    ? (ticket.responsible = responsible.name)
-    : (ticket.responsible = "");
-
-  delete ticket.id_company;
-  delete ticket.id_form;
-
+  ticket.responsible = await props.ticketModel.getLastResponsibleTicket(ticket.id);
   return ticket;
 }
 
@@ -48,7 +41,7 @@ export async function formatClosedTickets(redis, authorization, phase, props) {
     tickets = await props.ticketModel.getTicketByPhaseAndStatus(phase.id, [true]);
 
     for await (let ticket of tickets) {
-      await formatTicketForPhase(phase, ticket, props.database, props.logger);
+      await formatTicketForPhase(phase, ticket, props);
     }
     
     await redis.set(

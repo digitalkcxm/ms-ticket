@@ -316,23 +316,16 @@ export default class TicketModel {
 
   async getTicketByPhaseAndStatus(id_phase, status) {
     try {
-      console.log("status", status);
       return await this.database("phase_ticket")
         .select({
           id: "ticket.id",
           id_seq: "ticket.id_seq",
           id_user: "users.id_users",
           user: "users.name",
-          id_protocol: "ticket.id_protocol",
           closed: "ticket.closed",
-          id_form: `ticket.id_form`,
-          department_origin: `ticket.department_origin`,
-          created_at: "ticket.created_at",
           updated_at: "ticket.updated_at",
           display_name: "ticket.display_name",
-          start_ticket: "ticket.start_ticket",
           status: "status_ticket.name",
-          id_tab: `ticket.id_tab`,
         })
         .leftJoin("ticket", "ticket.id", "phase_ticket.id_ticket")
         .leftJoin("users", "users.id", "ticket.id_user")
@@ -806,7 +799,6 @@ export default class TicketModel {
         .leftJoin("users", "users.id", "responsible_ticket.id_user")
         .where("responsible_ticket.id_ticket", id_ticket)
         .orderBy("responsible_ticket.id", "desc")
-        .limit(1);
 
       return result[0];
     } catch (err) {
