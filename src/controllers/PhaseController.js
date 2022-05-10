@@ -30,7 +30,7 @@ export default class PhaseController {
     this.slaModel = new SLAModel(database, logger);
     this.phaseModel = new PhaseModel(database, logger);
     this.ticketModel = new TicketModel(database, logger);
-    this.formatTicket = new FormatTicket(database,logger)
+    this.formatTicket = new FormatTicket(database, logger);
     this.slaController = new SLAController(database, logger);
     this.userController = new UserController(database, logger);
     this.typeColumnModel = new TypeColumnModel(database, logger);
@@ -252,16 +252,11 @@ export default class PhaseController {
             result[i].id,
             req.query.status
           );
-          for await (let ticket of tickets) {
-            result[i].ticket.push(
-              await this.formatTicket.formatTicketForPhase(
-                result[i],
-                ticket,
-                this.database,
-                this.logger
-              )
-            );
-          }
+
+          result[i].ticket = await this.formatTicket.phaseFormat(
+            { id: result[i].id, sla: result[i].sla },
+            tickets
+          );
           result[i] = await this._formatPhase(
             result[i],
             req.app.locals.db,
@@ -333,7 +328,6 @@ export default class PhaseController {
   }
   // departments = JSON.parse(departments)
   async _queryDepartment(department, authorization, status, db, enable) {
-
     let result = await this.phaseModel.getAllPhasesByDepartmentID(
       department,
       authorization,
@@ -594,7 +588,7 @@ export default class PhaseController {
     status = JSON.parse(status);
 
     result.header = {};
-    result.ticket = [];
+    
 
     result.sla = await this.slaController.settingsSLA(result.id);
 
@@ -622,9 +616,9 @@ export default class PhaseController {
     }
 
     if (!search) {
+      result.ticket = [];
       let openTickets = "";
       if (status && Array.isArray(status)) {
-        console.time('ticket')
         for await (const x of status) {
           !x
             ? (openTickets = await this.ticketModel.getTicketByPhaseAndStatus(
@@ -638,15 +632,16 @@ export default class PhaseController {
                 this
               ));
         }
-        console.timeEnd('ticket')
       } else {
         openTickets = await this.ticketModel.getTicketByPhase(result.id);
-      } 
-      
+      }
+
       if (openTickets && Array.isArray(openTickets) && openTickets.length > 0) {
-        console.time("TicketFormat")
-        result.ticket = await this.formatTicket.phaseFormat({id: result.id, sla: result.sla},openTickets,this)
-        console.timeEnd("TicketFormat")
+        result.ticket = await this.formatTicket.phaseFormat(
+          { id: result.id, sla: result.sla },
+          openTickets,
+          this
+        );
       }
     }
 

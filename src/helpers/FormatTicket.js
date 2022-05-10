@@ -15,14 +15,19 @@ export default class FormatTicket {
         this.slaController.ticketSLA(phase.id, ticket.id)
       ));
 
-    await tickets.map(
-      async (ticket) =>
-        (ticket.responsible =
-          await this.responsibleModel.getAllResponsibleByTicket(ticket.id)) &&
-        (ticket.updated_at = moment(ticket.updated_at).format(
-          "DD/MM/YYYY HH:mm:ss"
-        ))
-    );
+    tickets && Array.isArray(tickets) &&
+      (await tickets.map(
+        async (ticket) =>
+          (ticket.responsible =
+            await this.responsibleModel.getAllResponsibleByTicket(ticket.id)) &&
+          (ticket.updated_at = moment(ticket.updated_at).format(
+            "DD/MM/YYYY HH:mm:ss"
+          ))
+          &&
+          (ticket.created_at = moment(ticket.created_at).format(
+            "DD/MM/YYYY HH:mm:ss"
+          ))
+      ));
 
     return tickets;
   }
