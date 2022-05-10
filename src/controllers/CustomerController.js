@@ -6,7 +6,7 @@ import { validationResult } from "express-validator";
 import CustomerModel from "../models/CustomerModel.js";
 import CallbackDigitalk from "../services/CallbackDigitalk.js";
 import PhaseController from "../controllers/PhaseController.js";
-import { formatTicketForPhase } from "../helpers/FormatTicket.js";
+import FormatTicket from "../helpers/FormatTicket.js";
 
 export default class CustomerController {
   constructor(database = {}, logger = {}) {
@@ -16,6 +16,7 @@ export default class CustomerController {
     this.slaController = new SLAController(database, logger);
     this.customerModel = new CustomerModel(database, logger);
     this.phaseController = new PhaseController(database, logger);
+    this.formatTicket= new FormatTicket(database,logger)
   }
 
   async create(req, res) {
@@ -53,7 +54,7 @@ export default class CustomerController {
         req.body.id_ticket,
         req.headers.authorization
       );
-      ticket = await formatTicketForPhase(
+      ticket = await this.ticketFormat.formatTicketForPhase(
         { id: ticket[0].phase_id },
         ticket[0],
         this.database,

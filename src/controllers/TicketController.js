@@ -24,7 +24,7 @@ import ResponsibleModel from "../models/ResponsibleModel.js";
 import DepartmentController from "./DepartmentController.js";
 import AttachmentsModel from "../models/AttachmentsModel.js";
 import CallbackDigitalk from "../services/CallbackDigitalk.js";
-import { formatTicketForPhase } from "../helpers/FormatTicket.js";
+import FormatTicket from "../helpers/FormatTicket.js";
 import Notify from "../helpers/Notify.js";
 const sla_status = {
   emdia: 1,
@@ -38,10 +38,11 @@ export default class TicketController {
     this.database = database;
     this.tabModel = new TabModel(database);
     this.formTemplate = new FormTemplate(logger);
-    this.slaModel = new SLAModel(database, logger);
+    this.slaModel = new SLAModel(database, logger);    
     this.userModel = new UserModel(database, logger);
     this.phaseModel = new PhaseModel(database, logger);
     this.ticketModel = new TicketModel(database, logger);
+    this.formatTicket = new FormatTicket(database,logger)
     this.companyModel = new CompanyModel(database, logger);
     this.slaController = new SLAController(database, logger);
     this.customerModel = new CustomerModel(database, logger);
@@ -181,7 +182,7 @@ export default class TicketController {
       if (result && result.length > 0 && result[0].id) {
         await this.slaController.createSLAControl(phase[0].id, obj.id);
 
-        ticket = await formatTicketForPhase(
+        ticket = await this.formatTicket.formatTicketForPhase(
           { id: phase[0].id },
           ticket[0],
           this.database,
@@ -541,7 +542,7 @@ export default class TicketController {
           .status(400)
           .send({ error: "There is no ticket with this ID" });
 
-      result = await formatTicketForPhase(
+      result = await this.formatTicket.formatTicketForPhase(
         { id: result[0].phase_id },
         result[0],
         this.database,
@@ -648,7 +649,7 @@ export default class TicketController {
           .status(400)
           .send({ error: "There is no ticket with this ID" });
 
-      result = await formatTicketForPhase(
+      result = await this.formatTicket.formatTicketForPhase(
         { id: result[0].phase_id },
         result[0],
         this.database,
@@ -1005,7 +1006,7 @@ export default class TicketController {
 
       const tickets = [];
       for (const ticket of result) {
-        const ticketFormated = await formatTicketForPhase(
+        const ticketFormated = await this.formatTicket.formatTicketForPhase(
           { id: ticket.id_phase },
           ticket,
           this.database,
@@ -1057,7 +1058,7 @@ export default class TicketController {
       //   data.id,
       //   data.authorization
       // );
-      ticket = await formatTicketForPhase(
+      ticket = await this.formatTicket.formatTicketForPhase(
         { id: ticket[0].phase_id },
         ticket[0],
         this.database,
@@ -1304,7 +1305,7 @@ export default class TicketController {
         await this.slaController.updateSLA(ticket[0].id, ticket[0].phase_id, 3);
 
         await this.slaModel.disableSLA(ticket[0].id);
-        ticket[0] = await formatTicketForPhase(
+        ticket[0] = await this.formatTicket.formatTicketForPhase(
           { id: ticket[0].phase_id },
           ticket[0],
           this.database,
@@ -1580,7 +1581,7 @@ export default class TicketController {
         req.params.id
       );
       for (let ticket of result) {
-        ticket = await formatTicketForPhase(
+        ticket = await this.formatTicket.formatTicketForPhase(
           { id: ticket.phase_id },
           ticket,
           this.database,
@@ -1942,7 +1943,7 @@ export default class TicketController {
 
       const history = [];
 
-      const slaInfo = await formatTicketForPhase(
+      const slaInfo = await this.formatTicket.formatTicketForPhase(
         { id: ticket[0].phase_id },
         ticket[0],
         this.database,
