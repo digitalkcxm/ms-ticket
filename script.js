@@ -336,9 +336,14 @@
 // update_customer();
 
 
-const array = ["text","123",123]
-
+const array = ["text","123",123, 123.12, undefined]
+let soma = 0
 for(const x of array){
  
-  console.log(!parseInt(x) )
+  console.log(isNaN(x) )
+  console.log(typeof x)
+  console.log("parse ===:",
+  parseFloat(x))
+  !isNaN(x) ?  typeof x === 'string' ? soma = soma + parseFloat(x) :  soma = soma + x :''
 }
+console.log(soma)

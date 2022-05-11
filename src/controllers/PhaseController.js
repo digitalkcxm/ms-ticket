@@ -588,7 +588,6 @@ export default class PhaseController {
     status = JSON.parse(status);
 
     result.header = {};
-    
 
     result.sla = await this.slaController.settingsSLA(result.id);
 
@@ -1303,10 +1302,8 @@ export default class PhaseController {
           req.headers.authorization
         );
         obj[i] = await this.formatTicket.formatTicketForPhase(
-          { id: obj[i][0].phase_id },
-          obj[i][0],
-          this.database,
-          this.logger
+          { id: obj[i][0].phase_id, sla: false },
+          obj[i]
         );
       }
       return res.status(200).send(obj);
@@ -1963,11 +1960,19 @@ export default class PhaseController {
                 if (!campos_calculados[campo.column])
                   campos_calculados[campo.column] = 0;
 
-                if (parseInt(documents[campo.column])) {
-                  campos_calculados[campo.column] =
-                    parseInt(campos_calculados[campo.column]) +
-                    parseInt(documents[campo.column]);
-                }
+                  console.log('docks',documents[campo.column])
+                !isNaN(documents[campo.column])
+                  ? typeof documents[campo.column] === "string"
+                    ? (campos_calculados[campo.column] =
+                        campos_calculados[campo.column] +
+                        parseFloat(documents[campo.column]))
+                    : (campos_calculados[campo.column] =
+                        campos_calculados[campo.column] +
+                        documents[campo.column])
+                  : "";
+
+                  
+                  
               }
             }
           }
