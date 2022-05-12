@@ -712,7 +712,7 @@ export default class TicketModel {
   async searchTicket(id_company, search, id_phase, status) {
     try {
       if (typeof search === "string") search = search.toLowerCase();
-      const default_where = `ticket.id_company = '${id_company}' AND phase.id = '${id_phase}'  AND ticket.closed IN(${status
+      const default_where = `ticket.id_company = '${id_company}' AND phase.id = '${id_phase}' AND phase_ticket.active = true AND ticket.closed IN(${status
         .replace("[", "")
         .replace("]", "")
         .replace(/\"/g, "'")}) AND phase_ticket.active = true AND`;

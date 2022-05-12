@@ -15,15 +15,15 @@ export default class FormatTicket {
         this.slaController.ticketSLA(phase.id, ticket.id)
       ));
 
-    tickets && Array.isArray(tickets) &&
+    tickets &&
+      Array.isArray(tickets) &&
       (await tickets.map(
         async (ticket) =>
-          (ticket.responsible =
-            await this.responsibleModel.getAllResponsibleByTicket(ticket.id)) &&
+          (ticket.responsibles =
+            await this.responsibleModel.getActiveResponsibleByTicket(ticket.id)) &&
           (ticket.updated_at = moment(ticket.updated_at).format(
             "DD/MM/YYYY HH:mm:ss"
-          ))
-          &&
+          )) &&
           (ticket.created_at = moment(ticket.created_at).format(
             "DD/MM/YYYY HH:mm:ss"
           ))
@@ -36,11 +36,9 @@ export default class FormatTicket {
     phase.sla &&
       (ticket.sla = await this.slaController.ticketSLA(phase.id, ticket.id));
 
-    // ticket.created_at = moment(ticket.created_at).format("DD/MM/YYYY HH:mm:ss");
+    ticket.created_at = moment(ticket.created_at).format("DD/MM/YYYY HH:mm:ss");
     ticket.updated_at = moment(ticket.updated_at).format("DD/MM/YYYY HH:mm:ss");
-    ticket.responsible = await this.responsibleModel.getAllResponsibleByTicket(
-      ticket.id
-    );
+
     return ticket;
   }
 
@@ -56,9 +54,7 @@ export default class FormatTicket {
         true,
       ]);
 
-      for await (let ticket of tickets) {
-        await this.formatTicketForPhase(phase, ticket);
-      }
+      tickets = await this.phaseFormat(phase, tickets);
 
       await redis.set(
         `msTicket:header:${authorization}:closeTickets:${phase.id}`,
