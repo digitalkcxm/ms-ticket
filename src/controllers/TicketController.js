@@ -1292,7 +1292,7 @@ export default class TicketController {
       if (result && result[0].id) {{
         await redis.del(`msTicket:ticket:${result[0].id}`);
         await redis.del(
-          `msTicket:header:${authorization}:closeTickets:${phase.id}`
+          `msTicket:${req.headers.authorization}:closeTickets:${phase.id}`
         );
       }
         
@@ -1302,6 +1302,9 @@ export default class TicketController {
           req.headers.authorization
         );
 
+        await redis.del(
+          `msTicket:${req.headers.authorization}:closeTickets:${ticket[0].phase_id}`
+        );
         await this.slaController.updateSLA(ticket[0].id, ticket[0].phase_id, 3);
 
         await this.slaModel.disableSLA(ticket[0].id);
