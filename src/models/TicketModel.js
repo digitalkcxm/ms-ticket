@@ -327,6 +327,7 @@ export default class TicketModel {
           updated_at: "ticket.updated_at",
           display_name: "ticket.display_name",
           status: "status_ticket.name",
+          id_tab: "ticket.id_tab",
         })
         .leftJoin("ticket", "ticket.id", "phase_ticket.id_ticket")
         .leftJoin("users", "users.id", "ticket.id_user")
