@@ -12,7 +12,7 @@ export default class DepartmentModel {
         .where("id_company", company_id)
         .andWhere("id_department_core", department_id);
     } catch (err) {
-      this.logger(err,"Error when get department by ID.");
+      this.logger.error(err,"Error when get department by ID.");
       return err;
     }
   }
