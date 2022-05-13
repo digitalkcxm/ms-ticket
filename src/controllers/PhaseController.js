@@ -599,18 +599,11 @@ export default class PhaseController {
       if (register && register.column) {
         result.formTemplate = register.column;
 
-        for (const x of result.formTemplate) {
-          let type;
-          if (isNaN(x.type)) {
-            type = await this.typeColumnModel.getTypeByName(x.type);
-          } else {
-            type = await this.typeColumnModel.getTypeByID(x.type);
-          }
-
-          type && Array.isArray(type) && type.length > 0
-            ? (x.type = type[0].name)
-            : "";
-        }
+        result.formTemplate.map(
+          async (x) =>
+            !isNaN(x.type) &&
+            (x.type = (await this.typeColumnModel.getTypeByID(x.type))[0].name)
+        );
       }
     }
 
@@ -696,11 +689,13 @@ export default class PhaseController {
 
   async _getByDepartment(departments, authorization, db) {
     try {
-      //departments = JSON.parse(departments)
+      let phases = [];
+      departments = JSON.parse(departments);
       if (departments.length > 0 && Array.isArray(departments)) {
-        let phases;
-        for (const department of departments) {
-          phases.concat(await this._phaseForCache(department, authorization));
+        for await (const department of departments) {
+          phases = phases.concat(
+            await this._phaseForCache(department, authorization)
+          );
         }
         return phases;
       } else {
@@ -712,30 +707,43 @@ export default class PhaseController {
     }
   }
 
+
+
   async _phaseForCache(departments, authorization) {
-    const phases = [];
-    const department_id = await this.departmentModel.getByID(
-      departments,
-      authorization
-    );
-    if (department_id && department_id.length <= 0) return false;
+    try {
+      const phases = [];
+      const department_id = await this.departmentModel.getByID(
+        departments,
+        authorization
+      );
+      if (department_id && department_id.length <= 0) return false;
 
-    const result = await this.phaseModel.getPhasesByDepartmentID(
-      department_id[0].id
-    );
-    for (const phase of result) {
-      if (phase.id_form_template && phase.form) {
-        const register = await this.formTemplate.findRegister(
-          phase.id_form_template
-        );
-        if (register && register.column) phase.formTemplate = register.column;
+      const result = await this.phaseModel.getPhasesByDepartmentID(
+        department_id[0].id
+      );
+      for (const phase of result) {
+        if (phase.id_form_template && phase.form) {
+          const register = await this.formTemplate.findRegister(
+            phase.id_form_template
+          );
 
-        delete phase.id_form_template;
+          for await (const x of register.column) {
+            if (!isNaN(x.type))
+              x.type = (await this.typeColumnModel.getTypeByID(x.type))[0].name;
+          }
+          phase.formTemplate =  register.column
+
+          delete phase.id_form_template;
+        }
+        phase.department = departments;
+
+        phases.push(phase);
       }
-      phase.department = departments;
-      phases.push(phase);
+
+      return phases;
+    } catch (err) {
+      console.log(err);
     }
-    return phases;
   }
 
   async disablePhase(req, res) {
@@ -1960,7 +1968,7 @@ export default class PhaseController {
                 if (!campos_calculados[campo.column])
                   campos_calculados[campo.column] = 0;
 
-                  console.log('docks',documents[campo.column])
+                console.log("docks", documents[campo.column]);
                 !isNaN(documents[campo.column])
                   ? typeof documents[campo.column] === "string"
                     ? (campos_calculados[campo.column] =
@@ -1970,9 +1978,6 @@ export default class PhaseController {
                         campos_calculados[campo.column] +
                         documents[campo.column])
                   : "";
-
-                  
-                  
               }
             }
           }

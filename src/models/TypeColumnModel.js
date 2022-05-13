@@ -7,7 +7,7 @@ export default class TypeColumnModel {
     }
     async getTypeByName(name) {
         try {
-            console.log("teste",name)
+            
             return await this.database.raw(`select * from type_column where name ilike '%${name.replace('"', "").replace('"', "")}%'`)
         } catch (err) {
             this.logger.error(err,"Error get type by name.")
