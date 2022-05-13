@@ -690,7 +690,7 @@ export default class PhaseController {
   async _getByDepartment(departments, authorization, db) {
     try {
       let phases = [];
-      departments = JSON.parse(departments);
+      // departments = JSON.parse(departments);
       if (departments.length > 0 && Array.isArray(departments)) {
         for await (const department of departments) {
           phases = phases.concat(
