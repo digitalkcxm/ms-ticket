@@ -3,10 +3,9 @@ export default async function (
   authorization,
   department,
   phase,
-  logger,
-  database
+  props
 ) {
-  const filaController = new FilaController(logger, database);
+  const filaController = new FilaController({}, props.logger);
   await filaController.sendToQueue(
     {
       id: department,
