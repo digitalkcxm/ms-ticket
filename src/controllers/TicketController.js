@@ -196,7 +196,8 @@ export default class TicketController {
         await cache(
           data.authorization,
           dashPhase[0].id_department,
-          ticket.phase_id
+          ticket.phase_id,
+          this
         );
 
         await CallbackDigitalk(
@@ -375,7 +376,8 @@ export default class TicketController {
         await cache(
           data.authorization,
           dashPhase[0].id_department,
-          ticket[0].phase_id
+          ticket[0].phase_id,
+          this
         );
 
         await CallbackDigitalk(
@@ -493,7 +495,8 @@ export default class TicketController {
         await cache(
           data.authorization,
           dashPhase[0].id_department,
-          ticket[0].phase_id
+          ticket[0].phase_id,
+          this
         );
 
         await CallbackDigitalk(
@@ -1047,17 +1050,9 @@ export default class TicketController {
       if (!ticket || ticket.length <= 0) return false;
 
       let obj = {
-        // ids_crm: data.ids_crm,
-        // id_customer: data.id_customer,
-        // id_protocol: data.id_protocol,
         updated_at: moment().format(),
       };
 
-      // let result = await this.ticketModel.updateTicket(
-      //   obj,
-      //   data.id,
-      //   data.authorization
-      // );
       ticket = await this.formatTicket.formatTicketForPhase(
         { id: ticket[0].phase_id },
         ticket[0],
@@ -1065,9 +1060,7 @@ export default class TicketController {
         this.logger
       );
 
-      // await this._createResponsibles(userResponsible, data.id);
-
-      let phase = await this.phaseModel.getPhase(
+      let phase = await this.phaseModel.getPhaseById(
         data.id_phase,
         data.authorization
       );
@@ -1078,7 +1071,7 @@ export default class TicketController {
       
       if (ticket.phase_id != phase[0].id) {
       
-              if (data.form) {
+        if (data.form) {
           if (Object.keys(data.form).length > 0) {
             if (phase[0].form) {
               let errors = await this._validateForm(
@@ -1169,6 +1162,14 @@ export default class TicketController {
             customerModel: this.customerModel
           }
         );
+
+        await cache(
+          data.authorization,
+          phase[0].id_department,
+          phase[0].id,
+          this
+        );
+  
       } else {
         if (data.form && Object.keys(data.form).length > 0) {
           const firstPhase = await this.ticketModel.getFirstFormTicket(
@@ -1201,7 +1202,8 @@ export default class TicketController {
       await cache(
         data.authorization,
         dashPhase[0].id_department,
-        ticket.phase_id
+        ticket.phase_id,
+        this
       );
 
       await Notify(
@@ -1355,7 +1357,8 @@ export default class TicketController {
         await cache(
           req.headers.authorization,
           phase[0].id_department,
-          ticket[0].phase_id
+          ticket[0].phase_id,
+          this
         );
 
         return res.status(200).send(ticket[0]);
@@ -1750,7 +1753,8 @@ export default class TicketController {
         await cache(
           req.headers.authorization,
           phase[0].id_department,
-          ticket[0].phase_id
+          ticket[0].phase_id,
+          this
         );
 
         await Notify(

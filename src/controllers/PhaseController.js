@@ -129,7 +129,7 @@ export default class PhaseController {
         req.company[0].callback
       );
 
-      await cache(req.headers.authorization, req.body.department, obj.id);
+      await cache(req.headers.authorization, req.body.department, obj.id,this);
 
       return res.status(200).send(obj);
     } catch (err) {
@@ -505,7 +505,8 @@ export default class PhaseController {
       await cache(
         req.headers.authorization,
         req.body.department,
-        req.params.id
+        req.params.id,
+        this
       );
 
       await redis.del(`ticket:phase:${req.headers.authorization}`);
@@ -772,7 +773,8 @@ export default class PhaseController {
       await cache(
         req.headers.authorization,
         result[0].department,
-        req.params.id
+        req.params.id,
+        this
       );
 
       await CallbackDigitalk(
@@ -846,7 +848,8 @@ export default class PhaseController {
       await cache(
         req.headers.authorization,
         phase[0].id_department,
-        req.params.id
+        req.params.id,
+        this
       );
 
       return res.status(200).send({ msg: "OK" });
@@ -923,7 +926,8 @@ export default class PhaseController {
       await cache(
         req.headers.authorization,
         newPhase[0].id_department,
-        req.body.new_phase
+        req.body.new_phase,
+        this
       );
 
       return res.status(200).send({ msg: "OK" });
