@@ -1789,13 +1789,6 @@ export default class TicketController {
           responsibleCheck.length > 0 &&
           !responsibleCheck[0].start_ticket
         ) {
-          await this.ticketModel.updateResponsible(
-            req.body.id_ticket,
-            result.id,
-            {
-              start_ticket: time,
-            }
-          );
           return res
             .status(200)
             .send({ start_ticket: moment(time).format("DD/MM/YYYY HH:mm:ss") });
