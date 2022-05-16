@@ -5,7 +5,7 @@ export default async function (
   phase,
   this
 ) {
-  const filaController = new FilaController(this.logger, this.database);
+  const filaController = new FilaController({}, this.logger);
   await filaController.sendToQueue(
     {
       id: department,
