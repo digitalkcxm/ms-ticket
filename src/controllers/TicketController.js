@@ -1535,7 +1535,7 @@ export default class TicketController {
       );
       console.log(form_template);
       for (let column of form_template.column) {
-        column.required && !form[column.column]
+        column.required && !form[column.column] && column.active !== false
           ? errors.push(`O campo ${column.column} é obrigatório`)
           : "";
       }
