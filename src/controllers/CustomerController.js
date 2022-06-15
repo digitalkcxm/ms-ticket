@@ -54,7 +54,7 @@ export default class CustomerController {
         req.body.id_ticket,
         req.headers.authorization
       );
-      ticket = await this.ticketFormat.formatTicketForPhase(
+      ticket = await this.formatTicket.formatTicketForPhase(
         { id: ticket[0].phase_id },
         ticket[0],
         this.database,
