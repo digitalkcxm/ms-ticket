@@ -460,6 +460,7 @@ export default class PhaseController {
         req.headers.authorization
       );
 
+      console.log("req.body.form && req.body.column",req.body.form, req.body.column)
       if (req.body.form && req.body.column) {
         if (phase[0].id_form_template) {
           console.log("id_form_template ===>", phase[0].id_form_template);
@@ -476,8 +477,9 @@ export default class PhaseController {
           phase[0].formTemplate = req.body.column;
           delete phase[0].id_form_template;
         } else {
+          console.log('form')
           const templateValidate = await this._formPhase(req.body.column);
-
+          console.log('templateValidate',templateValidate)
           if (!templateValidate) {
             return res.status(400).send({ errors: templateValidate });
           }
