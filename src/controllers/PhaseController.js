@@ -369,6 +369,8 @@ export default class PhaseController {
         },
         create_protocol: req.body.create_protocol,
         create_ticket: req.body.create_ticket,
+        form: req.body.form,
+
       };
 
       const oldPhase = await this.phaseModel.getPhaseById(
@@ -398,31 +400,13 @@ export default class PhaseController {
           req.company[0].callback
         );
       }
-      // let result = await departmentController.checkDepartmentCreated(
-      //   req.body.department,
-      //   req.headers.authorization
-      // );
-
-      // let departmentLinkedWithPhase = await this.phaseModel.selectLinkedDepartment(
-      //   req.params.id
-      // );
-      // if (departmentLinkedWithPhase.length <= 0)
-      //   return res
-      //     .status(400)
-      //     .send({ error: "Phase without linked department" });
-
-      // if (departmentLinkedWithPhase[0].id_department != result[0].id) {
+ 
       await this._departmentPhaseLinked(
         req.body.department,
         req.headers.authorization,
         req.params.id
       );
-      //   await this.phaseModel.linkedDepartment({
-      //     id_department: result[0].id,
-      //     id_phase: req.params.id,
-      //     active: true,
-      //   });
-      // }
+
       if (
         req.body.responsible &&
         Array.isArray(req.body.responsible) &&
