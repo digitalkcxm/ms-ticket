@@ -129,7 +129,7 @@ export default class PhaseController {
         req.company[0].callback
       );
 
-      await cache(req.headers.authorization, req.body.department, obj.id,this);
+      await cache(req.headers.authorization, req.body.department, obj.id, this);
 
       return res.status(200).send(obj);
     } catch (err) {
@@ -344,11 +344,6 @@ export default class PhaseController {
     // const errors = validationResult(req)
     // if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() })
     try {
-      const usersResponsible = [];
-      const usersNotify = [];
-
-      const dpt = [];
-
       let obj = {
         icon: req.body.icon,
         name: req.body.name,
@@ -370,100 +365,62 @@ export default class PhaseController {
         create_protocol: req.body.create_protocol,
         create_ticket: req.body.create_ticket,
         form: req.body.form,
-
       };
 
+      // Valida se a fase existe na company e se está ativa no departamento
       const oldPhase = await this.phaseModel.getPhaseById(
         req.params.id,
         req.headers.authorization
       );
+
       if (!oldPhase || oldPhase.length <= 0)
         return res
           .status(400)
           .send({ error: "Error when manage phase update" });
 
-      await this.phaseModel.updatePhase(
-        obj,
-        req.params.id,
-        req.headers.authorization
-      );
-      obj.id = req.params.id;
-
-      if (obj.active != oldPhase[0].active) {
-        await CallbackDigitalk(
-          {
-            type: "socket",
-            channel: `wf_department_${req.body.department}`,
-            event: "change_active_phase",
-            obj: { id: req.params.id, active: obj.active },
-          },
-          req.company[0].callback
-        );
-      }
- 
       await this._departmentPhaseLinked(
         req.body.department,
         req.headers.authorization,
         req.params.id
       );
 
-      if (
-        req.body.responsible &&
-        Array.isArray(req.body.responsible) &&
-        req.body.responsible.length > 0
-      ) {
-        for await (const responsible of req.body.responsible) {
-          let resultUser;
-          resultUser = await this.userController.checkUserCreated(
-            responsible,
-            req.headers.authorization,
-            responsible.name,
-            responsible.phone,
-            responsible.email,
-            1
-          );
-          usersResponsible.push(resultUser.id);
+      
+      ["responsible", "notify"].map(async (x) => {
+        const usersNotify = [];
+        if (
+          req.body[x] &&
+          Array.isArray(req.body[x]) &&
+          req.body[x].length > 0
+        ) {
+          for await (const notified of req.body[x]) {
+            let resultUser;
+            resultUser = await this.userController.checkUserCreated(
+              notified,
+              req.headers.authorization,
+              notified.name,
+              notified.phone,
+              notified.email,
+              1
+            );
+            usersNotify.push(resultUser.id);
+          }
+          x === "responsible"
+            ? await this._responsiblePhase(req.params.id, usersNotify)
+            : await this._notifyPhase(req.params.id, usersNotify);
         }
-        await this._responsiblePhase(req.params.id, usersResponsible);
-        obj.responsible = req.body.responsible;
-      }
-
-      if (
-        req.body.notify &&
-        Array.isArray(req.body.notify) &&
-        req.body.notify.length > 0
-      ) {
-        for await (const notify of req.body.notify) {
-          let resultUser;
-          resultUser = await this.userController.checkUserCreated(
-            notify,
-            req.headers.authorization,
-            notify.name,
-            notify.phone,
-            notify.email,
-            1
-          );
-          usersNotify.push(resultUser.id);
-        }
-
-        await this._notifyPhase(req.params.id, usersNotify, usersResponsible);
-        obj.notify = req.body.notify;
-      }
+      });
 
       // Registra a configuração de SLA da fase.
-      if (req.body.sla) {
-        await this._phaseSLASettings(req.body.sla, obj.id);
-      }
+      req.body.sla &&
+        (await this._phaseSLASettings(req.body.sla, req.params.id));
 
       let phase = await this.phaseModel.getPhaseById(
         req.params.id,
         req.headers.authorization
       );
 
-      console.log("req.body.form && req.body.column",req.body.form, req.body.column)
       if (req.body.form && req.body.column) {
         if (phase[0].id_form_template) {
-          console.log("id_form_template ===>", phase[0].id_form_template);
           let validations = await this._checkColumnsFormTemplate(
             req.body.column,
             phase[0].id_form_template
@@ -477,15 +434,33 @@ export default class PhaseController {
           phase[0].formTemplate = req.body.column;
           delete phase[0].id_form_template;
         } else {
-          console.log('form')
           const templateValidate = await this._formPhase(req.body.column);
-          console.log('templateValidate',templateValidate)
           if (!templateValidate) {
             return res.status(400).send({ errors: templateValidate });
           }
-          this.logger.info("Return of validate template", templateValidate);
+          // Esse update é para caso a fase não tivesse formulario anteriormente e foi decidido adicionar
           obj.id_form_template = templateValidate;
+
+          this.logger.info("Return of validate template", templateValidate);
         }
+      }
+
+      await this.phaseModel.updatePhase(
+        obj,
+        req.params.id,
+        req.headers.authorization
+      );
+
+      if (obj.active != oldPhase[0].active) {
+        await CallbackDigitalk(
+          {
+            type: "socket",
+            channel: `wf_department_${req.body.department}`,
+            event: "change_active_phase",
+            obj: { id: req.params.id, active: obj.active },
+          },
+          req.company[0].callback
+        );
       }
 
       await cache(
@@ -522,7 +497,7 @@ export default class PhaseController {
     }
   }
 
-  async _notifyPhase(phase_id, usersNotify, usersResponsible) {
+  async _notifyPhase(phase_id, usersNotify) {
     try {
       await this.phaseModel.delNotifyPhase(phase_id);
 
@@ -694,8 +669,6 @@ export default class PhaseController {
     }
   }
 
-
-
   async _phaseForCache(departments, authorization) {
     try {
       const phases = [];
@@ -718,7 +691,7 @@ export default class PhaseController {
             if (!isNaN(x.type))
               x.type = (await this.typeColumnModel.getTypeByID(x.type))[0].name;
           }
-          phase.formTemplate =  register.column
+          phase.formTemplate = register.column;
 
           delete phase.id_form_template;
         }
