@@ -20,7 +20,9 @@ export default class FormatTicket {
       (await tickets.map(
         async (ticket) =>
           (ticket.responsibles =
-            await this.responsibleModel.getActiveResponsibleByTicket(ticket.id)) &&
+            await this.responsibleModel.getActiveResponsibleByTicket(
+              ticket.id
+            )) &&
           (ticket.updated_at = moment(ticket.updated_at).format(
             "DD/MM/YYYY HH:mm:ss"
           )) &&
@@ -44,7 +46,7 @@ export default class FormatTicket {
 
   async formatClosedTickets(redis, authorization, phase) {
     let tickets = await redis.get(
-      `msTicket:header:${authorization}:closeTickets:${phase.id}`
+      `msTicket:${authorization}:closeTickets:${phase.id}`
     );
 
     if (tickets) {
@@ -57,7 +59,7 @@ export default class FormatTicket {
       tickets = await this.phaseFormat(phase, tickets);
 
       await redis.set(
-        `msTicket:header:${authorization}:closeTickets:${phase.id}`,
+        `msTicket:${authorization}:closeTickets:${phase.id}`,
         JSON.stringify(tickets)
       );
       return tickets;
