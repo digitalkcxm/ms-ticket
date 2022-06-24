@@ -23,9 +23,6 @@ export default class FormatTicket {
             await this.responsibleModel.getActiveResponsibleByTicket(
               ticket.id
             )) &&
-          (ticket.updated_at = moment(ticket.updated_at).format(
-            "DD/MM/YYYY HH:mm:ss"
-          )) &&
           (ticket.created_at = moment(ticket.created_at).format(
             "DD/MM/YYYY HH:mm:ss"
           ))
