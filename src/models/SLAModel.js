@@ -94,7 +94,7 @@ export default class SLAModel {
     try {
       // Pega todos os tickets com status em aberto e atualiza seus status.
       return await this.database("ticket_sla_control as tsc")
-        .where("tsc.id_sla_status", 3)
+        .where("tsc.id_sla_status", 1)
         .andWhere("tsc.id_sla_type", type)
         .andWhere("tsc.active", true);
     } catch (err) {

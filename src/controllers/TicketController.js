@@ -1403,22 +1403,40 @@ export default class TicketController {
             if (!ticket.interaction_time && ticket.limit_sla_time < moment()) {
               await this.slaModel.updateTicketSLA(
                 ticket.id_ticket,
-                { id_sla_status: sla_status.atrasado },
-                ticket.id_sla_type
+                { id_sla_status: sla_status.atrasado, active:false},
+                ticket.id_sla_type,
+                ticket.id_phase
               );
             }
           }
           break;
-        case 2:
+        case '2':
           for (const ticket of tickets) {
+            console.log("ticket",ticket)
             if (
-              ticket.interaction_time < ticket.limit_sla_time &&
-              ticket.limit_sla_time < moment()
+              !ticket.interaction_time && ticket.limit_sla_time < moment().utc()
             ) {
               await this.slaModel.updateTicketSLA(
                 ticket.id_ticket,
-                { id_sla_status: sla_status.atrasado },
-                ticket.id_sla_type
+                { id_sla_status: sla_status.atrasado,active:false },
+                ticket.id_sla_type,
+                ticket.id_phase
+              );
+              const ticketInfo = await this.ticketModel.getTicketToCronSLA(ticket.id_ticket)
+              const companyInfo = await this.companyModel.getByIdActive(
+                ticketInfo[0].id_company
+              );
+              await Notify(
+                ticket.id_ticket,
+                ticket.id_phase,
+                companyInfo[0].id,
+                "first_reply",
+                companyInfo[0].callback,
+                {
+                  phaseModel: this.phaseModel,
+                  ticketModel: this.ticketModel,
+                  customerModel: this.customerModel
+                }
               );
             }
           }
@@ -1428,8 +1446,9 @@ export default class TicketController {
             if (ticket.limit_sla_time < moment()) {
               await this.slaModel.updateTicketSLA(
                 ticket.id_ticket,
-                { id_sla_status: sla_status.atrasado },
-                ticket.id_sla_type
+                { id_sla_status: sla_status.atrasado, active:false },
+                ticket.id_sla_type,
+                ticket.id_phase
               );
             }
           }

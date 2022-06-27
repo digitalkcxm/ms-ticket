@@ -5,13 +5,17 @@ import TicketController from "../controllers/TicketController.js";
 export default function ticket(database = {}, logger = {}) {
   const router = express.Router();
   const ticketController = new TicketController(database, logger);
-  router.use((req, res, next) =>
-    verifyCompany(req, res, next, database, logger)
-  );
+
 
   router.get("/sla_check/:type", (req, res) =>
     ticketController.cronCheckSLA(req, res)
   );
+
+  
+  router.use((req, res, next) =>
+    verifyCompany(req, res, next, database, logger)
+  );
+
   // type: 1 -> /15 * * * * *
   // type: 2 -> /5 * * * * *
   // type: 3 -> /30 * * * * *

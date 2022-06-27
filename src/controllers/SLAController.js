@@ -284,8 +284,8 @@ export default class SLAController {
               break;
             case 2:
             case 3:
-              console.log("sla",getSLA)
-              if (getSLA.filter((x) => x.id_sla_type === 1 && x.interaction_time).length > 0) {
+              console.log("sla",getSLA) 
+              if (slaSettings.find(x=> x.id_sla_type === 1) && getSLA.filter((x) => x.id_sla_type === 1 && x.interaction_time).length > 0) {
 
                   if (
                     getSLA &&
@@ -295,6 +295,15 @@ export default class SLAController {
                   ) {
                     await this.ticketControl(value, id_ticket, id_phase);
                   }
+              } else if(!slaSettings.find(x=> x.id_sla_type === 1)){
+                if (
+                  getSLA &&
+                  Array.isArray(getSLA) &&
+                  getSLA.filter((x) => x.id_sla_type === value.id_sla_type)
+                    .length <= 0
+                ) {
+                  await this.ticketControl(value, id_ticket, id_phase);
+                }
               }
               break;
             default:
