@@ -73,6 +73,21 @@ export default class TicketModel {
       return err;
     }
   }
+
+  async getTicketToCronSLA(id){
+    try {
+      return await this.database(tableName)
+        .select({
+          id: `${tableName}.id`,
+          id_company: `${tableName}.id_company`
+        })       
+        .where(`${tableName}.id`, id)
+    } catch (err) {
+      this.logger.error(err, "Error when get ticket by id.");
+      return err;
+    }
+  }
+  
   async getTicketByIdSeq(id_seq, id_company) {
     try {
       return await this.database(tableName)
