@@ -178,6 +178,7 @@ export default class PhaseController {
     const keys = Object.keys(obj);
 
     const slaSettings = async function (sla, type, slaModel) {
+      console.log("sla ===> ", sla)
       if (sla.unit_of_time && sla.time) {
         await slaModel.slaPhaseSettings({
           id_phase: idPhase,
@@ -384,7 +385,6 @@ export default class PhaseController {
         req.params.id
       );
 
-      
       ["responsible", "notify"].map(async (x) => {
         const usersNotify = [];
         if (
@@ -563,7 +563,7 @@ export default class PhaseController {
 
         result.formTemplate.map(
           async (x) =>
-            !isNaN(x.type) &&
+            !isNaN(x.type) && x.type != 0 &&
             (x.type = (await this.typeColumnModel.getTypeByID(x.type))[0].name)
         );
       }
@@ -688,7 +688,7 @@ export default class PhaseController {
           );
 
           for await (const x of register.column) {
-            if (!isNaN(x.type))
+            if (!isNaN(x.type) && x.type != 0 )
               x.type = (await this.typeColumnModel.getTypeByID(x.type))[0].name;
           }
           phase.formTemplate = register.column;
@@ -977,7 +977,7 @@ export default class PhaseController {
         const dash = JSON.parse(dashRedis);
 
         if (dash) return res.status(200).send(dash);
-
+        console.log(req.params.id);
         const result = await this.dashGenerate({
           id: req.params.id,
           authorization: req.headers.authorization,
@@ -1287,6 +1287,7 @@ export default class PhaseController {
   async dashGenerate(data) {
     if (!data.id) return false;
 
+    console.log(data);
     this.logger.info("DASH GENERATE");
     const result = await this.phaseModel.dash(data.id, data.authorization);
     result.total_tickets_nao_iniciados = 0;
