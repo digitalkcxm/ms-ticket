@@ -599,7 +599,6 @@ export default class PhaseController {
           )){
             result.ticket = [...result.ticket,ticket]
           }
-        
       }
     }
 
