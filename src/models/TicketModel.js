@@ -74,20 +74,20 @@ export default class TicketModel {
     }
   }
 
-  async getTicketToCronSLA(id){
+  async getTicketToCronSLA(id) {
     try {
       return await this.database(tableName)
         .select({
           id: `${tableName}.id`,
-          id_company: `${tableName}.id_company`
-        })       
-        .where(`${tableName}.id`, id)
+          id_company: `${tableName}.id_company`,
+        })
+        .where(`${tableName}.id`, id);
     } catch (err) {
       this.logger.error(err, "Error when get ticket by id.");
       return err;
     }
   }
-  
+
   async getTicketByIdSeq(id_seq, id_company) {
     try {
       return await this.database(tableName)
@@ -149,35 +149,35 @@ export default class TicketModel {
           `AND ticket.created_at >= '${obj.range[0]}' AND ticket.created_at <= '${obj.range[1]}'`;
       }
 
-      return await this.database(tableName)
-        .select({
-          id: `${tableName}.id`,
-          id_seq: `${tableName}.id_seq`,
-          ids_crm: `${tableName}.ids_crm`,
-          id_customer: `${tableName}.id_customer`,
-          id_protocol: `${tableName}.id_protocol`,
-          id_phase: "phase.id",
-          phase: "phase.name",
-          id_user: "users.id_users",
-          name: "users.name",
-          form: "phase.form",
-          closed: `${tableName}.closed`,
-          id_form: `${tableName}.id_form`,
-          department_origin: `${tableName}.department_origin`,
-          created_at: `${tableName}.created_at`,
-          updated_at: `${tableName}.updated_at`,
-          id_tab: `${tableName}.id_tab`,
-        })
-        .leftJoin("users", "users.id", "ticket.id_user")
-        .leftJoin("phase_ticket", "phase_ticket.id_ticket", `${tableName}.id`)
-        .leftJoin("phase", "phase.id", "phase_ticket.id_phase")
-        .leftJoin("department_phase", "department_phase.id_phase", "phase.id")
-        .leftJoin(
-          "department",
-          "department.id",
-          "department_phase.id_department"
-        )
-        .whereRaw(stringWhere);
+      const result =  await this.database.raw(`
+      SELECT DISTINCT(phase_ticket.id) AS phase_ticket_id,
+        ticket.id, 
+        ticket.id_seq, 
+        ticket.id_protocol, 
+        phase.id AS id_phase, 
+        phase.name AS phase, 
+        users.id_users, 
+        users.name, 
+        phase.form, 
+        ticket.closed, 
+        ticket.id_form, 
+        ticket.department_origin, 
+        ticket.created_at, 
+        ticket.updated_at, 
+        ticket.id_tab 
+      from ticket 
+      left join 
+        users on users.id = ticket.id_user 
+      left join 
+        phase_ticket on phase_ticket.id_ticket = ticket.id 
+      left join 
+        phase on phase.id = phase_ticket.id_phase 
+      left join 
+        department_phase on department_phase.id_phase = phase.id 
+      left join 
+        department on department.id = department_phase.id_department 
+      where ${stringWhere}`)
+      return result.rows
     } catch (err) {
       this.logger.error(err, "Error when get ticket by id.");
       return err;
