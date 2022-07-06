@@ -46,6 +46,7 @@ export default class FormatTicket {
       `msTicket:${authorization}:closeTickets:${phase.id}`
     );
 
+    console.log(tickets)
     if (tickets) {
       return JSON.parse(tickets);
     } else {
