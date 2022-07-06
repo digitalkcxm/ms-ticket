@@ -178,7 +178,7 @@ export default class PhaseController {
     const keys = Object.keys(obj);
 
     const slaSettings = async function (sla, type, slaModel) {
-      console.log("sla ===> ", sla)
+      console.log("sla ===> ", sla);
       if (sla.unit_of_time && sla.time) {
         await slaModel.slaPhaseSettings({
           id_phase: idPhase,
@@ -563,7 +563,8 @@ export default class PhaseController {
 
         result.formTemplate.map(
           async (x) =>
-            !isNaN(x.type) && x.type != 0 &&
+            !isNaN(x.type) &&
+            x.type != 0 &&
             (x.type = (await this.typeColumnModel.getTypeByID(x.type))[0].name)
         );
       }
@@ -591,11 +592,13 @@ export default class PhaseController {
       }
 
       if (openTickets && Array.isArray(openTickets) && openTickets.length > 0) {
-        result.ticket.concat(await this.formatTicket.phaseFormat(
-          { id: result.id, sla: result.sla },
-          openTickets,
-          this
-        ))
+        for( const ticket of  await this.formatTicket.phaseFormat(
+            { id: result.id, sla: result.sla },
+            openTickets,
+            this
+          )){
+            result.ticket = [...result.ticket,ticket]
+          }
       }
     }
 
@@ -688,7 +691,7 @@ export default class PhaseController {
           );
 
           for await (const x of register.column) {
-            if (!isNaN(x.type) && x.type != 0 )
+            if (!isNaN(x.type) && x.type != 0)
               x.type = (await this.typeColumnModel.getTypeByID(x.type))[0].name;
           }
           phase.formTemplate = register.column;
