@@ -10,24 +10,16 @@ export default class FormatTicket {
     this.ticketModel = new TicketModel(database, logger);
   }
   async phaseFormat(phase, tickets) {
-    phase.sla &&
-      (await tickets.map((ticket) =>
-        this.slaController.ticketSLA(phase.id, ticket.id)
-      ));
-
-    tickets &&
-      Array.isArray(tickets) &&
-      (await tickets.map(
-        async (ticket) =>
-          (ticket.responsibles =
-            await this.responsibleModel.getActiveResponsibleByTicket(
-              ticket.id
-            )) &&
-          (ticket.created_at = moment(ticket.created_at).format(
-            "DD/MM/YYYY HH:mm:ss"
-          ))
-      ));
-
+    if (tickets && Array.isArray(tickets)){
+      await tickets.map(async (ticket) => {
+        phase.sla && (ticket.sla = this.slaController.ticketSLA(phase.id, ticket.id))
+        ticket.responsibles =await this.responsibleModel.getActiveResponsibleByTicket(ticket.id);
+        ticket.created_at = moment(ticket.created_at).format("DD/MM/YYYY HH:mm:ss");
+        ticket.updated_at = moment(ticket.updated_at).format("DD/MM/YYYY HH:mm:ss");
+        return ticket
+      });
+    }
+      
     return tickets;
   }
 
