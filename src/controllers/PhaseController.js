@@ -591,11 +591,11 @@ export default class PhaseController {
       }
 
       if (openTickets && Array.isArray(openTickets) && openTickets.length > 0) {
-        result.ticket = await this.formatTicket.phaseFormat(
+        result.ticket.concat(await this.formatTicket.phaseFormat(
           { id: result.id, sla: result.sla },
           openTickets,
           this
-        );
+        ))
       }
     }
 
