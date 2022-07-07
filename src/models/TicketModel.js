@@ -224,6 +224,7 @@ export default class TicketModel {
           closed: true,
           updated_at: moment().format(),
           id_status: 3,
+          status:"Finalizado",
           time_closed_ticket: moment().format(),
           user_closed_ticket: id_user,
         })
@@ -299,30 +300,21 @@ export default class TicketModel {
 
   async getTicketByPhase(id_phase) {
     try {
-      return await this.database("phase_ticket")
+      return await this.database("ticket")
         .select({
           id: "ticket.id",
           id_seq: "ticket.id_seq",
-          ids_crm: "ticket.ids_crm",
           id_user: "users.id_users",
           user: "users.name",
-          id_customer: "ticket.id_customer",
-          id_protocol: "ticket.id_protocol",
           closed: "ticket.closed",
-          sla: "ticket.sla",
-          id_form: `ticket.id_form`,
-          department_origin: `ticket.department_origin`,
           created_at: "ticket.created_at",
           updated_at: "ticket.updated_at",
           display_name: "ticket.display_name",
-          status: "status_ticket.name",
-          id_tab: `ticket.id_tab`,
+          status: "ticket.status",
+          id_tab: "ticket.id_tab",
         })
-        .leftJoin("ticket", "ticket.id", "phase_ticket.id_ticket")
         .leftJoin("users", "users.id", "ticket.id_user")
-        .leftJoin("status_ticket", "status_ticket.id", "ticket.id_status")
-        .where("phase_ticket.id_phase", id_phase)
-        .andWhere("phase_ticket.active", true);
+        .where("ticket.id_phase", id_phase)
     } catch (err) {
       this.logger.error(err, "Error when get Ticket by phase.");
       return err;
