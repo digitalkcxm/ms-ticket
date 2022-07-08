@@ -4,7 +4,7 @@ exports.up = async function (knex, Promise) {
   return tickets.map(
     async (x) =>
       await knex("ticket").update({
-        status: status.find((y) => y.id === tickets.id_status).name,
+        status: status.find((y) => y.id === x.id_status).name,
       })
   );
 };
