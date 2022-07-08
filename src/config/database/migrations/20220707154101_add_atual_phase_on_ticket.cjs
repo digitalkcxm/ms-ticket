@@ -9,10 +9,11 @@ exports.up = async function (knex, Promise) {
       .andWhere("phase_ticket", true);
 
       
-    await knex("ticket").update({
+    return await knex("ticket").update({
         id_phase: phase_ticket[0].id,
         phase: phase_ticket[0].name,
-      })
+      }).where("id_ticket", x.id)
+
   });
 };
 
