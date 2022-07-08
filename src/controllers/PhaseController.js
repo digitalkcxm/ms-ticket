@@ -591,7 +591,8 @@ export default class PhaseController {
           this
         );
       }
-      result.ticket.concat(openTickets, closeTickets);
+      
+      result.ticket = result.ticket.concat(openTickets, closeTickets);
     }
 
     result.department_can_create_protocol &&
