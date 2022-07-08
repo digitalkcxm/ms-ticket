@@ -543,10 +543,10 @@ export default class PhaseController {
 
   async _formatPhase(result, mongodb, search = false, status, authorization) {
     status = JSON.parse(status);
-
+    result.ticket = [];
     result.header = {};
     result.sla = await this.slaController.settingsSLA(result.id);
-  if (result.id_form_template) {
+    if (result.id_form_template) {
       const register = await this.formTemplate.findRegister(
         result.id_form_template
       );
@@ -564,8 +564,8 @@ export default class PhaseController {
     }
 
     if (!search) {
-      result.ticket = [];
-      let openTickets = "";
+      let openTickets = [];
+      let closeTickets = [];
       if (status && Array.isArray(status)) {
         for await (const x of status) {
           !x
@@ -573,7 +573,7 @@ export default class PhaseController {
                 result.id,
                 [x]
               ))
-            : (result.ticket = await this.formatTicket.formatClosedTickets(
+            : (closeTickets = await this.formatTicket.formatClosedTickets(
                 redis,
                 authorization,
                 result,
@@ -585,12 +585,13 @@ export default class PhaseController {
       }
 
       if (openTickets && Array.isArray(openTickets) && openTickets.length > 0) {
-       result.ticket.concat(await this.formatTicket.phaseFormat(
-        { id: result.id, sla: result.sla },
-        openTickets,
-        this
-      ))
+        openTickets = await this.formatTicket.phaseFormat(
+          { id: result.id, sla: result.sla },
+          openTickets,
+          this
+        );
       }
+      result.ticket.concat(openTickets, closeTickets);
     }
 
     result.department_can_create_protocol &&
@@ -1980,7 +1981,7 @@ export default class PhaseController {
       header.percent_closed_tickets = 0;
     }
 
-    console.log('teste header')
+    console.log("teste header");
     header.counter_sla = await this.slaController.counter_sla(
       data.id,
       false,

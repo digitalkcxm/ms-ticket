@@ -322,6 +322,11 @@ export default class TicketController {
       );
       if (!ticket || ticket.length <= 0) return false;
 
+      let objUpdateTicket = {
+        updated_at: moment().format(),
+        id_status: 2,
+        status: "Em atendimento",
+      };
       if (!ticket[0].start_ticket) {
         await Notify(
           ticket[0].id,
@@ -336,13 +341,14 @@ export default class TicketController {
           }
         );
 
-        await this.ticketModel.updateTicket(
-          { start_ticket: moment(), id_status: 2, status: "Em atendimento" },
-          data.id_ticket,
-          data.authorization
-        );
+        objUpdateTicket = { ...objUpdateTicket, start_ticket: moment() }
       }
 
+      await this.ticketModel.updateTicket(
+        objUpdateTicket,
+        data.id_ticket,
+        data.authorization
+      );
       let obj = {
         text: data.text,
         id_ticket: data.id_ticket,
@@ -442,6 +448,12 @@ export default class TicketController {
       );
       if (!ticket || ticket.length <= 0) return false;
 
+      let objUpdateTicket = {
+        updated_at: moment().format(),
+        id_status: 2,
+        status: "Em atendimento",
+      };
+      
       if (!ticket[0].start_ticket) {
         await Notify(
           ticket[0].id,
@@ -456,12 +468,14 @@ export default class TicketController {
           }
         );
 
-        await this.ticketModel.updateTicket(
-          { start_ticket: moment(), id_status: 2, status: "Em atendimento" },
-          data.id_ticket,
-          data.authorization
-        );
+          objUpdateTicket ={...objUpdateTicket, start_ticket: moment()}
       }
+
+      await this.ticketModel.updateTicket(
+        objUpdateTicket,
+        data.id_ticket,
+        data.authorization
+      );
 
       let typeAttachments = await this.ticketModel.getTypeAttachments(
         data.type
