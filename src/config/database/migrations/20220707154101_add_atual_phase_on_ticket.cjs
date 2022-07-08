@@ -8,7 +8,7 @@ exports.up = async function (knex, Promise) {
       .where("phase_ticket.id_ticket", x.id)
       .andWhere("phase_ticket.active", true);
 
-      
+      if(Array.isArray(phase_ticket) && phase_ticket.length > 0)
     return await knex("ticket").update({
         id_phase: phase_ticket[0].id,
         phase: phase_ticket[0].name,
