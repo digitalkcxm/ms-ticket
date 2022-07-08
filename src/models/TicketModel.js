@@ -310,7 +310,7 @@ export default class TicketModel {
           created_at: "ticket.created_at",
           updated_at: "ticket.updated_at",
           display_name: "ticket.display_name",
-          status: "ticket.name",
+          status: "ticket.status",
           id_tab: "ticket.id_tab",
         })
         .leftJoin("users", "users.id", "ticket.id_user")
@@ -333,7 +333,7 @@ export default class TicketModel {
           created_at: "ticket.created_at",
           updated_at: "ticket.updated_at",
           display_name: "ticket.display_name",
-          status: "ticket.name",
+          status: "ticket.status",
           id_tab: "ticket.id_tab",
         })
         
