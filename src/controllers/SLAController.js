@@ -132,48 +132,22 @@ export default class SLAController {
     return obj;
   }
 
-  async settingsSLA(id, database = {}, logger = {}) {
+  async settingsSLA(id) {
     const slas = await this.slaModel.getSLASettings(id);
     let sla = {};
-    for await (const value of slas) {
+    slas.map(async value => {
       const unit_of_time = await this.unitOfTimeModel.checkUnitOfTime(
         value.id_unit_of_time
       );
-      switch (parseInt(value.id_sla_type)) {
-        case 1:
-          sla = {
-            ...sla,
-            1: {
-              unit_of_time: unit_of_time[1],
-              time: value.time,
-              active: true,
-            },
-          };
-          break;
-        case 2:
-          sla = {
-            ...sla,
-            2: {
-              unit_of_time: unit_of_time[1],
-              time: value.time,
-              active: true,
-            },
-          };
-          break;
-        case 3:
-          sla = {
-            ...sla,
-            3: {
-              unit_of_time: unit_of_time[1],
-              time: value.time,
-              active: true,
-            },
-          };
-          break;
-        default:
-          break;
-      }
-    }
+      sla = {
+        ...sla,
+        [value.id_sla_type]: {
+          unit_of_time: unit_of_time[1],
+          time: value.time,
+          active: true,
+        },
+      };
+    })
     return sla;
   }
 
@@ -188,54 +162,23 @@ export default class SLAController {
         );
 
         if (ticket && ticket.length > 0) {
-          const controleSLA = ticket.filter(x=> x.id_sla_type === value.id_sla_type )
+          const controleSLA = ticket.filter(
+            (x) => x.id_sla_type === value.id_sla_type
+          );
 
-          if(Array.isArray(controleSLA) && controleSLA.length > 0){
-            switch (value.id_sla_type) {
-              case 1:
-                sla = {
-                  ...sla,
-                  1: {
-                    name: value.name,
-                    status: controleSLA[0].name,
-                    limit_sla_time: moment(ticket[0].limit_sla_time).format(
-                      "DD/MM/YYYY HH:mm:ss"
-                    ),
-                    active: controleSLA[0].active,
-                  },
-                };
-                break;
-              case 2:
-                sla = {
-                  ...sla,
-                  2: {
-                    name: value.name,
-                    status: controleSLA[0].name,
-                    limit_sla_time: moment(controleSLA[0].limit_sla_time).format(
-                      "DD/MM/YYYY HH:mm:ss"
-                    ),
-                    active: controleSLA[0].active,
-                  },
-                };
-                break;
-              case 3:
-                sla = {
-                  ...sla,
-                  3: {
-                    name: value.name,
-                    status: controleSLA[0].name,
-                    limit_sla_time: moment(controleSLA[0].limit_sla_time).format(
-                      "DD/MM/YYYY HH:mm:ss"
-                    ),
-                    active: controleSLA[0].active,
-                  },
-                };
-                break;
-              default:
-                break;
-            }
+          if (Array.isArray(controleSLA) && controleSLA.length > 0) {
+            sla = {
+              ...sla,
+              [value.id_sla_type]: {
+                name: value.name,
+                status: controleSLA[0].name,
+                limit_sla_time: moment(ticket[0].limit_sla_time).format(
+                  "DD/MM/YYYY HH:mm:ss"
+                ),
+                active: controleSLA[0].active,
+              },
+            };
           }
-
         }
       }
     }
@@ -284,18 +227,21 @@ export default class SLAController {
               break;
             case 2:
             case 3:
-              console.log("sla",getSLA) 
-              if (slaSettings.find(x=> x.id_sla_type === 1) && getSLA.filter((x) => x.id_sla_type === 1 && x.interaction_time).length > 0) {
-
-                  if (
-                    getSLA &&
-                    Array.isArray(getSLA) &&
-                    getSLA.filter((x) => x.id_sla_type === value.id_sla_type)
-                      .length <= 0
-                  ) {
-                    await this.ticketControl(value, id_ticket, id_phase);
-                  }
-              } else if(!slaSettings.find(x=> x.id_sla_type === 1)){
+              console.log("sla", getSLA);
+              if (
+                slaSettings.find((x) => x.id_sla_type === 1) &&
+                getSLA.filter((x) => x.id_sla_type === 1 && x.interaction_time)
+                  .length > 0
+              ) {
+                if (
+                  getSLA &&
+                  Array.isArray(getSLA) &&
+                  getSLA.filter((x) => x.id_sla_type === value.id_sla_type)
+                    .length <= 0
+                ) {
+                  await this.ticketControl(value, id_ticket, id_phase);
+                }
+              } else if (!slaSettings.find((x) => x.id_sla_type === 1)) {
                 if (
                   getSLA &&
                   Array.isArray(getSLA) &&
@@ -323,16 +269,16 @@ export default class SLAController {
   async updateSLA(id_ticket, id_phase, sla_type) {
     // Busca a configuração de sla do ticket pela phase e id_do ticket, primeiramente pela opção de inicialização do ticket.
     let controleSLA = await this.slaModel.getByPhaseTicket(id_phase, id_ticket);
-    
+
     // valida se existe controle de sla, e se é um array.
     if (controleSLA && Array.isArray(controleSLA) && controleSLA.length > 0) {
       for (const sla of controleSLA) {
         // valida se a configuração de sla está ativa, caso não esteja não pode sofrer ação.
         if (!sla.interaction_time) {
-          
-          let obj = {  };
+          let obj = {};
 
-          if (sla_type === sla.id_sla_type) obj = { ...obj, active: false, interaction_time: moment() };
+          if (sla_type === sla.id_sla_type)
+            obj = { ...obj, active: false, interaction_time: moment() };
 
           // Valida se o sla está atrasado ou em dia.
           if (sla.limit_sla_time < moment()) {

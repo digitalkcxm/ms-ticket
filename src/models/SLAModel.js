@@ -1,7 +1,7 @@
 export default class SLAModel {
-  constructor(database = {}, logger = {}){
-    this.database = database
-    this.logger = logger
+  constructor(database = {}, logger = {}) {
+    this.database = database;
+    this.logger = logger;
   }
   async slaPhaseSettings(obj) {
     try {
@@ -10,19 +10,17 @@ export default class SLAModel {
         .where("id_phase", obj.id_phase);
       return await this.database("phase_sla_settings").insert(obj);
     } catch (err) {
-      this.logger.error(err,"Error sla phase settings.");
+      this.logger.error(err, "Error sla phase settings.");
       return err;
     }
   }
 
   async getSLASettings(idPhase) {
     try {
-      return await this.database("phase_sla_settings")
-        .leftJoin("sla_type", "sla_type.id", "phase_sla_settings.id_sla_type")
-        .where("phase_sla_settings.id_phase", idPhase)
-        .orderBy("phase_sla_settings.id_sla_type", "asc");
+      const query =  await this.database.raw(`SELECT * FROM phase_sla_settings LEFT JOIN sla_type ON sla_type.id = phase_sla_settings.id_sla_type WHERE phase_sla_settings.id_phase = '${idPhase}'`)
+      return query.rows
     } catch (err) {
-      this.logger.error(err,"Get sla settings.");
+      this.logger.error(err, "Get sla settings.");
       return err;
     }
   }
@@ -34,7 +32,7 @@ export default class SLAModel {
         .where("phase_sla_settings.id_phase", idPhase)
         .andWhere("sla_type.id", type);
     } catch (err) {
-      this.logger.error(err,"Get sla settings.");
+      this.logger.error(err, "Get sla settings.");
       return err;
     }
   }
@@ -43,7 +41,7 @@ export default class SLAModel {
     try {
       return await this.database("ticket_sla_control").insert(obj);
     } catch (err) {
-      this.logger.error(err,"Error sla ticket control.");
+      this.logger.error(err, "Error sla ticket control.");
       return err;
     }
   }
@@ -61,31 +59,30 @@ export default class SLAModel {
         .andWhere("tsc.active", status);
       return result[0].count;
     } catch (err) {
-      this.logger.error(err,"error when get sla's.");
+      this.logger.error(err, "error when get sla's.");
       return err;
     }
   }
 
-
   async getByPhaseTicket(id_phase, id_ticket) {
     try {
-      return await this.database("ticket_sla_control as tsc").select({
-        id_sla_type: "tsc.id_sla_type",
-        id_sla_status: "tsc.id_sla_status",
-        limit_sla_time: "tsc.limit_sla_time",
-        interaction_time: "tsc.interaction_time",
-        active: "tsc.active",
-        name: 'ss.name'
-      })
+      return await this.database("ticket_sla_control as tsc")
+        .select({
+          id_sla_type: "tsc.id_sla_type",
+          id_sla_status: "tsc.id_sla_status",
+          limit_sla_time: "tsc.limit_sla_time",
+          interaction_time: "tsc.interaction_time",
+          active: "tsc.active",
+          name: "ss.name",
+        })
         .leftJoin("phase_ticket as pt", "pt.id_ticket", "tsc.id_ticket")
         .leftJoin("sla_status as ss", "ss.id", "tsc.id_sla_status")
         .where("tsc.id_phase", id_phase)
         .andWhere("tsc.id_ticket", id_ticket)
         .andWhere("pt.active", true)
-        .orderBy("tsc.id_sla_type","asc")
-        
+        .orderBy("tsc.id_sla_type", "asc");
     } catch (err) {
-      this.logger.error(err,"error when get sla's.");
+      this.logger.error(err, "error when get sla's.");
       return err;
     }
   }
@@ -98,7 +95,7 @@ export default class SLAModel {
         .andWhere("tsc.id_sla_type", type)
         .andWhere("tsc.active", true);
     } catch (err) {
-      this.logger.error(err,"Error check sla.");
+      this.logger.error(err, "Error check sla.");
       return err;
     }
   }
@@ -111,7 +108,7 @@ export default class SLAModel {
         .andWhere("id_sla_type", id_type)
         .andWhere("id_phase", id_phase);
     } catch (err) {
-      this.logger.error(err,"Error when update sla ticket.")
+      this.logger.error(err, "Error when update sla ticket.");
       return err;
     }
   }
@@ -122,7 +119,7 @@ export default class SLAModel {
         .update({ active: false })
         .where("id_ticket", id_ticket);
     } catch (err) {
-      this.logger.error(err,"Error when disable sla ticket.");
+      this.logger.error(err, "Error when disable sla ticket.");
       return err;
     }
   }
@@ -145,7 +142,7 @@ export default class SLAModel {
         .where("tsc.id_phase", id_phase)
         .andWhere("tsc.id_ticket", id_ticket);
     } catch (err) {
-      this.logger.error(err,"Error when get sla's.");
+      this.logger.error(err, "Error when get sla's.");
       return err;
     }
   }
@@ -160,11 +157,10 @@ export default class SLAModel {
         .andWhere("tsc.id_ticket", id_ticket)
         .andWhere("pt.active", true);
     } catch (err) {
-      this.logger.error(err,"Error when get sla's.");
+      this.logger.error(err, "Error when get sla's.");
       return err;
     }
   }
-
 
   async getToCountSLA(id_phase, closed = false) {
     if (closed) {
