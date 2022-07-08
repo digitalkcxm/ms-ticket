@@ -7,7 +7,7 @@ exports.up = async function (knex, Promise) {
         .update({
           status: status.find((y) => y.id === x.id_status).name,
         })
-        .where("id_ticket", x.id)
+        .where("id", x.id)
   );
 };
 
