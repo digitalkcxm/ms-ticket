@@ -1,6 +1,6 @@
 exports.up = function (knex, Promise) {
     return knex.schema.alterTable("ticket", (table) => {
-      table.string("id_phase");
+      table.uuid("id_phase");
       table.string("phase");
       table.string("status");
       
