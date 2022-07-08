@@ -717,7 +717,7 @@ export default class TicketModel {
   async searchTicket(id_company, search, id_phase, status) {
     try {
       if (typeof search === "string") search = search.toLowerCase();
-      const default_where = `ticket.id_company = '${id_company}' AND phase.id = '${id_phase}' AND phase_ticket.active = true AND ticket.closed IN(${status
+      const default_where = `ticket.id_company = '${id_company}' AND phase.id = '${id_phase}' AND phase_ticket.active = true AND ticket.closed IN (${status
         .replace("[", "")
         .replace("]", "")
         .replace(/\"/g, "'")}) AND phase_ticket.active = true AND`;
@@ -730,10 +730,10 @@ export default class TicketModel {
         ${default_where} ticket.display_name ILIKE '%${search}%'`;
       } else {
         query = `
-        ${default_where} CAST(ticket.id_seq AS TEXT) LIKE '%${search}%' OR 
-        ${default_where} CAST(ticket.id_protocol AS TEXT) LIKE '%${search}%' OR
-        ${default_where} CAST(ticket.id_user AS TEXT) LIKE '%${search}%' OR
-        ${default_where} CAST(ticket_protocol.id_protocol AS TEXT) LIKE '%${search}%'`;
+        ${default_where} CAST(ticket.id_seq AS TEXT) ILIKE '%${search}%' OR 
+        ${default_where} CAST(ticket.id_protocol AS TEXT) ILIKE '%${search}%' OR
+        ${default_where} CAST(ticket.id_user AS TEXT) ILIKE '%${search}%' OR
+        ${default_where} CAST(ticket_protocol.id_protocol AS TEXT) ILIKE '%${search}%'`;
       }
 
       const result = await this.database.raw(`

@@ -254,16 +254,18 @@ export default class PhaseController {
             req.query.status
           );
 
-          result[i].ticket = await this.formatTicket.phaseFormat(
-            { id: result[i].id, sla: result[i].sla },
-            tickets
-          );
           result[i] = await this._formatPhase(
             result[i],
             req.app.locals.db,
             true,
             false,
             req.headers.authorization
+          );
+
+          result[i].ticket = await this.formatTicket.phaseFormat(
+            { id: result[i].id, sla: result[i].sla },
+            tickets,
+            this
           );
         }
         // }
