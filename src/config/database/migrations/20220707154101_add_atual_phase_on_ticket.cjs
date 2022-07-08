@@ -5,8 +5,8 @@ exports.up = async function (knex, Promise) {
     const phase_ticket = await knex("phase_ticket")
       .select(["phase.id", "phase.name"])
       .leftJoin("phase", "phase.id", "phase_ticket.id_phase")
-      .where("id_ticket", x.id)
-      .andWhere("phase_ticket", true);
+      .where("phase_ticket.id_ticket", x.id)
+      .andWhere("phase_ticket.active", true);
 
       
     return await knex("ticket").update({
