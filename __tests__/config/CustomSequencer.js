@@ -3,10 +3,10 @@ import Sequencer from '@jest/test-sequencer'
 export default class CustomSequencer extends Sequencer.default {
   sort(tests) {
     const digitalkTests = [
-        'Health.test.js',
+        //'Health.test.js',
         'Company.test.js',
         'Department.test.js',
-        'Phase.test.js',
+        //'Phase.test.js',
         //'Ticket.test.js',
         //'Phase_ticket.test.js'
     ]
