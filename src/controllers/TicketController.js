@@ -38,11 +38,11 @@ export default class TicketController {
     this.database = database;
     this.tabModel = new TabModel(database);
     this.formTemplate = new FormTemplate(logger);
-    this.slaModel = new SLAModel(database, logger);    
+    this.slaModel = new SLAModel(database, logger);
     this.userModel = new UserModel(database, logger);
     this.phaseModel = new PhaseModel(database, logger);
     this.ticketModel = new TicketModel(database, logger);
-    this.formatTicket = new FormatTicket(database,logger)
+    this.formatTicket = new FormatTicket(database, logger);
     this.companyModel = new CompanyModel(database, logger);
     this.slaController = new SLAController(database, logger);
     this.customerModel = new CustomerModel(database, logger);
@@ -50,9 +50,8 @@ export default class TicketController {
     this.typeColumnModel = new TypeColumnModel(database, logger);
     this.activitiesModel = new ActivitiesModel(database, logger);
     this.attachmentsModel = new AttachmentsModel(database, logger);
-    this.responsibleModel  = new ResponsibleModel(database, logger);
+    this.responsibleModel = new ResponsibleModel(database, logger);
     this.departmentController = new DepartmentController(database, logger);
-    
   }
   //Remover assim que função da fila funcionar direitinho
 
@@ -76,13 +75,11 @@ export default class TicketController {
       let obj = {
         id: v1(),
         id_company: data.authorization,
-        // ids_crm: data.ids_crm,
-        // id_customer: data.id_customer,
-        // id_protocol: data.id_protocol,
         id_user: id_user.id,
         created_at: moment().format(),
         updated_at: moment().format(),
         display_name: data.display_name,
+        status: "Aberto",
       };
 
       if (data.department_origin) {
@@ -99,6 +96,8 @@ export default class TicketController {
       );
       if (!phase || phase.length <= 0) return false;
 
+      obj.id_phase = data.id_phase;
+      obj.phase = phase[0].name;
       if (data.form) {
         //console.log(global.mongodb)
         if (Object.keys(data.form).length > 0) {
@@ -218,7 +217,7 @@ export default class TicketController {
           {
             phaseModel: this.phaseModel,
             ticketModel: this.ticketModel,
-            customerModel: this.customerModel
+            customerModel: this.customerModel,
           }
         );
         // delete ticket[0].id_company
@@ -233,7 +232,12 @@ export default class TicketController {
     }
   }
 
-  async _createResponsibles(userResponsible = null, ticket_id, authorization,act_user) {
+  async _createResponsibles(
+    userResponsible = null,
+    ticket_id,
+    authorization,
+    act_user
+  ) {
     try {
       if (Array.isArray(userResponsible) && userResponsible.length > 0) {
         for (const user of userResponsible) {
@@ -251,9 +255,9 @@ export default class TicketController {
             id_user: id_user.id,
             id_type_of_responsible: 2,
             active: true,
-            created_at: moment().add(1,'seconds'),
-            updated_at: moment().add(1,'seconds'),
-            id_user_add:act_user.id
+            created_at: moment().add(1, "seconds"),
+            updated_at: moment().add(1, "seconds"),
+            id_user_add: act_user.id,
           });
         }
       }
@@ -291,7 +295,6 @@ export default class TicketController {
     }
   }
 
-
   async queueCreateActivities(data) {
     try {
       const companyVerified = await this.companyModel.getByIdActive(
@@ -319,6 +322,11 @@ export default class TicketController {
       );
       if (!ticket || ticket.length <= 0) return false;
 
+      let objUpdateTicket = {
+        updated_at: moment().format(),
+        id_status: 2,
+        status: "Em atendimento",
+      };
       if (!ticket[0].start_ticket) {
         await Notify(
           ticket[0].id,
@@ -329,17 +337,18 @@ export default class TicketController {
           {
             phaseModel: this.phaseModel,
             ticketModel: this.ticketModel,
-            customerModel: this.customerModel
+            customerModel: this.customerModel,
           }
         );
 
-        await this.ticketModel.updateTicket(
-          { start_ticket: moment(), id_status: 2 },
-          data.id_ticket,
-          data.authorization
-        );
+        objUpdateTicket = { ...objUpdateTicket, start_ticket: moment() }
       }
 
+      await this.ticketModel.updateTicket(
+        objUpdateTicket,
+        data.id_ticket,
+        data.authorization
+      );
       let obj = {
         text: data.text,
         id_ticket: data.id_ticket,
@@ -399,7 +408,7 @@ export default class TicketController {
           {
             phaseModel: this.phaseModel,
             ticketModel: this.ticketModel,
-            customerModel: this.customerModel
+            customerModel: this.customerModel,
           }
         );
         return obj;
@@ -439,6 +448,12 @@ export default class TicketController {
       );
       if (!ticket || ticket.length <= 0) return false;
 
+      let objUpdateTicket = {
+        updated_at: moment().format(),
+        id_status: 2,
+        status: "Em atendimento",
+      };
+      
       if (!ticket[0].start_ticket) {
         await Notify(
           ticket[0].id,
@@ -449,16 +464,18 @@ export default class TicketController {
           {
             phaseModel: this.phaseModel,
             ticketModel: this.ticketModel,
-            customerModel: this.customerModel
+            customerModel: this.customerModel,
           }
         );
 
-        await this.ticketModel.updateTicket(
-          { start_ticket: moment(), id_status: 2 },
-          data.id_ticket,
-          data.authorization
-        );
+          objUpdateTicket ={...objUpdateTicket, start_ticket: moment()}
       }
+
+      await this.ticketModel.updateTicket(
+        objUpdateTicket,
+        data.id_ticket,
+        data.authorization
+      );
 
       let typeAttachments = await this.ticketModel.getTypeAttachments(
         data.type
@@ -518,7 +535,7 @@ export default class TicketController {
           {
             phaseModel: this.phaseModel,
             ticketModel: this.ticketModel,
-            customerModel: this.customerModel
+            customerModel: this.customerModel,
           }
         );
         return true;
@@ -627,8 +644,14 @@ export default class TicketController {
         delete result.form_data._id;
       }
 
-      result.responsibles = await this.responsibleModel.getActiveResponsibleByTicket(result.id)
-      result.responsibles.map(x => {delete x.created_at; delete x.updated_at; delete x.active; delete x.id})
+      result.responsibles =
+        await this.responsibleModel.getActiveResponsibleByTicket(result.id);
+      result.responsibles.map((x) => {
+        delete x.created_at;
+        delete x.updated_at;
+        delete x.active;
+        delete x.id;
+      });
 
       console.log("result =>", result);
       return res.status(200).send(result);
@@ -728,8 +751,14 @@ export default class TicketController {
         delete result.form_data._id;
       }
 
-      result.responsibles = await this.responsibleModel.getActiveResponsibleByTicket(result.id)
-      result.responsibles.map(x => {delete x.created_at; delete x.updated_at; delete x.active; delete x.id})
+      result.responsibles =
+        await this.responsibleModel.getActiveResponsibleByTicket(result.id);
+      result.responsibles.map((x) => {
+        delete x.created_at;
+        delete x.updated_at;
+        delete x.active;
+        delete x.id;
+      });
       return res.status(200).send(result);
     } catch (err) {
       console.log("Error when select ticket by id =>", err);
@@ -952,32 +981,48 @@ export default class TicketController {
       }
     }
 
-    const responsaveis = await this.responsibleModel.getAllResponsibleByTicket(id_ticket)
-    for(const responsavel of responsaveis){
-      let user_add = ''
-      if(responsavel.id_user_add) user_add = await this.userModel.getById(responsavel.id_user_add, id_company)
+    const responsaveis = await this.responsibleModel.getAllResponsibleByTicket(
+      id_ticket
+    );
+    for (const responsavel of responsaveis) {
+      let user_add = "";
+      if (responsavel.id_user_add)
+        user_add = await this.userModel.getById(
+          responsavel.id_user_add,
+          id_company
+        );
 
       obj.push({
         type: "add_responsible",
         id_ticket: id_ticket,
         id_user: responsavel.id_user,
         name: responsavel.name,
-        id_user_add: user_add ?  user_add[0].id_user : responsavel.id_user,
+        id_user_add: user_add ? user_add[0].id_user : responsavel.id_user,
         user_add: user_add ? user_add[0].name : responsavel.name,
-        created_at: moment(responsavel.created_at).format("DD/MM/YYYY HH:mm:ss"),
+        created_at: moment(responsavel.created_at).format(
+          "DD/MM/YYYY HH:mm:ss"
+        ),
       });
 
-      if(!responsavel.active){
-        let user_remove = ""
-        if(responsavel.id_user_remove) user_remove = await this.userModel.getById(responsavel.id_user_remove, id_company)
+      if (!responsavel.active) {
+        let user_remove = "";
+        if (responsavel.id_user_remove)
+          user_remove = await this.userModel.getById(
+            responsavel.id_user_remove,
+            id_company
+          );
         obj.push({
           type: "remove_responsible",
           id_ticket: id_ticket,
           id_user: responsavel.id_user,
           name: responsavel.name,
-          id_user_remove: user_remove ? user_remove[0].id_user: responsavel.id_user,
+          id_user_remove: user_remove
+            ? user_remove[0].id_user
+            : responsavel.id_user,
           user_remove: user_remove ? user_remove[0].name : responsavel.name,
-          created_at: moment(responsavel.updated_at).format("DD/MM/YYYY HH:mm:ss"),
+          created_at: moment(responsavel.updated_at).format(
+            "DD/MM/YYYY HH:mm:ss"
+          ),
         });
       }
     }
@@ -1067,10 +1112,11 @@ export default class TicketController {
 
       if (!phase || phase.length <= 0) return false;
 
+      obj.id_phase = data.id_phase;
+      obj.phase = phase[0].name;
       await this.slaController.updateSLA(ticket.id, ticket.phase_id, 2);
-      
+
       if (ticket.phase_id != phase[0].id) {
-      
         if (data.form) {
           if (Object.keys(data.form).length > 0) {
             if (phase[0].form) {
@@ -1159,7 +1205,7 @@ export default class TicketController {
           {
             phaseModel: this.phaseModel,
             ticketModel: this.ticketModel,
-            customerModel: this.customerModel
+            customerModel: this.customerModel,
           }
         );
 
@@ -1169,7 +1215,6 @@ export default class TicketController {
           phase[0].id,
           this
         );
-  
       } else {
         if (data.form && Object.keys(data.form).length > 0) {
           const firstPhase = await this.ticketModel.getFirstFormTicket(
@@ -1182,14 +1227,13 @@ export default class TicketController {
               data.form,
               firstPhase[0].id_form
             );
-            console.log("errors ====>",errors)
+            console.log("errors ====>", errors);
             if (errors.length > 0) return false;
 
-            const resultUpdate = await new FormDocuments(global.mongodb).updateRegister(
-              firstPhase[0].id_form,
-              data.form
-            );
-            console.log(resultUpdate)
+            const resultUpdate = await new FormDocuments(
+              global.mongodb
+            ).updateRegister(firstPhase[0].id_form, data.form);
+            console.log(resultUpdate);
           }
         }
       }
@@ -1215,7 +1259,7 @@ export default class TicketController {
         {
           phaseModel: this.phaseModel,
           ticketModel: this.ticketModel,
-          customerModel: this.customerModel
+          customerModel: this.customerModel,
         }
       );
       if (!ticket.start_ticket) {
@@ -1228,12 +1272,13 @@ export default class TicketController {
           {
             phaseModel: this.phaseModel,
             ticketModel: this.ticketModel,
-            customerModel: this.customerModel
+            customerModel: this.customerModel,
           }
         );
 
         obj.start_ticket = moment();
         obj.id_status = 2;
+        obj.status = "Em atendimento";
       }
       delete obj.id_form;
       let result = await this.ticketModel.updateTicket(
@@ -1298,11 +1343,11 @@ export default class TicketController {
         );
 
         await redis.del(`msTicket:ticket:${result[0].id}`);
-        
+
         await redis.del(
           `msTicket:${req.headers.authorization}:closeTickets:${ticket[0].phase_id}`
         );
-        
+
         await this.slaController.updateSLA(ticket[0].id, ticket[0].phase_id, 3);
 
         await this.slaModel.disableSLA(ticket[0].id);
@@ -1322,7 +1367,7 @@ export default class TicketController {
           {
             phaseModel: this.phaseModel,
             ticketModel: this.ticketModel,
-            customerModel: this.customerModel
+            customerModel: this.customerModel,
           }
         );
 
@@ -1400,29 +1445,34 @@ export default class TicketController {
       switch (req.params.type) {
         case 1:
           for (const ticket of tickets) {
-            if (!ticket.interaction_time && ticket.limit_sla_time < moment().utc()) {
+            if (
+              !ticket.interaction_time &&
+              ticket.limit_sla_time < moment().utc()
+            ) {
               await this.slaModel.updateTicketSLA(
                 ticket.id_ticket,
-                { id_sla_status: sla_status.atrasado, active:false},
+                { id_sla_status: sla_status.atrasado, active: false },
                 ticket.id_sla_type,
                 ticket.id_phase
               );
             }
           }
           break;
-        case '2':
+        case "2":
           for (const ticket of tickets) {
-            
             if (
-              !ticket.interaction_time && ticket.limit_sla_time < moment().utc()
+              !ticket.interaction_time &&
+              ticket.limit_sla_time < moment().utc()
             ) {
               await this.slaModel.updateTicketSLA(
                 ticket.id_ticket,
-                { id_sla_status: sla_status.atrasado,active:false },
+                { id_sla_status: sla_status.atrasado, active: false },
                 ticket.id_sla_type,
                 ticket.id_phase
               );
-              const ticketInfo = await this.ticketModel.getTicketToCronSLA(ticket.id_ticket)
+              const ticketInfo = await this.ticketModel.getTicketToCronSLA(
+                ticket.id_ticket
+              );
               const companyInfo = await this.companyModel.getByIdActive(
                 ticketInfo[0].id_company
               );
@@ -1435,7 +1485,7 @@ export default class TicketController {
                 {
                   phaseModel: this.phaseModel,
                   ticketModel: this.ticketModel,
-                  customerModel: this.customerModel
+                  customerModel: this.customerModel,
                 }
               );
             }
@@ -1446,7 +1496,7 @@ export default class TicketController {
             if (ticket.limit_sla_time < moment().utc()) {
               await this.slaModel.updateTicketSLA(
                 ticket.id_ticket,
-                { id_sla_status: sla_status.atrasado, active:false },
+                { id_sla_status: sla_status.atrasado, active: false },
                 ticket.id_sla_type,
                 ticket.id_phase
               );
@@ -1749,7 +1799,7 @@ export default class TicketController {
         if (ticket && ticket.length > 0 && !ticket[0].start_ticket) {
           ticket[0].start_ticket = time;
           await this.ticketModel.updateTicket(
-            { start_ticket: time, id_status: 2 },
+            { start_ticket: time, id_status: 2, status: "Em atendimento" },
             req.body.id_ticket,
             req.headers.authorization
           );
@@ -1781,7 +1831,7 @@ export default class TicketController {
           {
             phaseModel: this.phaseModel,
             ticketModel: this.ticketModel,
-            customerModel: this.customerModel
+            customerModel: this.customerModel,
           }
         );
         await CallbackDigitalk(

@@ -178,7 +178,7 @@ export default class PhaseController {
     const keys = Object.keys(obj);
 
     const slaSettings = async function (sla, type, slaModel) {
-      console.log("sla ===> ", sla)
+      console.log("sla ===> ", sla);
       if (sla.unit_of_time && sla.time) {
         await slaModel.slaPhaseSettings({
           id_phase: idPhase,
@@ -254,16 +254,18 @@ export default class PhaseController {
             req.query.status
           );
 
-          result[i].ticket = await this.formatTicket.phaseFormat(
-            { id: result[i].id, sla: result[i].sla },
-            tickets
-          );
           result[i] = await this._formatPhase(
             result[i],
             req.app.locals.db,
             true,
             false,
             req.headers.authorization
+          );
+
+          result[i].ticket = await this.formatTicket.phaseFormat(
+            { id: result[i].id, sla: result[i].sla },
+            tickets,
+            this
           );
         }
         // }
@@ -290,11 +292,6 @@ export default class PhaseController {
             req.headers.authorization
           );
         }
-
-        await redis.set(
-          `ticket:phase:${req.headers.authorization}`,
-          JSON.stringify(result)
-        );
       }
       return res.status(200).send(result);
     } catch (err) {
@@ -548,11 +545,9 @@ export default class PhaseController {
 
   async _formatPhase(result, mongodb, search = false, status, authorization) {
     status = JSON.parse(status);
-
+    result.ticket = [];
     result.header = {};
-
     result.sla = await this.slaController.settingsSLA(result.id);
-
     if (result.id_form_template) {
       const register = await this.formTemplate.findRegister(
         result.id_form_template
@@ -563,15 +558,16 @@ export default class PhaseController {
 
         result.formTemplate.map(
           async (x) =>
-            !isNaN(x.type) && x.type != 0 &&
+            !isNaN(x.type) &&
+            x.type != 0 &&
             (x.type = (await this.typeColumnModel.getTypeByID(x.type))[0].name)
         );
       }
     }
 
     if (!search) {
-      result.ticket = [];
-      let openTickets = "";
+      let openTickets = [];
+      let closeTickets = [];
       if (status && Array.isArray(status)) {
         for await (const x of status) {
           !x
@@ -579,7 +575,7 @@ export default class PhaseController {
                 result.id,
                 [x]
               ))
-            : (result.ticket = await this.formatTicket.formatClosedTickets(
+            : (closeTickets = await this.formatTicket.formatClosedTickets(
                 redis,
                 authorization,
                 result,
@@ -591,12 +587,14 @@ export default class PhaseController {
       }
 
       if (openTickets && Array.isArray(openTickets) && openTickets.length > 0) {
-        result.ticket = await this.formatTicket.phaseFormat(
+        openTickets = await this.formatTicket.phaseFormat(
           { id: result.id, sla: result.sla },
           openTickets,
           this
         );
       }
+      
+      result.ticket = result.ticket.concat(openTickets, closeTickets);
     }
 
     result.department_can_create_protocol &&
@@ -688,7 +686,7 @@ export default class PhaseController {
           );
 
           for await (const x of register.column) {
-            if (!isNaN(x.type) && x.type != 0 )
+            if (!isNaN(x.type) && x.type != 0)
               x.type = (await this.typeColumnModel.getTypeByID(x.type))[0].name;
           }
           phase.formTemplate = register.column;
@@ -820,83 +818,83 @@ export default class PhaseController {
     }
   }
 
-  async transferMassive(req, res) {
-    try {
-      //Verifica se a nova fase dos tickets é valido e existe dentro do banco de dados
-      const newPhase = await this.phaseModel.getPhaseById(
-        req.body.new_phase,
-        req.headers.authorization
-      );
-      if (newPhase.length <= 0)
-        return res.status(400).send({ error: "Id da phase invalido" });
+  // async transferMassive(req, res) {
+  //   try {
+  //     //Verifica se a nova fase dos tickets é valido e existe dentro do banco de dados
+  //     const newPhase = await this.phaseModel.getPhaseById(
+  //       req.body.new_phase,
+  //       req.headers.authorization
+  //     );
+  //     if (newPhase.length <= 0)
+  //       return res.status(400).send({ error: "Id da phase invalido" });
 
-      //Verifica se o id do usuario está sendo passado no body da requisição.
-      if (!req.body.id_user) {
-        this.logger.info("Não foi passado o ID do usuário");
-        return res.status(400).send({ error: "Whitout id_user" });
-      }
+  //     //Verifica se o id do usuario está sendo passado no body da requisição.
+  //     if (!req.body.id_user) {
+  //       this.logger.info("Não foi passado o ID do usuário");
+  //       return res.status(400).send({ error: "Whitout id_user" });
+  //     }
 
-      //Faz a verificação de usuario, caso ele não exista ele cria na base.
-      let user = await this.userController.checkUserCreated(
-        req.body.id_user,
-        req.headers.authorization,
-        req.body.name_user
-      );
+  //     //Faz a verificação de usuario, caso ele não exista ele cria na base.
+  //     let user = await this.userController.checkUserCreated(
+  //       req.body.id_user,
+  //       req.headers.authorization,
+  //       req.body.name_user
+  //     );
 
-      //Verifica se ocorreu algum erro na checagem de usuario.
-      if (!user || !user.id) {
-        this.logger.info("O erro foi na checagem de usuário.");
-        return res
-          .status(400)
-          .send({ error: "Ocorreu algum erro na checagem de usuario" });
-      }
+  //     //Verifica se ocorreu algum erro na checagem de usuario.
+  //     if (!user || !user.id) {
+  //       this.logger.info("O erro foi na checagem de usuário.");
+  //       return res
+  //         .status(400)
+  //         .send({ error: "Ocorreu algum erro na checagem de usuario" });
+  //     }
 
-      //Faz o get dos tickets pelo id da fase.
-      const tickets = await this.ticketModel.getTicketByPhase(
-        req.params.id,
-        ""
-      );
+  //     //Faz o get dos tickets pelo id da fase.
+  //     const tickets = await this.ticketModel.getTicketByPhase(
+  //       req.params.id,
+  //       ""
+  //     );
 
-      //Retorna um erro caso a fase não contenha tickets na fase.
-      if (tickets.length <= 0) {
-        this.logger.info("Não há tickets ativos nessa phase");
-        return res
-          .status(400)
-          .send({ error: "Não há tickets ativos nessa phase" });
-      }
+  //     //Retorna um erro caso a fase não contenha tickets na fase.
+  //     if (tickets.length <= 0) {
+  //       this.logger.info("Não há tickets ativos nessa phase");
+  //       return res
+  //         .status(400)
+  //         .send({ error: "Não há tickets ativos nessa phase" });
+  //     }
 
-      //Faz um laço de repetição finalizando todos os tickets relacionados a phase.
-      for (const ticket of tickets) {
-        //Desativa o registro da fase atual.
-        await this.phaseModel.disablePhaseTicket(ticket.id);
+  //     //Faz um laço de repetição finalizando todos os tickets relacionados a phase.
+  //     for (const ticket of tickets) {
+  //       //Desativa o registro da fase atual.
+  //       await this.phaseModel.disablePhaseTicket(ticket.id);
 
-        //Cria um novo registro com a nova fase.
-        await this.ticketModel.createPhaseTicket({
-          id_phase: req.body.new_phase,
-          id_ticket: ticket.id,
-        });
+  //       //Cria um novo registro com a nova fase.
+  //       await this.ticketModel.createPhaseTicket({
+  //         id_phase: req.body.new_phase,
+  //         id_ticket: ticket.id,
+  //       });
 
-        await this.slaController.createSLAControl(
-          req.body.new_phase,
-          ticket.id
-        );
-      }
+  //       await this.slaController.createSLAControl(
+  //         req.body.new_phase,
+  //         ticket.id
+  //       );
+  //     }
 
-      await cache(
-        req.headers.authorization,
-        newPhase[0].id_department,
-        req.body.new_phase,
-        this
-      );
+  //     await cache(
+  //       req.headers.authorization,
+  //       newPhase[0].id_department,
+  //       req.body.new_phase,
+  //       this
+  //     );
 
-      return res.status(200).send({ msg: "OK" });
-    } catch (err) {
-      this.logger.error(err, "Error when transfer massive.");
-      return res
-        .status(500)
-        .send({ error: "Houve um erro ao mover os tickets" });
-    }
-  }
+  //     return res.status(200).send({ msg: "OK" });
+  //   } catch (err) {
+  //     this.logger.error(err, "Error when transfer massive.");
+  //     return res
+  //       .status(500)
+  //       .send({ error: "Houve um erro ao mover os tickets" });
+  //   }
+  // }
 
   async orderPhase(req, res) {
     try {
@@ -1986,6 +1984,7 @@ export default class PhaseController {
       header.percent_closed_tickets = 0;
     }
 
+    console.log("teste header");
     header.counter_sla = await this.slaController.counter_sla(
       data.id,
       false,

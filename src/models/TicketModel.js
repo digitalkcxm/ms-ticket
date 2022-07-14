@@ -74,20 +74,20 @@ export default class TicketModel {
     }
   }
 
-  async getTicketToCronSLA(id){
+  async getTicketToCronSLA(id) {
     try {
       return await this.database(tableName)
         .select({
           id: `${tableName}.id`,
-          id_company: `${tableName}.id_company`
-        })       
-        .where(`${tableName}.id`, id)
+          id_company: `${tableName}.id_company`,
+        })
+        .where(`${tableName}.id`, id);
     } catch (err) {
       this.logger.error(err, "Error when get ticket by id.");
       return err;
     }
   }
-  
+
   async getTicketByIdSeq(id_seq, id_company) {
     try {
       return await this.database(tableName)
@@ -149,35 +149,35 @@ export default class TicketModel {
           `AND ticket.created_at >= '${obj.range[0]}' AND ticket.created_at <= '${obj.range[1]}'`;
       }
 
-      return await this.database(tableName)
-        .select({
-          id: `${tableName}.id`,
-          id_seq: `${tableName}.id_seq`,
-          ids_crm: `${tableName}.ids_crm`,
-          id_customer: `${tableName}.id_customer`,
-          id_protocol: `${tableName}.id_protocol`,
-          id_phase: "phase.id",
-          phase: "phase.name",
-          id_user: "users.id_users",
-          name: "users.name",
-          form: "phase.form",
-          closed: `${tableName}.closed`,
-          id_form: `${tableName}.id_form`,
-          department_origin: `${tableName}.department_origin`,
-          created_at: `${tableName}.created_at`,
-          updated_at: `${tableName}.updated_at`,
-          id_tab: `${tableName}.id_tab`,
-        })
-        .leftJoin("users", "users.id", "ticket.id_user")
-        .leftJoin("phase_ticket", "phase_ticket.id_ticket", `${tableName}.id`)
-        .leftJoin("phase", "phase.id", "phase_ticket.id_phase")
-        .leftJoin("department_phase", "department_phase.id_phase", "phase.id")
-        .leftJoin(
-          "department",
-          "department.id",
-          "department_phase.id_department"
-        )
-        .whereRaw(stringWhere);
+      const result = await this.database.raw(`
+      SELECT DISTINCT(phase_ticket.id) AS phase_ticket_id,
+        ticket.id, 
+        ticket.id_seq, 
+        ticket.id_protocol, 
+        phase.id AS id_phase, 
+        phase.name AS phase, 
+        users.id_users, 
+        users.name, 
+        phase.form, 
+        ticket.closed, 
+        ticket.id_form, 
+        ticket.department_origin, 
+        ticket.created_at, 
+        ticket.updated_at, 
+        ticket.id_tab 
+      from ticket 
+      left join 
+        users on users.id = ticket.id_user 
+      left join 
+        phase_ticket on phase_ticket.id_ticket = ticket.id 
+      left join 
+        phase on phase.id = phase_ticket.id_phase 
+      left join 
+        department_phase on department_phase.id_phase = phase.id 
+      left join 
+        department on department.id = department_phase.id_department 
+      where ${stringWhere}`);
+      return result.rows;
     } catch (err) {
       this.logger.error(err, "Error when get ticket by id.");
       return err;
@@ -224,6 +224,7 @@ export default class TicketModel {
           closed: true,
           updated_at: moment().format(),
           id_status: 3,
+          status: "Finalizado",
           time_closed_ticket: moment().format(),
           user_closed_ticket: id_user,
         })
@@ -299,30 +300,21 @@ export default class TicketModel {
 
   async getTicketByPhase(id_phase) {
     try {
-      return await this.database("phase_ticket")
+      return await this.database("ticket")
         .select({
           id: "ticket.id",
           id_seq: "ticket.id_seq",
-          ids_crm: "ticket.ids_crm",
           id_user: "users.id_users",
           user: "users.name",
-          id_customer: "ticket.id_customer",
-          id_protocol: "ticket.id_protocol",
           closed: "ticket.closed",
-          sla: "ticket.sla",
-          id_form: `ticket.id_form`,
-          department_origin: `ticket.department_origin`,
           created_at: "ticket.created_at",
           updated_at: "ticket.updated_at",
           display_name: "ticket.display_name",
-          status: "status_ticket.name",
-          id_tab: `ticket.id_tab`,
+          status: "ticket.status",
+          id_tab: "ticket.id_tab",
         })
-        .leftJoin("ticket", "ticket.id", "phase_ticket.id_ticket")
         .leftJoin("users", "users.id", "ticket.id_user")
-        .leftJoin("status_ticket", "status_ticket.id", "ticket.id_status")
-        .where("phase_ticket.id_phase", id_phase)
-        .andWhere("phase_ticket.active", true);
+        .where("ticket.id_phase", id_phase);
     } catch (err) {
       this.logger.error(err, "Error when get Ticket by phase.");
       return err;
@@ -331,7 +323,7 @@ export default class TicketModel {
 
   async getTicketByPhaseAndStatus(id_phase, status) {
     try {
-      return await this.database("phase_ticket")
+      return await this.database("ticket")
         .select({
           id: "ticket.id",
           id_seq: "ticket.id_seq",
@@ -341,15 +333,13 @@ export default class TicketModel {
           created_at: "ticket.created_at",
           updated_at: "ticket.updated_at",
           display_name: "ticket.display_name",
-          status: "status_ticket.name",
+          status: "ticket.status",
           id_tab: "ticket.id_tab",
         })
-        .leftJoin("ticket", "ticket.id", "phase_ticket.id_ticket")
+        
         .leftJoin("users", "users.id", "ticket.id_user")
-        .leftJoin("status_ticket", "status_ticket.id", "ticket.id_status")
         .whereIn("ticket.closed", status)
-        .andWhere("phase_ticket.id_phase", id_phase)
-        .andWhere("phase_ticket.active", true);
+        .andWhere("ticket.id_phase", id_phase)
     } catch (err) {
       this.logger.error(err, "Error when get Ticket by phase.");
       return err;
@@ -727,7 +717,7 @@ export default class TicketModel {
   async searchTicket(id_company, search, id_phase, status) {
     try {
       if (typeof search === "string") search = search.toLowerCase();
-      const default_where = `ticket.id_company = '${id_company}' AND phase.id = '${id_phase}' AND phase_ticket.active = true AND ticket.closed IN(${status
+      const default_where = `ticket.id_company = '${id_company}' AND phase.id = '${id_phase}' AND phase_ticket.active = true AND ticket.closed IN (${status
         .replace("[", "")
         .replace("]", "")
         .replace(/\"/g, "'")}) AND phase_ticket.active = true AND`;
@@ -740,10 +730,10 @@ export default class TicketModel {
         ${default_where} ticket.display_name ILIKE '%${search}%'`;
       } else {
         query = `
-        ${default_where} CAST(ticket.id_seq AS TEXT) LIKE '%${search}%' OR 
-        ${default_where} CAST(ticket.id_protocol AS TEXT) LIKE '%${search}%' OR
-        ${default_where} CAST(ticket.id_user AS TEXT) LIKE '%${search}%' OR
-        ${default_where} CAST(ticket_protocol.id_protocol AS TEXT) LIKE '%${search}%'`;
+        ${default_where} CAST(ticket.id_seq AS TEXT) ILIKE '%${search}%' OR 
+        ${default_where} CAST(ticket.id_protocol AS TEXT) ILIKE '%${search}%' OR
+        ${default_where} CAST(ticket.id_user AS TEXT) ILIKE '%${search}%' OR
+        ${default_where} CAST(ticket_protocol.id_protocol AS TEXT) ILIKE '%${search}%'`;
       }
 
       const result = await this.database.raw(`
