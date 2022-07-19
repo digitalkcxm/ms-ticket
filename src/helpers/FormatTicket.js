@@ -12,22 +12,20 @@ export default class FormatTicket {
   }
 
   async retriveTicket(ticket, id_phase) {
-    
     ticket = await this.formatTicketForPhase({ id: id_phase }, ticket)
 
     const removeTk = async function (key) {
       let openTickets = await redis.get(key)
       openTickets = JSON.parse(openTickets)
       openTickets = await openTickets.filter((x) => x.id !== ticket.id)
-      
+
       await redis.set(key, JSON.stringify(openTickets))
     }
 
     const addTk = async function (key) {
-      
       let openTickets = await redis.get(key)
       openTickets = JSON.parse(openTickets)
-      
+
       openTickets = openTickets.concat(ticket)
 
       console.log(await redis.set(key, JSON.stringify(openTickets)))
@@ -40,9 +38,18 @@ export default class FormatTicket {
     }
 
     const validationAdd = {
-      1: addTk(`msTicket:openTickets:${ticket.phase_id}`),
-      2: addTk(`msTicket:inProgressTickets:${ticket.phase_id}`),
-      3: addTk(`msTicket:closeTickets:${ticket.phase_id}`)
+      1: {
+        key: `msTicket:openTickets:${ticket.phase_id}`,
+        func: addTk
+      },
+      2: {
+        key: `msTicket:inProgressTickets:${ticket.phase_id}`,
+        func: addTk
+      },
+      3: {
+        key: `msTicket:closeTickets:${ticket.phase_id}`,
+        func: addTk
+      }
     }
 
     let cache = await redis.get(`msTicket:tickets:${id_phase}`)
@@ -52,13 +59,15 @@ export default class FormatTicket {
 
     if (oldTk.length > 0) await validationRemove[oldTk[0].id_status]
 
-    console.log('ticket',ticket)
-    validationAdd[ticket.id_status]
+    console.log('ticket', typeof ticket.id_status)
+    const key = validationAdd[ticket.id_status].key
+    validationAdd[ticket.id_status].func(key)
     return ticket
   }
 
   async formatTicketForPhase(phase, ticket) {
-    ticket.sla = await this.slaController.ticketSLA(phase.id, ticket.id)
+    phase.sla = await this.slaController.settingsSLA(phase.id)
+    Object.keys(phase.sla).length > 0 && (ticket.sla = await this.slaController.ticketSLA(phase.id, ticket.id))
 
     ticket.responsibles = await this.responsibleModel.getActiveResponsibleByTicket(ticket.id)
     ticket.created_at = moment(ticket.created_at).format('DD/MM/YYYY HH:mm:ss')
