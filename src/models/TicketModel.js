@@ -56,14 +56,14 @@ export default class TicketModel {
           display_name: "ticket.display_name",
           id_ticket_father: "ticket.id_ticket_father",
           id_protocol: "ticket.id_protocol",
-          status: "status_ticket.name",
+          status: "ticket.status",
+          id_status: "ticket.id_status",
           id_tab: "ticket.id_tab",
         })
         .leftJoin("users", "users.id", `${tableName}.id_user`)
         .leftJoin("phase_ticket", "phase_ticket.id_ticket", `${tableName}.id`)
         .leftJoin("phase", "phase.id", "phase_ticket.id_phase")
         .leftJoin("department", "department.id", "ticket.department_origin")
-        .leftJoin("status_ticket", "status_ticket.id", "ticket.id_status")
         .where(`${tableName}.id`, id)
         .andWhere(`${tableName}.id_company`, id_company)
         .orderBy("phase_ticket.id", "desc")
