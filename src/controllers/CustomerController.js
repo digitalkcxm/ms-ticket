@@ -54,11 +54,10 @@ export default class CustomerController {
         req.body.id_ticket,
         req.headers.authorization
       );
-      ticket = await this.formatTicket.formatTicketForPhase(
-        { id: ticket[0].phase_id },
+      
+      ticket = await this.formatTicket.retriveTicket(
         ticket[0],
-        this.database,
-        this.logger
+        ticket[0].phase_id
       );
 
       await CallbackDigitalk(

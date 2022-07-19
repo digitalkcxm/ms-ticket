@@ -221,6 +221,38 @@ export default class PhaseModel {
     }
   }
 
+  
+  async getPhasesForCache() {
+    try {
+      return await this.database(tableName)
+        .select([
+          "id",
+          "id_unit_of_time",
+          "icon as emoji",
+          "name",
+          "sla_time",
+          "id_form_template",
+          "active",
+          "order",
+          "created_at",
+          "updated_at",
+          "phase.visible_new_ticket",
+          "phase.notification_customer as customer",
+          "phase.notification_admin as admin",
+          "phase.notification_responsible as responsible",
+          "phase.notification_separate as separate",
+          "phase.department_can_create_protocol",
+          "phase.department_can_create_ticket",
+          "phase.create_protocol",
+          "phase.create_ticket",
+        ])
+        .orderBy("order", "asc");
+    } catch (err) {
+      return err;
+    }
+  }
+
+
   async getAllPhasesByDepartmentID(id_department, id_company, enable) {
     try {
       return await this.database("department_phase")

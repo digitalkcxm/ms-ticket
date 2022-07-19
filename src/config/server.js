@@ -12,6 +12,8 @@ import logger from "./logger.js";
 
 import FilaController from "../controllers/FilaController.js";
 
+import CacheController from "../controllers/CacheController.js";
+
 const server = http.createServer(app);
 
 app.use(cors());
@@ -23,6 +25,8 @@ moment.tz.setDefault("America/Sao_Paulo");
 routes(app, database, logger);
 // app.use(routes);
 queue();
+
+new CacheController(database, logger).cachePhase();
 
 connect(app, () => {
   server.listen(process.env.PORT, () =>
