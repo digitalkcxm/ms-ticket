@@ -1023,9 +1023,12 @@ export default class TicketController {
       req.query.closed
         ? (obj.closed = JSON.parse(req.query.closed))
         : (obj.closed = [true, false]);
-      req.query.range ? (obj.range = JSON.parse(req.query.range)) : "";
+      if(req.query.range){
+        obj.range = req.query.range.split(',')
+        obj.range = obj.range.map(x=> x.replace('[','').replace(']',''))
+      } 
 
-      const result = await this.ticketModel.getAllTickets(
+            const result = await this.ticketModel.getAllTickets(
         req.headers.authorization,
         obj
       );
