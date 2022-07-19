@@ -31,8 +31,8 @@ new CacheController(database, logger).cachePhase();
 const port = process.env.PORT || 3000
 
 connect(app, () => {
-  server.listen(process.env.PORT, () =>
-    console.log(`Server running in port ${process.env.PORT}`)
+  server.listen(port, () =>
+    console.log(`Server running in port ${port}`)
   );
 });
 
