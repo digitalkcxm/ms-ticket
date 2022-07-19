@@ -1087,9 +1087,7 @@ export default class TicketController {
 
       ticket = await this.formatTicket.formatTicketForPhase(
         { id: ticket[0].phase_id },
-        ticket[0],
-        this.database,
-        this.logger
+        ticket[0]
       );
 
       let phase = await this.phaseModel.getPhaseById(

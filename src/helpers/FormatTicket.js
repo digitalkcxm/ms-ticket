@@ -32,22 +32,22 @@ export default class FormatTicket {
     }
 
     const validationRemove = {
-      1: removeTk(`msTicket:openTickets:${id_phase}`),
-      2: removeTk(`msTicket:inProgressTickets:${id_phase}`),
-      3: removeTk(`msTicket:closeTickets:${id_phase}`)
+      1: removeTk(`msTicket:openTickets:${ticket.phase_id}`),
+      2: removeTk(`msTicket:inProgressTickets:${ticket.phase_id}`),
+      3: removeTk(`msTicket:closeTickets:${ticket.phase_id}`)
     }
 
     const validationAdd = {
       1: {
-        key: `msTicket:openTickets:${ticket.phase_id}`,
+        key: `msTicket:openTickets:${id_phase}`,
         func: addTk
       },
       2: {
-        key: `msTicket:inProgressTickets:${ticket.phase_id}`,
+        key: `msTicket:inProgressTickets:${id_phase}`,
         func: addTk
       },
       3: {
-        key: `msTicket:closeTickets:${ticket.phase_id}`,
+        key: `msTicket:closeTickets:${id_phase}`,
         func: addTk
       }
     }
