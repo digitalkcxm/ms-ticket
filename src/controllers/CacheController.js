@@ -33,7 +33,6 @@ export default class CacheController {
       const tickets = await this.ticketModel.getTicketByPhase(phase.id)
 
       for await (const ticket of tickets) {
-        console.log(phase.sla)
         Object.keys(phase.sla).length > 0 && (ticket.sla = this.slaController.ticketSLA(phase.id, ticket.id))
         ticket.responsibles = await this.responsibleModel.getActiveResponsibleByTicket(ticket.id)
         ticket.created_at = moment(ticket.created_at).format('DD/MM/YYYY HH:mm:ss')
