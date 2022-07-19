@@ -49,7 +49,7 @@ export default class CacheController {
 
         ticket.id_status === 1
           ? open_tickets.push(ticket)
-          : (ticket.id_status = 2
+          : (ticket.id_status === 2
               ? in_progress_tickets.push(ticket)
               : closed_tickets.push(ticket));
       }
