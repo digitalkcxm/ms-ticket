@@ -304,7 +304,7 @@ export default class TicketController {
         id_status: 2,
         status: "Em atendimento",
       };
-
+      ticket[0].id_status = 2
       if (!ticket[0].start_ticket) {
         await Notify(
           ticket[0].id,
@@ -326,6 +326,7 @@ export default class TicketController {
         data.id_ticket,
         data.authorization
       );
+      
       let obj = {
         text: data.text,
         id_ticket: data.id_ticket,
@@ -359,7 +360,7 @@ export default class TicketController {
           ticket[0].phase_id,
           data.authorization
         );
-        ticket = await this.formatTicket.retriveTicket(ticket[0], phase[0].id);
+        ticket[0] = await this.formatTicket.retriveTicket(ticket[0], phase[0].id);
 
         await cache(
           data.authorization,
@@ -430,7 +431,7 @@ export default class TicketController {
         id_status: 2,
         status: "Em atendimento",
       };
-
+      ticket[0].id_status = 2
       if (!ticket[0].start_ticket) {
         await Notify(
           ticket[0].id,
@@ -487,7 +488,7 @@ export default class TicketController {
           data.authorization
         );
 
-        ticket = await this.formatTicket.retriveTicket(
+        ticket[0] = await this.formatTicket.retriveTicket(
           ticket[0],
           dashPhase[0].id
         );
@@ -1797,8 +1798,8 @@ export default class TicketController {
         req.headers.authorization
       );
 
-      
-      ticket = await this.formatTicket.retriveTicket(
+      ticket[0].id_status = 2
+      ticket[0] = await this.formatTicket.retriveTicket(
         ticket[0],
         phase[0].id
       );
@@ -1918,7 +1919,7 @@ export default class TicketController {
       const result = await this.ticketModel.linkProtocolToticket(obj);
 
             
-      ticket = await this.formatTicket.retriveTicket(
+      ticket[0] = await this.formatTicket.retriveTicket(
         ticket[0],
         ticket[0].phase_id
       );
@@ -1981,7 +1982,7 @@ export default class TicketController {
       if (!result)
         return res.status(400).send({ error: "Houve algum problema" });
 
-        ticket = await this.formatTicket.retriveTicket(
+        await this.formatTicket.retriveTicket(
           ticket[0],
           ticket[0].phase_id
         );
@@ -2206,7 +2207,7 @@ export default class TicketController {
             req.headers.authorization
           );
 
-          ticket = await this.formatTicket.retriveTicket(
+          await this.formatTicket.retriveTicket(
             ticket[0],
             ticket[0].phase_id
           );

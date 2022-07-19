@@ -59,7 +59,7 @@ export default class FormatTicket {
 
     if (oldTk.length > 0) await validationRemove[oldTk[0].id_status]
 
-    console.log('ticket', typeof ticket.id_status)
+    console.log('ticket', ticket)
     const key = validationAdd[ticket.id_status].key
     validationAdd[ticket.id_status].func(key)
     return ticket
