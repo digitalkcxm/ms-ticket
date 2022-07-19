@@ -44,7 +44,7 @@ export default class TicketModel {
           phase_id: "phase_ticket.id_phase",
           phase: "phase.name",
           id_user: "users.id_users",
-          name: "users.name",
+          user: "users.name",
           sla_time: "phase.sla_time",
           id_unit_of_time: "phase.id_unit_of_time",
           form: "phase.form",
@@ -56,14 +56,14 @@ export default class TicketModel {
           display_name: "ticket.display_name",
           id_ticket_father: "ticket.id_ticket_father",
           id_protocol: "ticket.id_protocol",
-          status: "status_ticket.name",
+          status: "ticket.status",
+          id_status: "ticket.id_status",
           id_tab: "ticket.id_tab",
         })
         .leftJoin("users", "users.id", `${tableName}.id_user`)
         .leftJoin("phase_ticket", "phase_ticket.id_ticket", `${tableName}.id`)
         .leftJoin("phase", "phase.id", "phase_ticket.id_phase")
         .leftJoin("department", "department.id", "ticket.department_origin")
-        .leftJoin("status_ticket", "status_ticket.id", "ticket.id_status")
         .where(`${tableName}.id`, id)
         .andWhere(`${tableName}.id_company`, id_company)
         .orderBy("phase_ticket.id", "desc")
@@ -311,6 +311,7 @@ export default class TicketModel {
           updated_at: "ticket.updated_at",
           display_name: "ticket.display_name",
           status: "ticket.status",
+          id_status: "ticket.id_status",
           id_tab: "ticket.id_tab",
         })
         .leftJoin("users", "users.id", "ticket.id_user")

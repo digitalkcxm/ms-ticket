@@ -12,6 +12,8 @@ import logger from "./logger.js";
 
 import FilaController from "../controllers/FilaController.js";
 
+import CacheController from "../controllers/CacheController.js";
+
 const server = http.createServer(app);
 
 app.use(cors());
@@ -24,7 +26,10 @@ routes(app, database, logger);
 // app.use(routes);
 queue();
 
+new CacheController(database, logger).cachePhase();
+
 const port = process.env.PORT || 3000
+
 connect(app, () => {
   server.listen(port, () =>
     console.log(`Server running in port ${port}`)
