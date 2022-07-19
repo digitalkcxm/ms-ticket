@@ -82,11 +82,11 @@ export default class TicketController {
       };
 
       if (data.department_origin) {
-        obj.department_origin =
-          await this.departmentController.checkDepartmentCreated(
-            data.department_origin,
-            data.authorization
-          )[0].id;
+        const department = await this.departmentController.checkDepartmentCreated(
+          data.department_origin,
+          data.authorization
+        )
+        obj.department_origin = department[0].id;
       }
 
       let phase = await this.phaseModel.getPhaseById(
