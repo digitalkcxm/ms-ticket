@@ -1085,10 +1085,7 @@ export default class TicketController {
         updated_at: moment().format(),
       };
 
-      ticket = await this.formatTicket.formatTicketForPhase(
-        { id: ticket[0].phase_id },
-        ticket[0]
-      );
+      ticket = ticket[0]
 
       let phase = await this.phaseModel.getPhaseById(
         data.id_phase,
