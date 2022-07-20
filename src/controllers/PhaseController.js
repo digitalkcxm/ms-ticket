@@ -212,7 +212,7 @@ export default class PhaseController {
 
           result[i] = await this._formatPhase(result[i], req.app.locals.db, true, false, req.headers.authorization)
 
-           await tickets.map(x =>  result[i].ticket.push(await this.formatTicket.formatTicketForPhase({ id: result[i].id}, x)))
+           await tickets.map(async x =>  result[i].ticket.push(await this.formatTicket.formatTicketForPhase({ id: result[i].id}, x)))
         }
         // }
       } else if (req.query.department) {
