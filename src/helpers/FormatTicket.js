@@ -31,12 +31,14 @@ export default class FormatTicket {
       console.log(await redis.set(key, JSON.stringify(openTickets)))
     }
 
+    //@info importante utilizar o phase_id do objeto do ticket, por ser a sua fase atual
     const validationRemove = {
       1: removeTk(`msTicket:openTickets:${ticket.phase_id}`),
       2: removeTk(`msTicket:inProgressTickets:${ticket.phase_id}`),
       3: removeTk(`msTicket:closeTickets:${ticket.phase_id}`)
     }
 
+    //@info importante utilizar o paramêtro id_phase, pois se for o caso de uma transferência ele atualiza no cache da nova fase.
     const validationAdd = {
       1: {
         key: `msTicket:openTickets:${id_phase}`,
