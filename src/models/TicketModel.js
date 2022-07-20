@@ -157,7 +157,7 @@ export default class TicketModel {
         ticket.created_at, 
         ticket.updated_at, 
         ticket.id_tab ,
-        customer.name,
+        customer.name as customer,
         customer.identification_document
       from ticket 
       left join 

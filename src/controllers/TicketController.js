@@ -761,17 +761,21 @@ export default class TicketController {
 
       const tickets = []
       for (const ticket of result) {
-        const ticketFormated = await this.formatTicket.formatTicketForPhase({ id: ticket.id_phase }, ticket, this.database, this.logger)
-        // sla formatado dessa forma para apresentar no analitico do ticket. favor não mexer sem consultar o Rafael ou o Silas.
-        if (ticketFormated.sla) {
-          const keys = Object.keys(ticketFormated.sla)
-          if (keys.length > 0) {
-            const sla = keys.pop()
-            ticketFormated.countSLA = ticketFormated.sla[sla].status
-            ticketFormated.sla_time = ticketFormated.sla[sla].limit_sla_time
+        console.log("result",ticket)
+
+        if(ticket.id_phase){
+          const ticketFormated = await this.formatTicket.formatTicketForPhase({ id: ticket.id_phase }, ticket)
+          //@info sla formatado dessa forma para apresentar no analitico do ticket. favor não mexer sem consultar o Rafael ou o Silas.
+          if (ticketFormated.sla) {
+            const keys = Object.keys(ticketFormated.sla)
+            if (keys.length > 0) {
+              const sla = keys.pop()
+              ticketFormated.countSLA = ticketFormated.sla[sla].status
+              ticketFormated.sla_time = ticketFormated.sla[sla].limit_sla_time
+            }
           }
+          tickets.push(ticketFormated)
         }
-        tickets.push(ticketFormated)
       }
 
       return res.status(200).send(tickets)
