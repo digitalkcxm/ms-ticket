@@ -761,7 +761,6 @@ export default class TicketController {
 
       const tickets = []
       for (const ticket of result) {
-        console.log("result",ticket)
 
         if(ticket.id_phase){
           const ticketFormated = await this.formatTicket.formatTicketForPhase({ id: ticket.id_phase }, ticket)
