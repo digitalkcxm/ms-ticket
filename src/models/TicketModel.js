@@ -126,7 +126,7 @@ export default class TicketModel {
 
   async getAllTickets(id_company, obj) {
     try {
-      let stringWhere = `${tableName}.id_company = '${id_company}' ${!obj.history_phase ? `AND phase.ticket.active = true` : ""}  `
+      let stringWhere = `${tableName}.id_company = '${id_company}' ${!obj.history_phase ? `AND phase.ticket.active = true ` : ""}  `
 
       if (obj.department && obj.department.length > 0) {
         stringWhere = stringWhere + ` AND department.id_department_core in (${obj.department}) `
