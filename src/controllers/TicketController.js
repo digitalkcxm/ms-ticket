@@ -752,8 +752,9 @@ export default class TicketController {
         obj.range = req.query.range.split(',')
         obj.range = obj.range.map((x) => x.replace('[', '').replace(']', ''))
       }
+      obj.history_phase = typeof req.query.history_phase === 'boolean' ? req.query.history_phase : true
 
-      const result = await this.ticketModel.getAllTickets(req.headers.authorization, obj)
+      const result =  await this.ticketModel.getAllTickets(req.headers.authorization, obj)
 
       if (result.name && result.name == 'error') return res.status(400).send({ error: 'There was an error' })
 
@@ -761,8 +762,7 @@ export default class TicketController {
 
       const tickets = []
       for (const ticket of result) {
-
-        if(ticket.id_phase){
+        if (ticket.id_phase) {
           const ticketFormated = await this.formatTicket.formatTicketForPhase({ id: ticket.id_phase }, ticket)
           //@info sla formatado dessa forma para apresentar no analitico do ticket. favor não mexer sem consultar o Rafael ou o Silas.
           if (ticketFormated.sla) {
@@ -854,7 +854,7 @@ export default class TicketController {
             type: 'socket',
             channel: `phase_${phase[0].id}`,
             event: 'move_ticket_new_phase',
-            obj: { ...ticket, created_at: moment(ticket.created_at).format("DD/MM/YYYY HH:mm:ss"), phase_id: phase[0].id }
+            obj: { ...ticket, created_at: moment(ticket.created_at).format('DD/MM/YYYY HH:mm:ss'), phase_id: phase[0].id }
           },
           companyVerified[0].callback
         )
