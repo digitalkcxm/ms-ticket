@@ -16,26 +16,34 @@ export default class FormatTicket {
 
     const removeTk = async function (key) {
       let openTickets = await redis.get(key)
-      openTickets = JSON.parse(openTickets)
-      openTickets = await openTickets.filter((x) => x.id !== ticket.id)
+      
+      if (openTickets) {
+        openTickets = JSON.parse(openTickets)
 
-      await redis.set(key, JSON.stringify(openTickets))
+        openTickets = await openTickets.filter((x) => x.id !== ticket.id)
+
+        await redis.set(key, JSON.stringify(openTickets))
+      }
     }
 
     const addTk = async function (key) {
       let openTickets = await redis.get(key)
-      openTickets = JSON.parse(openTickets)
+      if (openTickets) {
+        openTickets = JSON.parse(openTickets)
 
-      openTickets = openTickets.concat(ticket)
+        openTickets = openTickets.concat(ticket)
 
-      console.log(await redis.set(key, JSON.stringify(openTickets)))
+        await redis.set(key, JSON.stringify(openTickets))
+      } else {
+        await redis.set(key, JSON.stringify([ticket]))
+      }
     }
 
     //@info importante utilizar o phase_id do objeto do ticket, por ser a sua fase atual
     const validationRemove = {
-      1: removeTk(`msTicket:openTickets:${ticket.phase_id}`),
-      2: removeTk(`msTicket:inProgressTickets:${ticket.phase_id}`),
-      3: removeTk(`msTicket:closeTickets:${ticket.phase_id}`)
+      1: { key: `msTicket:openTickets:${ticket.phase_id}`, func: removeTk },
+      2: { key: `msTicket:inProgressTickets:${ticket.phase_id}`, func: removeTk },
+      3: { key: `msTicket:closeTickets:${ticket.phase_id}`, func: removeTk }
     }
 
     //@info importante utilizar o paramêtro id_phase, pois se for o caso de uma transferência ele atualiza no cache da nova fase.
@@ -55,13 +63,15 @@ export default class FormatTicket {
     }
 
     let cache = await redis.get(`msTicket:tickets:${id_phase}`)
-    cache && (cache = JSON.parse(cache))
+    
+    if (cache) {
+      cache = JSON.parse(cache)
 
-    const oldTk = await cache.filter((x) => x.id === ticket.id)
+      const oldTk = await cache.filter((x) => x.id === ticket.id)
 
-    if (oldTk.length > 0) await validationRemove[oldTk[0].id_status]
-
-    console.log('ticket', ticket)
+      if (oldTk.length > 0) await validationRemove[oldTk[0].id_status]
+    }
+    
     const key = validationAdd[ticket.id_status].key
     validationAdd[ticket.id_status].func(key)
     return ticket
