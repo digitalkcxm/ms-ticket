@@ -16,7 +16,7 @@ export default class FormatTicket {
 
     const removeTk = async function (key) {
       let openTickets = await redis.get(key)
-      
+
       if (openTickets) {
         openTickets = JSON.parse(openTickets)
 
@@ -62,16 +62,19 @@ export default class FormatTicket {
       }
     }
 
-    let cache = await redis.get(`msTicket:tickets:${id_phase}`)
-    
+    let cache = await redis.get(`msTicket:tickets:${ticket.phase_id}`)
+
     if (cache) {
       cache = JSON.parse(cache)
 
       const oldTk = await cache.filter((x) => x.id === ticket.id)
 
-      if (oldTk.length > 0) await validationRemove[oldTk[0].id_status]
+      if (oldTk.length > 0) {
+        const key = validationRemove[oldTk[0].id_status].key
+        await validationRemove[oldTk[0].id_status].func(key)
+      }
     }
-    
+
     const key = validationAdd[ticket.id_status].key
     validationAdd[ticket.id_status].func(key)
     return ticket

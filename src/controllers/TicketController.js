@@ -752,7 +752,7 @@ export default class TicketController {
         obj.range = req.query.range.split(',')
         obj.range = obj.range.map((x) => x.replace('[', '').replace(']', ''))
       }
-      obj.history_phase = typeof req.query.history_phase === 'boolean' ? req.query.history_phase : true
+      obj.history_phase = req.query.history_phase
 
       const result =  await this.ticketModel.getAllTickets(req.headers.authorization, obj)
 
@@ -808,6 +808,7 @@ export default class TicketController {
       obj.phase = phase[0].name
       await this.slaController.updateSLA(ticket.id, ticket.phase_id, 2)
 
+      //@info ticket.phase_id === fase atual | phase[0].id === fase destino
       if (ticket.phase_id != phase[0].id) {
         if (data.form) {
           if (Object.keys(data.form).length > 0) {
