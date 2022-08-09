@@ -114,7 +114,15 @@ export default class PhaseController {
       )
 
       await cache(req.headers.authorization, req.body.department, obj.id, this)
-      await this.cacheController.cachePhase()
+
+      await redis.set(`msTicket:closeTickets:${phase.id}`, JSON.stringify([]))
+
+      await redis.set(`msTicket:openTickets:${phase.id}`, JSON.stringify([]))
+
+      await redis.set(`msTicket:inProgressTickets:${phase.id}`, JSON.stringify([]))
+
+      await redis.set(`msTicket:tickets:${phase.id}`, JSON.stringify([]))
+      
       return res.status(200).send(obj)
     } catch (err) {
       this.logger.error(err, 'Error when manage phase create.')
