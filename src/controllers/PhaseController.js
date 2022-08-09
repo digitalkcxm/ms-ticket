@@ -115,13 +115,13 @@ export default class PhaseController {
 
       await cache(req.headers.authorization, req.body.department, obj.id, this)
 
-      await redis.set(`msTicket:closeTickets:${phase.id}`, JSON.stringify([]))
+      await redis.set(`msTicket:closeTickets:${obj.id}`, JSON.stringify([]))
 
-      await redis.set(`msTicket:openTickets:${phase.id}`, JSON.stringify([]))
+      await redis.set(`msTicket:openTickets:${obj.id}`, JSON.stringify([]))
 
-      await redis.set(`msTicket:inProgressTickets:${phase.id}`, JSON.stringify([]))
+      await redis.set(`msTicket:inProgressTickets:${obj.id}`, JSON.stringify([]))
 
-      await redis.set(`msTicket:tickets:${phase.id}`, JSON.stringify([]))
+      await redis.set(`msTicket:tickets:${obj.id}`, JSON.stringify([]))
       
       return res.status(200).send(obj)
     } catch (err) {
