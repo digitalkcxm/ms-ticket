@@ -144,7 +144,7 @@ export default class TicketController {
           customerModel: this.customerModel
         })
 
-        return true
+        return ticket
       }
       return false
     } catch (err) {
