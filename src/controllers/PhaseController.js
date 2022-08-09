@@ -17,7 +17,7 @@ import DepartmentController from './DepartmentController.js'
 import templateValidate from '../helpers/TemplateValidate.js'
 import CallbackDigitalk from '../services/CallbackDigitalk.js'
 import FormatTicket from '../helpers/FormatTicket.js'
-
+import CacheController from './CacheController.js'
 export default class PhaseController {
   constructor(database = {}, logger = {}) {
     this.logger = logger
@@ -30,6 +30,7 @@ export default class PhaseController {
     this.formatTicket = new FormatTicket(database, logger)
     this.slaController = new SLAController(database, logger)
     this.userController = new UserController(database, logger)
+    this.cacheController = new CacheController(database,logger)
     this.typeColumnModel = new TypeColumnModel(database, logger)
     this.departmentModel = new DepartmentModel(database, logger)
     this.departmentController = new DepartmentController(database, logger)
@@ -114,6 +115,14 @@ export default class PhaseController {
 
       await cache(req.headers.authorization, req.body.department, obj.id, this)
 
+      await redis.set(`msTicket:closeTickets:${obj.id}`, JSON.stringify([]))
+
+      await redis.set(`msTicket:openTickets:${obj.id}`, JSON.stringify([]))
+
+      await redis.set(`msTicket:inProgressTickets:${obj.id}`, JSON.stringify([]))
+
+      await redis.set(`msTicket:tickets:${obj.id}`, JSON.stringify([]))
+      
       return res.status(200).send(obj)
     } catch (err) {
       this.logger.error(err, 'Error when manage phase create.')

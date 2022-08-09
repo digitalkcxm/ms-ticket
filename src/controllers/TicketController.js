@@ -764,6 +764,18 @@ export default class TicketController {
       for (const ticket of result) {
         if (ticket.id_phase) {
           const ticketFormated = await this.formatTicket.formatTicketForPhase({ id: ticket.id_phase }, ticket)
+          
+          //@info regra para a comgas
+          if(req.headers.authorization === '04c42a90-f0e3-11ec-afda-f705ff2ac16e'){
+            const form = await this.ticketModel.getFormTicket(ticket.id)
+
+            if (form && form.length > 0 && form[0].id_form) {
+
+              const form_data = await new FormDocuments(req.app.locals.db).findRegister(form[0].id_form)
+              ticket.identification_document = form_data.CNPJ_do_condomínio
+            }
+      
+          }
           //@info sla formatado dessa forma para apresentar no analitico do ticket. favor não mexer sem consultar o Rafael ou o Silas.
           if (ticketFormated.sla) {
             const keys = Object.keys(ticketFormated.sla)
