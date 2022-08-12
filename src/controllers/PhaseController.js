@@ -216,14 +216,16 @@ export default class PhaseController {
       if (search) {
         result = await this.phaseModel.getAllPhasesByDepartmentID(req.query.department, req.headers.authorization, req.query.enable)
         for (let i in result) {
+          
           result[i].ticket = []
           const tickets = await this.ticketModel.searchTicket(req.headers.authorization, search, result[i].id, req.query.status)
-
           result[i] = await this._formatPhase(result[i], req.app.locals.db, true, false, req.headers.authorization)
 
-          await tickets.map(async (x) => result[i].ticket.push(await this.formatTicket.formatTicketForPhase({ id: result[i].id }, x)))
+          for (const ticket of tickets  ){
+            result[i].ticket = result[i].ticket.concat( await this.formatTicket.formatTicketForPhase(result[i], ticket))
+          }
         }
-        // }
+        
       } else if (req.query.department) {
         result = await this._queryDepartment(
           req.query.department,
