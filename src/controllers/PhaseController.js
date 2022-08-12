@@ -30,7 +30,7 @@ export default class PhaseController {
     this.formatTicket = new FormatTicket(database, logger)
     this.slaController = new SLAController(database, logger)
     this.userController = new UserController(database, logger)
-    this.cacheController = new CacheController(database,logger)
+    this.cacheController = new CacheController(database, logger)
     this.typeColumnModel = new TypeColumnModel(database, logger)
     this.departmentModel = new DepartmentModel(database, logger)
     this.departmentController = new DepartmentController(database, logger)
@@ -122,7 +122,7 @@ export default class PhaseController {
       await redis.set(`msTicket:inProgressTickets:${obj.id}`, JSON.stringify([]))
 
       await redis.set(`msTicket:tickets:${obj.id}`, JSON.stringify([]))
-      
+
       return res.status(200).send(obj)
     } catch (err) {
       this.logger.error(err, 'Error when manage phase create.')
@@ -216,14 +216,16 @@ export default class PhaseController {
       if (search) {
         result = await this.phaseModel.getAllPhasesByDepartmentID(req.query.department, req.headers.authorization, req.query.enable)
         for (let i in result) {
+          
           result[i].ticket = []
           const tickets = await this.ticketModel.searchTicket(req.headers.authorization, search, result[i].id, req.query.status)
-
           result[i] = await this._formatPhase(result[i], req.app.locals.db, true, false, req.headers.authorization)
 
-           await tickets.map(async x =>  result[i].ticket.push(await this.formatTicket.formatTicketForPhase({ id: result[i].id}, x)))
+          for (const ticket of tickets  ){
+            result[i].ticket = result[i].ticket.concat( await this.formatTicket.formatTicketForPhase(result[i], ticket))
+          }
         }
-        // }
+        
       } else if (req.query.department) {
         result = await this._queryDepartment(
           req.query.department,
@@ -301,7 +303,6 @@ export default class PhaseController {
       if (!oldPhase || oldPhase.length <= 0) return res.status(400).send({ error: 'Error when manage phase update' })
 
       await this._departmentPhaseLinked(req.body.department, req.headers.authorization, req.params.id)
-
       ;['responsible', 'notify'].map(async (x) => {
         const usersNotify = []
         if (req.body[x] && Array.isArray(req.body[x]) && req.body[x].length > 0) {
@@ -419,12 +420,13 @@ export default class PhaseController {
 
     register.column.map((valueA) => {
       let validate = 0
-      newTemplate.map((valueB) => (valueA.column == valueB.column ? validate++ : ''))
+      let inativado = 0
+      newTemplate.map((valueB) => (valueA.column == valueB.column ? (valueB.column.active ? validate++ : validate++ && inativado++) : ''))
 
       if (validate <= 0)
         errors.push(`A coluna ${valueA.label} não pode ser removido ou o valor do campo column não pode ser alterado, apenas inativado`)
 
-      if (validate > 1) errors.push(`A coluna ${valueA.label} não pode ser igual a um ja criado`)
+      if (validate > 1 && inativado <= 0) errors.push(`A coluna ${valueA.label} não pode ser igual a um ja criado`)
     })
 
     if (errors.length > 0) return errors
@@ -470,7 +472,7 @@ export default class PhaseController {
         openTickets = openTickets ? JSON.parse(openTickets) : []
       }
 
-      result.ticket = result.ticket.concat(openTickets, closeTickets,in_progress_ticket)
+      result.ticket = result.ticket.concat(openTickets, closeTickets, in_progress_ticket)
     }
 
     result.department_can_create_protocol && result.department_can_create_protocol.department

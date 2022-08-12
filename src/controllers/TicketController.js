@@ -232,10 +232,17 @@ export default class TicketController {
 
       let objUpdateTicket = {
         updated_at: moment().format(),
-        id_status: 2,
-        status: 'Em atendimento'
       }
+      if (!ticket[0].closed){
+        objUpdateTicket = {
+          ... objUpdateTicket,
+          id_status: 2,
+          status: 'Em atendimento'
+        }
+        
       ticket[0].id_status = 2
+      }
+      
       if (!ticket[0].start_ticket) {
         await Notify(ticket[0].id, ticket[0].phase_id, data.authorization, 'start_activity', companyVerified[0].callback, {
           phaseModel: this.phaseModel,
@@ -324,10 +331,17 @@ export default class TicketController {
 
       let objUpdateTicket = {
         updated_at: moment().format(),
-        id_status: 2,
-        status: 'Em atendimento'
       }
+      if (!ticket[0].closed){
+        objUpdateTicket = {
+          ... objUpdateTicket,
+          id_status: 2,
+          status: 'Em atendimento'
+        }
+        
       ticket[0].id_status = 2
+      }
+        
       if (!ticket[0].start_ticket) {
         await Notify(ticket[0].id, ticket[0].phase_id, data.authorization, 'start_activity', companyVerified[0].callback, {
           phaseModel: this.phaseModel,
@@ -754,7 +768,7 @@ export default class TicketController {
       }
       obj.history_phase = req.query.history_phase
 
-      const result =  await this.ticketModel.getAllTickets(req.headers.authorization, obj)
+      const result = await this.ticketModel.getAllTickets(req.headers.authorization, obj)
 
       if (result.name && result.name == 'error') return res.status(400).send({ error: 'There was an error' })
 
@@ -764,17 +778,15 @@ export default class TicketController {
       for (const ticket of result) {
         if (ticket.id_phase) {
           const ticketFormated = await this.formatTicket.formatTicketForPhase({ id: ticket.id_phase }, ticket)
-          
+
           //@info regra para a comgas
-          if(req.headers.authorization === '04c42a90-f0e3-11ec-afda-f705ff2ac16e'){
+          if (req.headers.authorization === '04c42a90-f0e3-11ec-afda-f705ff2ac16e') {
             const form = await this.ticketModel.getFormTicket(ticket.id)
 
             if (form && form.length > 0 && form[0].id_form) {
-
               const form_data = await new FormDocuments(req.app.locals.db).findRegister(form[0].id_form)
               ticket.identification_document = form_data.CNPJ_do_condomínio
             }
-      
           }
           //@info sla formatado dessa forma para apresentar no analitico do ticket. favor não mexer sem consultar o Rafael ou o Silas.
           if (ticketFormated.sla) {
