@@ -20,11 +20,13 @@ export default class UserController {
 
     try {
       let result = await this.userModel.getUserByID(user, company_id, id_type);
+      console.log('result ==> ',result)
       if (!result || result.length <= 0) {
         obj = { ...obj, id_users: user, id_company: company_id };
 
         result = await this.userModel.create(obj);
-      } else if (result && !result[0].name) {
+      } else {
+        console.log("obj => ",obj)
         await this.userModel.update(result[0].id, obj);
       }
 
