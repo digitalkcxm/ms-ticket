@@ -447,7 +447,7 @@ export default class TicketController {
       
 
       if (result.form_data) {
-        const phase = await this.phaseModel.getPhaseById(result.id_phase, req.headers.authorization)
+        const phase = await this.phaseModel.getPhaseById(result.phase_id, req.headers.authorization)
         if (phase[0].form && phase[0].id_form_template) {
           const register = await this.formTemplate.findRegister(phase[0].id_form_template)
 
