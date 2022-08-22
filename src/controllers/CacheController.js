@@ -8,7 +8,7 @@ import TicketModel from '../models/TicketModel.js'
 import FormTemplate from '../documents/FormTemplate.js'
 import TypeColumnModel from '../models/TypeColumnModel.js'
 import ResponsibleModel from '../models/ResponsibleModel.js'
-
+import {formatTicketForPhase} from '../helpers/FormatTicket.js'
 export default class CacheController {
   constructor(database, logger) {
     this.logger = logger
@@ -33,10 +33,7 @@ export default class CacheController {
       const tickets = await this.ticketModel.getTicketByPhase(phase.id)
 
       for await (const ticket of tickets) {
-        Object.keys(phase.sla).length > 0 && (ticket.sla = this.slaController.ticketSLA(phase.id, ticket.id))
-        ticket.responsibles = await this.responsibleModel.getActiveResponsibleByTicket(ticket.id)
-        ticket.created_at = moment(ticket.created_at).format('DD/MM/YYYY HH:mm:ss')
-        ticket.updated_at = moment(ticket.updated_at).format('DD/MM/YYYY HH:mm:ss')
+        ticket = await formatTicketForPhase(phase, ticket)
 
         ticket.id_status === 1
           ? open_tickets.push(ticket)
