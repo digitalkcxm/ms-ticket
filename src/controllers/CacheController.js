@@ -34,7 +34,7 @@ export default class CacheController {
       const tickets = await this.ticketModel.getTicketByPhase(phase.id)
 
       for await (const ticket of tickets) {
-        ticket = await formatTicket.formatTicketForPhase(phase, ticket)
+        ticket = await this.formatTicket.formatTicketForPhase(phase, ticket)
 
         ticket.id_status === 1
           ? open_tickets.push(ticket)
