@@ -3,12 +3,19 @@ import SLAController from '../controllers/SLAController.js'
 import ResponsibleModel from '../models/ResponsibleModel.js'
 import TicketModel from '../models/TicketModel.js'
 import asyncRedis from 'async-redis'
+import PhaseModel from '../models/PhaseModel.js'
+
+import FormDocuments from '../documents/FormDocuments.js'
+
 const redis = asyncRedis.createClient(process.env.REDIS_PORT, process.env.REDIS_HOST)
 export default class FormatTicket {
   constructor(database = {}, logger = {}) {
     this.slaController = new SLAController(database, logger)
     this.responsibleModel = new ResponsibleModel(database, logger)
     this.ticketModel = new TicketModel(database, logger)
+    this.phaseModel = new PhaseModel(database, logger)
+
+    this.formDocuments = new FormDocuments()
   }
 
   async retriveTicket(ticket, id_phase) {
@@ -66,9 +73,9 @@ export default class FormatTicket {
 
     if (cache) {
       cache = JSON.parse(cache)
-      console.log('ticket', ticket)
+      
       const oldTk = await cache.filter((x) => x.id === ticket.id)
-      console.log('oldTk', oldTk)
+      
       if (oldTk.length > 0) {
         const key = validationRemove[oldTk[0].id_status].key
         await validationRemove[oldTk[0].id_status].func(key)
@@ -96,7 +103,8 @@ export default class FormatTicket {
         status: ticket.status,
         id_status: ticket.id_status,
         id_tab: ticket.id_tab,
-        responsibles: ticket.responsibles
+        responsibles: ticket.responsibles,
+        form_data : ticket.form_data
       })
       await redis.set(`msTicket:tickets:${id_phase}`, JSON.stringify(newCacheNewPhase))
     }
@@ -109,6 +117,12 @@ export default class FormatTicket {
     Object.keys(phase.sla).length > 0 && (ticket.sla = await this.slaController.ticketSLA(phase.id, ticket.id))
 
     ticket.responsibles = await this.responsibleModel.getActiveResponsibleByTicket(ticket.id)
+
+    const form = await this.ticketModel.getFormTicket(ticket.id)
+    if (form && form.length > 0 && form[0].id_form) {
+      ticket.form_data = await this.formDocuments.findRegister(form[0].id_form)
+    }
+
     ticket.created_at = moment(ticket.created_at).format('DD/MM/YYYY HH:mm:ss')
     ticket.updated_at = moment(ticket.updated_at).format('DD/MM/YYYY HH:mm:ss')
 

@@ -418,7 +418,7 @@ export default class TicketController {
 
       if (result && result.length <= 0) return res.status(400).send({ error: 'There is no ticket with this ID' })
 
-      result = await this.formatTicket.formatTicketForPhase({ id: result[0].phase_id }, result[0], this.database, this.logger)
+      result = await this.formatTicket.formatTicketForPhase({ id: result[0].phase_id }, result[0])
       const customer = await this.customerModel.getAll(result.id)
       if (customer && Array.isArray(customer) && customer.length > 0) {
         result.customers = customer
@@ -444,10 +444,10 @@ export default class TicketController {
       const department = await this.phaseModel.getDepartmentPhase(result.phase_id)
       result.actual_department = department[0].id_department
 
-      const form = await this.ticketModel.getFormTicket(result.id)
+      
 
-      if (form && form.length > 0 && form[0].id_form) {
-        const phase = await this.phaseModel.getPhaseById(form[0].id_phase, req.headers.authorization)
+      if (result.form_data) {
+        const phase = await this.phaseModel.getPhaseById(result.phase_id, req.headers.authorization)
         if (phase[0].form && phase[0].id_form_template) {
           const register = await this.formTemplate.findRegister(phase[0].id_form_template)
 
@@ -466,8 +466,7 @@ export default class TicketController {
             }
           }
         }
-        result.form_data = await new FormDocuments(req.app.locals.db).findRegister(form[0].id_form)
-        delete result.form_data._id
+        
       }
 
       result.responsibles = await this.responsibleModel.getActiveResponsibleByTicket(result.id)

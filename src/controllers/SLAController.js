@@ -135,7 +135,7 @@ export default class SLAController {
   async settingsSLA(id) {
     const slas = await this.slaModel.getSLASettings(id);
     let sla = {};
-    slas.map(async value => {
+    await slas.map(async value => {
       const unit_of_time = await this.unitOfTimeModel.checkUnitOfTime(
         value.id_unit_of_time
       );

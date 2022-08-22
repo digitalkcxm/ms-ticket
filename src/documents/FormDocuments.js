@@ -2,7 +2,7 @@ import pkg from "mongodb";
 const { ObjectID } = pkg;
 const collection = "form";
 export default class FormDocuments {
-  constructor(db) {
+  constructor(db = {}) {
     this._db = db;
   }
 
