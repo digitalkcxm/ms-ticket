@@ -26,7 +26,6 @@ routes(app, database, logger);
 // app.use(routes);
 queue();
 
-new CacheController(database, logger).cachePhase();
 
 const port = process.env.PORT || 3000
 
@@ -35,6 +34,8 @@ connect(app, () => {
     console.log(`Server running in port ${port}`)
   );
 });
+
+new CacheController(database, logger).cachePhase();
 
 const filaController = new FilaController(database, logger);
 

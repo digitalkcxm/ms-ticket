@@ -26,14 +26,12 @@ export default class CacheController {
     const phases = await this.phaseModel.getPhasesForCache()
 
     for await (const phase of phases) {
-      phase.sla = await this.slaController.settingsSLA(phase.id)
-
       const open_tickets = []
       const in_progress_tickets = []
       const closed_tickets = []
       const tickets = await this.ticketModel.getTicketByPhase(phase.id)
 
-      for await (const ticket of tickets) {
+      for await (let ticket of tickets) {
         ticket = await this.formatTicket.formatTicketForPhase(phase, ticket)
 
         ticket.id_status === 1
