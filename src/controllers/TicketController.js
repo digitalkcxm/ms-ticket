@@ -66,6 +66,7 @@ export default class TicketController {
         data.type_user ? data.type_user : 1
       )
 
+      console.log(id_user)
       let obj = {
         id: v1(),
         id_company: data.authorization,
