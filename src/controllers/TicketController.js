@@ -786,6 +786,9 @@ export default class TicketController {
             if (form && form.length > 0 && form[0].id_form) {
               const form_data = await new FormDocuments(req.app.locals.db).findRegister(form[0].id_form)
               ticket.identification_document = form_data.CNPJ_do_condomínio
+              ticket.phone = form_data.Telefone
+              ticket.email = form_data['E-mail']
+              
             }
           }
           //@info sla formatado dessa forma para apresentar no analitico do ticket. favor não mexer sem consultar o Rafael ou o Silas.
