@@ -779,9 +779,9 @@ export default class TicketController {
         if (ticket.id_phase) {
           const ticketFormated = await this.formatTicket.formatTicketForPhase({ id: ticket.id_phase }, ticket)
 
-          //@info regra para a comgas
+          //@info REGRA DE NEGOCIO DE COMGAS!
           if (req.headers.authorization === '04c42a90-f0e3-11ec-afda-f705ff2ac16e') {
-            const form = await this.ticketModel.getFormTicket(ticket.id)
+            const form = await this.ticketModel.getFormTicketFromComgas(ticket.id)
 
             if (form && form.length > 0 && form[0].id_form) {
               const form_data = await new FormDocuments(req.app.locals.db).findRegister(form[0].id_form)

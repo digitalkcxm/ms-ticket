@@ -521,6 +521,22 @@ export default class TicketModel {
     }
   }
 
+  //REGRA DE NEGOCIO DE CLIENTE EM MICROSERVIÇO!!! 
+  async getFormTicketFromComgas(id_ticket) {
+    try {
+      return await this.database('phase_ticket')
+        .select({
+          id_form: 'id_form',
+          id_phase: 'id_phase'
+        })
+        .where('id_ticket', id_ticket)
+        .andWhere('id_phase', '99b2d5d0-f173-11ec-afda-f705ff2ac16e')
+    } catch (err) {
+      this.logger.error(err, 'Error when select history ticket.')
+      return err
+    }
+  }
+
   async getFirstFormTicket(id_ticket) {
     try {
       return await this.database('phase_ticket')
