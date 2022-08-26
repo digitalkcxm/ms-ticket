@@ -35,7 +35,7 @@ await connect(app, () => {
   );
 });
 
-new CacheController(database, logger).cachePhase();
+
 const filaController = new FilaController(database, logger);
 
 setTimeout(() => {
@@ -45,7 +45,7 @@ setTimeout(() => {
   filaController.consumerCreateAttachments();
   filaController.consumerCreateDash();
   filaController.consumerCreateHeader();
-  
+  new CacheController(database, logger).cachePhase();
 }, 5000);
 
 export { server, app, database, logger };

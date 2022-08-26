@@ -770,7 +770,7 @@ export default class TicketController {
       obj.history_phase = req.query.history_phase
       req.query.rows && (obj.rows = req.query.rows )
 
-      req.query.offset && obj.rows && (obj.offset = obj.rows * (req.query.offset - 1))
+      req.query.offset && obj.rows && (obj.offset = obj.rows * (parseInt(req.query.offset) - 1))
       const result = await this.ticketModel.getAllTickets(req.headers.authorization, obj)
 
       if (result.name && result.name == 'error') return res.status(400).send({ error: 'There was an error' })
