@@ -29,13 +29,12 @@ queue();
 
 const port = process.env.PORT || 3000
 
-connect(app, () => {
+await connect(app, () => {
   server.listen(port, () =>
     console.log(`Server running in port ${port}`)
   );
 });
 
-new CacheController(database, logger).cachePhase();
 
 const filaController = new FilaController(database, logger);
 
@@ -46,6 +45,7 @@ setTimeout(() => {
   filaController.consumerCreateAttachments();
   filaController.consumerCreateDash();
   filaController.consumerCreateHeader();
+  new CacheController(database, logger).cachePhase();
 }, 5000);
 
 export { server, app, database, logger };

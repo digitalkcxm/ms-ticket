@@ -757,6 +757,7 @@ export default class TicketController {
   }
 
   async getAllTicket(req, res) {
+    console.log(req.query)
     try {
       let obj = {}
       req.query.department ? (obj.department = JSON.parse(req.query.department)) : ''
@@ -767,7 +768,9 @@ export default class TicketController {
         obj.range = obj.range.map((x) => x.replace('[', '').replace(']', ''))
       }
       obj.history_phase = req.query.history_phase
+      req.query.rows && (obj.rows = req.query.rows )
 
+      req.query.offset && obj.rows && (obj.offset = obj.rows * (parseInt(req.query.offset) != 0 ? parseInt(req.query.offset)  - 1 : req.query.offset))
       const result = await this.ticketModel.getAllTickets(req.headers.authorization, obj)
 
       if (result.name && result.name == 'error') return res.status(400).send({ error: 'There was an error' })
@@ -779,9 +782,9 @@ export default class TicketController {
         if (ticket.id_phase) {
           const ticketFormated = await this.formatTicket.formatTicketForPhase({ id: ticket.id_phase }, ticket)
 
-          //@info regra para a comgas
+          //@info REGRA DE NEGOCIO DE COMGAS!
           if (req.headers.authorization === '04c42a90-f0e3-11ec-afda-f705ff2ac16e') {
-            const form = await this.ticketModel.getFormTicket(ticket.id)
+            const form = await this.ticketModel.getFormTicketFromComgas(ticket.id)
 
             if (form && form.length > 0 && form[0].id_form) {
               const form_data = await new FormDocuments(req.app.locals.db).findRegister(form[0].id_form)

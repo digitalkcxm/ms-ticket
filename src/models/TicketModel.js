@@ -174,7 +174,10 @@ export default class TicketModel {
         department on department.id = department_phase.id_department 
       left join 
         customer on customer.id_ticket = ticket.id
-      where ${stringWhere}`)
+      where ${stringWhere}
+      ${obj.rows ? `limit ${obj.rows} offset ${obj.offset}` : ''}
+      `)
+
       return result.rows
     } catch (err) {
       this.logger.error(err, 'Error when get ticket by id.')
@@ -515,6 +518,22 @@ export default class TicketModel {
         })
         .where('id_ticket', id_ticket)
         .andWhere('active', true)
+    } catch (err) {
+      this.logger.error(err, 'Error when select history ticket.')
+      return err
+    }
+  }
+
+  //REGRA DE NEGOCIO DE CLIENTE EM MICROSERVIÇO!!! 
+  async getFormTicketFromComgas(id_ticket) {
+    try {
+      return await this.database('phase_ticket')
+        .select({
+          id_form: 'id_form',
+          id_phase: 'id_phase'
+        })
+        .where('id_ticket', id_ticket)
+        .andWhere('id_phase', '99b2d5d0-f173-11ec-afda-f705ff2ac16e')
     } catch (err) {
       this.logger.error(err, 'Error when select history ticket.')
       return err
