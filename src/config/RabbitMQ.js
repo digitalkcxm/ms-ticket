@@ -11,7 +11,7 @@ export function queue() {
   amqp.connect(`amqp://${connectionConfig.user}:${connectionConfig.password}@${connectionConfig.host}:${connectionConfig.port}?heartbeat=20`, (err, conn) => {
     if (err) {
       console.error(">> [AMQP]", err.message)
-      return setTimeout(() => { queue() }, 1000)
+      return setTimeout(() => { queue() }, 3000)
     }
 
     conn.on("error", err => {
