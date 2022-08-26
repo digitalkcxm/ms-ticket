@@ -10,7 +10,7 @@
     "migrate:make": "./node_modules/.bin/run.env ./node_modules/.bin/knex migrate:make",
     "dev": "nodemon src/index.js --ignore __tests__",
     "pretest": "NODE_ENV=testing node __tests__/config/database.js",
-    "test": "NODE_ENV=testing NODE_OPTIONS='--experimental-vm-modules --experimental-specifier-resolution=node' jest --verbose=true --detectOpenHandles --forceExit --maxWorkers=1"
+    "test": "NODE_ENV=testing NODE_OPTIONS='--experimental-vm-modules --experimental-specifier-resolution=node' jest --verbose=true --detectOpenHandles --forceExit --maxWorkers=1 --passWithNoTests"
   },
   "author": "Rafael da Silva Mendes",
   "license": "ISC",
