@@ -174,7 +174,10 @@ export default class TicketModel {
         department on department.id = department_phase.id_department 
       left join 
         customer on customer.id_ticket = ticket.id
-      where ${stringWhere}`)
+      where ${stringWhere}
+      ${obj.rows ? `limit ${obj.rows} offset ${obj.offset}` : ''}
+      `)
+
       return result.rows
     } catch (err) {
       this.logger.error(err, 'Error when get ticket by id.')

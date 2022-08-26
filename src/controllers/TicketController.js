@@ -757,6 +757,7 @@ export default class TicketController {
   }
 
   async getAllTicket(req, res) {
+    console.log(req)
     try {
       let obj = {}
       req.query.department ? (obj.department = JSON.parse(req.query.department)) : ''
@@ -767,7 +768,9 @@ export default class TicketController {
         obj.range = obj.range.map((x) => x.replace('[', '').replace(']', ''))
       }
       obj.history_phase = req.query.history_phase
+      req.query.rows && (obj.rows = req.query.rows )
 
+      req.query.offset && obj.rows && (obj.offset = obj.rows * (req.query.offset - 1))
       const result = await this.ticketModel.getAllTickets(req.headers.authorization, obj)
 
       if (result.name && result.name == 'error') return res.status(400).send({ error: 'There was an error' })
