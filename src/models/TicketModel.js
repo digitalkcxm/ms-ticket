@@ -732,7 +732,7 @@ export default class TicketModel {
         ticket.display_name,
         status_ticket.name as status
       from ticket
-      left join responsible_ticket as rt on rt.id_ticket = ticket.id
+      left join (select id_ticket, id_user from responsible_ticket limit 1) as rt on rt.id_ticket = ticket.id
       left join users on users.id = rt.id_user
       left join phase_ticket on phase_ticket.id_ticket = ticket.id
       left join phase on phase.id = phase_ticket.id_phase
