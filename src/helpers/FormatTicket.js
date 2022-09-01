@@ -119,7 +119,7 @@ export default class FormatTicket {
     ticket.responsibles = await this.responsibleModel.getActiveResponsibleByTicket(ticket.id)
 
     const form = await this.ticketModel.getFormTicket(ticket.id)
-    if (form && form.length > 0 && form[0].id_form) {
+    if (form && form.length > 0 && form[0].id_form !== '{}' ) {
       ticket.form_data = await this.formDocuments.findRegister(form[0].id_form)
     }
 
