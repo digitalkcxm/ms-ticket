@@ -784,14 +784,17 @@ export default class TicketController {
 
           //@info REGRA DE NEGOCIO DE COMGAS!
           if (req.headers.authorization === '04c42a90-f0e3-11ec-afda-f705ff2ac16e') {
-            const form = await this.ticketModel.getFormTicketFromComgas(ticket.id)
+            const form = await this.ticketModel.getFormTicketFromComgas(ticketFormated.id)
 
             if (form && form.length > 0 && form[0].id_form) {
               const form_data = await new FormDocuments(req.app.locals.db).findRegister(form[0].id_form)
-              ticket.identification_document = form_data.CNPJ_do_condomínio
-              ticket.phone = form_data.Telefone
-              ticket.email = form_data['E-mail']
-              
+              ticketFormated.customer = form_data['Nome_do_condomínio'] ? form_data['Nome_do_condomínio'] : form_data.CNPJ_do_condomínio
+              ticketFormated.identification_document = form_data.CNPJ_do_condomínio
+              ticketFormated.phone = form_data.Telefone
+              ticketFormated.email = form_data['E-mail']
+            }else{
+              ticketFormated.customer = form['Nome_do_condomínio'] ? form['Nome_do_condomínio'] : form.CNPJ_do_condomínio
+              ticketFormated.identification_document = form.CNPJ_do_condomínio
             }
           }
           //@info sla formatado dessa forma para apresentar no analitico do ticket. favor não mexer sem consultar o Rafael ou o Silas.
