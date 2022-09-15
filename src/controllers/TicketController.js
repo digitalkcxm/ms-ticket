@@ -333,6 +333,7 @@ export default class TicketController {
       let objUpdateTicket = {
         updated_at: moment().format(),
       }
+      console.log(ticket)
       if (!ticket[0].closed){
         objUpdateTicket = {
           ... objUpdateTicket,
@@ -408,7 +409,7 @@ export default class TicketController {
       return false
     } catch (err) {
       console.log('Error manage object to create attachments => ', err)
-      return res.status(400).send({ error: 'There was an error' })
+      return false
     }
   }
 
