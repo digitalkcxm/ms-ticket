@@ -16,7 +16,6 @@ export default class TypeColumnModel {
     }
     async getTypeByID(id) {
         try {
-            
             return await this.database(tableName).where('id', id)
         } catch (err) {
             this.logger.error(err,"Error get type by id.")

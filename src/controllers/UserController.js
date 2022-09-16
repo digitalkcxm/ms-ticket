@@ -14,7 +14,7 @@ export default class UserController {
   ) {
     let obj = {};
     name ? (obj.name = name) : "";
-    phone ? (obj.phone = phone) : "";
+    phone && phone != "null" ? (obj.phone = phone) : "";
     email ? (obj.email = email) : "";
     id_type ? (obj.id_type = id_type) : "";
 
