@@ -125,7 +125,7 @@ export default class FormatTicket {
 
     ticket.created_at = moment(ticket.created_at).format('DD/MM/YYYY HH:mm:ss')
     ticket.updated_at = moment(ticket.updated_at).format('DD/MM/YYYY HH:mm:ss')
-
+    ticket.time_closed_ticket ? ticket.time_closed_ticket = moment(ticket.time_closed_ticket).format('DD/MM/YYYY HH:mm:ss') : ''
     return ticket
   }
 }
