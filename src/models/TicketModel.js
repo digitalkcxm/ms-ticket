@@ -160,7 +160,8 @@ export default class TicketModel {
         ticket.display_name as customer,
         customer.identification_document,
         customer.phone,
-        customer.email
+        customer.email,
+        ticket.time_closed_ticket
       from ticket 
       left join 
         users on users.id = ticket.id_user 

@@ -841,6 +841,7 @@ export default class TicketController {
 
       obj.id_phase = data.id_phase
       obj.phase = phase[0].name
+      data.display_name ?? (obj.display_name = data.display_name)
       await this.slaController.updateSLA(ticket.id, ticket.phase_id, 2)
 
       //@info ticket.phase_id === fase atual | phase[0].id === fase destino
