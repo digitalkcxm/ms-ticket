@@ -10,11 +10,14 @@ import http from "http";
 import database from "./database/database.js";
 import logger from "./logger.js";
 
+import Redis from './redis.js'
 import FilaController from "../controllers/FilaController.js";
 
 import CacheController from "../controllers/CacheController.js";
 
 const server = http.createServer(app);
+
+const redis = Redis.newConnection()
 
 app.use(cors());
 app.use(bodyParser.json({ limit: "256mb", extended: true }));
@@ -22,7 +25,7 @@ app.use(bodyParser.urlencoded({ extended: true, limit: "256mb" }));
 // app.use(expressValidator())
 moment.tz.setDefault("America/Sao_Paulo");
 
-routes(app, database, logger);
+routes(app, database, logger, redis);
 // app.use(routes);
 queue();
 
@@ -45,7 +48,7 @@ setTimeout(() => {
   filaController.consumerCreateAttachments();
   filaController.consumerCreateDash();
   filaController.consumerCreateHeader();
-  new CacheController(database, logger).cachePhase();
+  new CacheController(database, logger, redis).cachePhase();
 }, 5000);
 
-export { server, app, database, logger };
+export { server, app };

@@ -1,7 +1,6 @@
 import { v1 } from 'uuid'
 import moment from 'moment'
-import asyncRedis from 'async-redis'
-const redis = asyncRedis.createClient(process.env.REDIS_PORT, process.env.REDIS_HOST)
+
 
 import cache from '../helpers/Cache.js'
 import TabModel from '../models/TabModel.js'
@@ -28,9 +27,10 @@ const sla_status = {
   atrasado: 2,
   aberto: 3
 }
-
+let redis 
 export default class TicketController {
-  constructor(database = {}, logger = {}) {
+  constructor(database = {}, logger = {}, redisConnection = {}) {
+    redis = redisConnection
     this.logger = logger
     this.database = database
     this.tabModel = new TabModel(database)
@@ -39,7 +39,7 @@ export default class TicketController {
     this.userModel = new UserModel(database, logger)
     this.phaseModel = new PhaseModel(database, logger)
     this.ticketModel = new TicketModel(database, logger)
-    this.formatTicket = new FormatTicket(database, logger)
+    this.formatTicket = new FormatTicket(database, logger,redisConnection)
     this.companyModel = new CompanyModel(database, logger)
     this.slaController = new SLAController(database, logger)
     this.customerModel = new CustomerModel(database, logger)
@@ -962,7 +962,6 @@ export default class TicketController {
       delete obj.id_form
       let result = await this.ticketModel.updateTicket(obj, data.id, data.authorization)
 
-      await redis.set(`msTicket:ticket:${data.id}`, JSON.stringify(ticket))
 
       if (ticket.phase_id === phase[0].id) {
         await CallbackDigitalk(
@@ -1010,9 +1009,6 @@ export default class TicketController {
 
       if (result && result[0].id) {
         let ticket = await this.ticketModel.getTicketById(req.params.id, req.headers.authorization)
-
-        await redis.del(`msTicket:ticket:${result[0].id}`)
-
         await redis.del(`msTicket:${req.headers.authorization}:closeTickets:${ticket[0].phase_id}`)
 
         await this.slaController.updateSLA(ticket[0].id, ticket[0].phase_id, 3)
@@ -1061,24 +1057,6 @@ export default class TicketController {
     }
   }
 
-  async setTicketAtRedis() {
-    return new Promise(async (resolve, reject) => {
-      await redis.KEYS(`msTicket:ticket:*`, async (err, res) => {
-        if (res && res.length > 0) {
-          resolve(true)
-        } else {
-          const tickets = await this.ticketModel.getAllTicketWhitoutCompanyId()
-          if (tickets && tickets.length > 0) {
-            for (const ticket of tickets) {
-              let result = await this.ticketModel.getTicketById(ticket.id, ticket.id_company)
-              await redis.set(`msTicket:ticket:${ticket.id}`, JSON.stringify(result[0]))
-            }
-            resolve(true)
-          }
-        }
-      })
-    })
-  }
 
   async cronCheckSLA(req, res) {
     const tickets = await this.slaModel.checkSLA(req.params.type)

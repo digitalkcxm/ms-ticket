@@ -1,7 +1,5 @@
 import { v1 } from 'uuid'
 import moment from 'moment'
-import async_redis from 'async-redis'
-const redis = async_redis.createClient(process.env.REDIS_PORT, process.env.REDIS_HOST)
 import cache from '../helpers/Cache.js'
 import SLAModel from '../models/SLAModel.js'
 import SLAController from './SLAController.js'
@@ -18,8 +16,11 @@ import templateValidate from '../helpers/TemplateValidate.js'
 import CallbackDigitalk from '../services/CallbackDigitalk.js'
 import FormatTicket from '../helpers/FormatTicket.js'
 import CacheController from './CacheController.js'
+
+let redis
 export default class PhaseController {
-  constructor(database = {}, logger = {}) {
+  constructor(database = {}, logger = {}, redisConnection = {}) {
+    redis = redisConnection
     this.logger = logger
     this.database = database
     this.formDocuments = new FormDocuments()
@@ -27,10 +28,10 @@ export default class PhaseController {
     this.slaModel = new SLAModel(database, logger)
     this.phaseModel = new PhaseModel(database, logger)
     this.ticketModel = new TicketModel(database, logger)
-    this.formatTicket = new FormatTicket(database, logger)
+    this.formatTicket = new FormatTicket(database, logger,redisConnection)
     this.slaController = new SLAController(database, logger)
     this.userController = new UserController(database, logger)
-    this.cacheController = new CacheController(database, logger)
+    this.cacheController = new CacheController(database, logger, redisConnection)
     this.typeColumnModel = new TypeColumnModel(database, logger)
     this.departmentModel = new DepartmentModel(database, logger)
     this.departmentController = new DepartmentController(database, logger)
