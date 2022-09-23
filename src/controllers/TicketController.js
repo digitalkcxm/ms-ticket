@@ -793,9 +793,9 @@ export default class TicketController {
               ticketFormated.identification_document = form_data['CNPJ_do_condomínio']
               ticketFormated.phone = form_data.Telefone
               ticketFormated.email = form_data['E-mail']
-            }else{
+            }else if(ticketFormated.form_data){
               
-              ticketFormated.customer = ticketFormated.form_data['Nome_do_condomínio'] ? ticketFormated.form_data['Nome_do_condomínio'] : ticketFormated.form_data['CNPJ_do_condomínio']
+              ticketFormated.customer =  ticketFormated.form_data['Nome_do_condomínio'] ? ticketFormated.form_data['Nome_do_condomínio'] : ticketFormated.form_data['CNPJ_do_condomínio']
               ticketFormated.identification_document = ticketFormated.form_data['CNPJ_do_condomínio']
             }
           }
