@@ -1,6 +1,4 @@
 import moment from 'moment'
-import asyncRedis from 'async-redis'
-const redis = asyncRedis.createClient(process.env.REDIS_PORT, process.env.REDIS_HOST)
 
 import SLAController from './SLAController.js'
 import PhaseModel from '../models/PhaseModel.js'
@@ -9,8 +7,10 @@ import FormTemplate from '../documents/FormTemplate.js'
 import TypeColumnModel from '../models/TypeColumnModel.js'
 import ResponsibleModel from '../models/ResponsibleModel.js'
 import FormatTicket from '../helpers/FormatTicket.js'
+let redis
 export default class CacheController {
-  constructor(database, logger) {
+  constructor(database, logger, redisConnection = {}) {
+    redis = redisConnection
     this.logger = logger
     this.database = database
     this.formTemplate = new FormTemplate(logger)
@@ -19,7 +19,7 @@ export default class CacheController {
     this.slaController = new SLAController(database, logger)
     this.typeColumnModel = new TypeColumnModel(database, logger)
     this.responsibleModel = new ResponsibleModel(database, logger)
-    this.formatTicket = new FormatTicket(database,logger)
+    this.formatTicket = new FormatTicket(database, logger, redisConnection)
   }
 
   async cachePhase() {
