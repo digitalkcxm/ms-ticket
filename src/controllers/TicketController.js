@@ -39,7 +39,7 @@ export default class TicketController {
     this.userModel = new UserModel(database, logger)
     this.phaseModel = new PhaseModel(database, logger)
     this.ticketModel = new TicketModel(database, logger)
-    this.formatTicket = new FormatTicket(database, logger,redisConnection)
+    this.formatTicket = new FormatTicket(database, logger, redisConnection)
     this.companyModel = new CompanyModel(database, logger)
     this.slaController = new SLAController(database, logger)
     this.customerModel = new CustomerModel(database, logger)
