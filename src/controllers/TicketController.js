@@ -27,10 +27,10 @@ const sla_status = {
   atrasado: 2,
   aberto: 3
 }
-let redis 
+
 export default class TicketController {
   constructor(database = {}, logger = {}, redisConnection = {}) {
-    redis = redisConnection
+    this.redis = redisConnection
     this.logger = logger
     this.database = database
     this.tabModel = new TabModel(database)
@@ -830,18 +830,20 @@ export default class TicketController {
       if (!ticket || ticket.length <= 0) return false
 
       let obj = {
-        updated_at: moment().format()
+        updated_at: moment().format(),
+        display_name : data.display_name ? data.display_name : ticket[0].display_name
       }
 
       ticket = ticket[0]
 
+      ticket.display_name = data.display_name ? data.display_name : ticket[0].display_name
       let phase = await this.phaseModel.getPhaseById(data.id_phase, data.authorization)
 
       if (!phase || phase.length <= 0) return false
 
       obj.id_phase = data.id_phase
       obj.phase = phase[0].name
-      data.display_name ?? (obj.display_name = data.display_name)
+      
       await this.slaController.updateSLA(ticket.id, ticket.phase_id, 2)
 
       //@info ticket.phase_id === fase atual | phase[0].id === fase destino
@@ -960,7 +962,8 @@ export default class TicketController {
         obj.status = 'Em atendimento'
       }
       delete obj.id_form
-      let result = await this.ticketModel.updateTicket(obj, data.id, data.authorization)
+
+      const result = await this.ticketModel.updateTicket(obj, data.id, data.authorization)
 
 
       if (ticket.phase_id === phase[0].id) {
@@ -985,7 +988,7 @@ export default class TicketController {
         companyVerified[0].callback
       )
 
-      await redis.del(`ticket:phase:${data.authorization}`)
+      await this.redis.del(`ticket:phase:${data.authorization}`)
       if (result) return true
 
       return false
@@ -1009,7 +1012,7 @@ export default class TicketController {
 
       if (result && result[0].id) {
         let ticket = await this.ticketModel.getTicketById(req.params.id, req.headers.authorization)
-        await redis.del(`msTicket:${req.headers.authorization}:closeTickets:${ticket[0].phase_id}`)
+        await this.redis.del(`msTicket:${req.headers.authorization}:closeTickets:${ticket[0].phase_id}`)
 
         await this.slaController.updateSLA(ticket[0].id, ticket[0].phase_id, 3)
 
@@ -1048,7 +1051,7 @@ export default class TicketController {
         return res.status(200).send(ticket[0])
       }
 
-      await redis.del(`ticket:phase:${req.headers.authorization}`)
+      await this.redis.del(`ticket:phase:${req.headers.authorization}`)
 
       return res.status(400).send({ error: 'There was an error' })
     } catch (err) {

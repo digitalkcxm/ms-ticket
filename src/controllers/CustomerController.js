@@ -16,7 +16,7 @@ export default class CustomerController {
     this.slaController = new SLAController(database, logger)
     this.customerModel = new CustomerModel(database, logger)
     this.phaseController = new PhaseController(database, logger, redis)
-    this.formatTicket = new FormatTicket(database, logger,redis)
+    this.formatTicket = new FormatTicket(database, logger, redis)
   }
 
   async create(req, res) {

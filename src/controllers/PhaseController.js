@@ -17,10 +17,10 @@ import CallbackDigitalk from '../services/CallbackDigitalk.js'
 import FormatTicket from '../helpers/FormatTicket.js'
 import CacheController from './CacheController.js'
 
-let redis
+
 export default class PhaseController {
   constructor(database = {}, logger = {}, redisConnection = {}) {
-    redis = redisConnection
+    this.redis = redisConnection
     this.logger = logger
     this.database = database
     this.formDocuments = new FormDocuments()
@@ -103,7 +103,7 @@ export default class PhaseController {
 
       obj = await this._formatPhase(obj, req.app.locals.db, false, false, req.headers.authorization)
 
-      await redis.del(`ticket:phase:${req.headers.authorization}`)
+      await this.redis.del(`ticket:phase:${req.headers.authorization}`)
       await CallbackDigitalk(
         {
           type: 'socket',
@@ -116,13 +116,13 @@ export default class PhaseController {
 
       await cache(req.headers.authorization, req.body.department, obj.id, this)
 
-      await redis.set(`msTicket:closeTickets:${obj.id}`, JSON.stringify([]))
+      await this.redis.set(`msTicket:closeTickets:${obj.id}`, JSON.stringify([]))
 
-      await redis.set(`msTicket:openTickets:${obj.id}`, JSON.stringify([]))
+      await this.redis.set(`msTicket:openTickets:${obj.id}`, JSON.stringify([]))
 
-      await redis.set(`msTicket:inProgressTickets:${obj.id}`, JSON.stringify([]))
+      await this.redis.set(`msTicket:inProgressTickets:${obj.id}`, JSON.stringify([]))
 
-      await redis.set(`msTicket:tickets:${obj.id}`, JSON.stringify([]))
+      await this.redis.set(`msTicket:tickets:${obj.id}`, JSON.stringify([]))
 
       return res.status(200).send(obj)
     } catch (err) {
@@ -366,7 +366,7 @@ export default class PhaseController {
 
       await cache(req.headers.authorization, req.body.department, req.params.id, this)
 
-      await redis.del(`ticket:phase:${req.headers.authorization}`)
+      await this.redis.del(`ticket:phase:${req.headers.authorization}`)
       return res.status(200).send(phase)
     } catch (err) {
       this.logger.error(err, 'Error when manage phase update.')
@@ -457,17 +457,17 @@ export default class PhaseController {
       if (status && Array.isArray(status)) {
         for await (const x of status) {
           if (!x) {
-            openTickets = await redis.get(`msTicket:openTickets:${result.id}`)
+            openTickets = await this.redis.get(`msTicket:openTickets:${result.id}`)
             openTickets = openTickets ? JSON.parse(openTickets) : []
-            in_progress_ticket = await redis.get(`msTicket:inProgressTickets:${result.id}`)
+            in_progress_ticket = await this.redis.get(`msTicket:inProgressTickets:${result.id}`)
             in_progress_ticket = in_progress_ticket ? JSON.parse(in_progress_ticket) : []
           } else {
-            closeTickets = await redis.get(`msTicket:closeTickets:${result.id}`)
+            closeTickets = await this.redis.get(`msTicket:closeTickets:${result.id}`)
             closeTickets = closeTickets ? JSON.parse(closeTickets) : []
           }
         }
       } else {
-        openTickets = await redis.get(`msTicket:tickets:${result.id}`)
+        openTickets = await this.redis.get(`msTicket:tickets:${result.id}`)
         openTickets = openTickets ? JSON.parse(openTickets) : []
       }
 
@@ -484,7 +484,7 @@ export default class PhaseController {
 
     result.separate && result.separate.separate ? (result.separate = result.separate.separate) : (result.separate = null)
 
-    const header = await redis.get(`msTicket:header:${authorization}:phase:${result.id}`)
+    const header = await this.redis.get(`msTicket:header:${authorization}:phase:${result.id}`)
 
     if (header) {
       result.header = JSON.parse(header)
@@ -679,7 +679,7 @@ export default class PhaseController {
   async dash(req, res) {
     try {
       if (req.query.customer) {
-        const dashRedis = await redis.get(`msTicket:dashForCustomer:${req.headers.authorization}:department:${req.params.id}`)
+        const dashRedis = await this.redis.get(`msTicket:dashForCustomer:${req.headers.authorization}:department:${req.params.id}`)
         const dash = JSON.parse(dashRedis)
 
         if (dash) return res.status(200).send(dash)
@@ -692,7 +692,7 @@ export default class PhaseController {
 
         return res.status(200).send(result)
       } else {
-        const dashRedis = await redis.get(`msTicket:dash:${req.headers.authorization}:department:${req.params.id}`)
+        const dashRedis = await this.redis.get(`msTicket:dash:${req.headers.authorization}:department:${req.params.id}`)
         const dash = JSON.parse(dashRedis)
 
         if (dash) return res.status(200).send(dash)
@@ -1096,7 +1096,7 @@ export default class PhaseController {
     delete result.tickets
     delete result.phases
 
-    await redis.set(`msTicket:dash:${data.authorization}:department:${data.id}`, JSON.stringify(result))
+    await this.redis.set(`msTicket:dash:${data.authorization}:department:${data.id}`, JSON.stringify(result))
     return result
   }
 
@@ -1311,7 +1311,7 @@ export default class PhaseController {
     delete result.tickets
     delete result.phases
 
-    await redis.set(`msTicket:dashForCustomer:${data.authorization}:department:${data.id}`, JSON.stringify(result))
+    await this.redis.set(`msTicket:dashForCustomer:${data.authorization}:department:${data.id}`, JSON.stringify(result))
     return result
   }
 
@@ -1369,7 +1369,7 @@ export default class PhaseController {
     header.counter_sla_closed = await this.slaController.counter_sla(data.id, true, data.customer)
 
     if (!data.customer) {
-      await redis.set(`msTicket:header:${data.authorization}:phase:${data.id}`, JSON.stringify(header))
+      await this.redis.set(`msTicket:header:${data.authorization}:phase:${data.id}`, JSON.stringify(header))
     }
 
     return header

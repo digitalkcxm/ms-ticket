@@ -36,7 +36,7 @@ await connect(app, () => {
 })
 
 const filaController = new FilaController(database, logger, redis)
-
+const cache  = new CacheController(database, logger, redis)
 setTimeout(() => {
   filaController.consumerCreateActivity()
   filaController.consumerCreateTicket()
@@ -44,7 +44,7 @@ setTimeout(() => {
   filaController.consumerCreateAttachments()
   filaController.consumerCreateDash()
   filaController.consumerCreateHeader()
-  new CacheController(database, logger, redis).cachePhase()
+  cache.cachePhase()
 }, 5000)
 
 export { server, app }
