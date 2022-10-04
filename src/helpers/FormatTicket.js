@@ -21,28 +21,28 @@ export default class FormatTicket {
   async retriveTicket(ticket, id_phase) {
     ticket = await this.formatTicketForPhase({ id: id_phase }, ticket)
 
-    const removeTk = async function (key) {
-      let openTickets = await this.redis.get(key)
+    const removeTk = async function (key, redis) {
+      let openTickets = await redis.get(key)
 
       if (openTickets) {
         openTickets = JSON.parse(openTickets)
 
         openTickets = await openTickets.filter((x) => x.id !== ticket.id)
 
-        await this.redis.set(key, JSON.stringify(openTickets))
+        await redis.set(key, JSON.stringify(openTickets))
       }
     }
 
-    const addTk = async function (key) {
-      let openTickets = await this.redis.get(key)
+    const addTk = async function (key, redis) {
+      let openTickets = await redis.get(key)
       if (openTickets) {
         openTickets = JSON.parse(openTickets)
 
         openTickets = openTickets.concat(ticket)
 
-        await this.redis.set(key, JSON.stringify(openTickets))
+        await redis.set(key, JSON.stringify(openTickets))
       } else {
-        await this.redis.set(key, JSON.stringify([ticket]))
+        await redis.set(key, JSON.stringify([ticket]))
       }
     }
 
@@ -78,7 +78,7 @@ export default class FormatTicket {
 
       if (oldTk.length > 0) {
         const key = validationRemove[oldTk[0].id_status].key
-        await validationRemove[oldTk[0].id_status].func(key)
+        await validationRemove[oldTk[0].id_status].func(key, this.redis)
 
         const newCacheOldPhase = await cache.filter((x) => x.id !== ticket.id)
         await this.redis.set(`msTicket:tickets:${ticket.phase_id}`, JSON.stringify(newCacheOldPhase))
@@ -86,7 +86,7 @@ export default class FormatTicket {
     }
 
     const key = validationAdd[ticket.id_status].key
-    validationAdd[ticket.id_status].func(key)
+    validationAdd[ticket.id_status].func(key, this.redis)
 
     let newCacheNewPhase = await this.redis.get(`msTicket:tickets:${id_phase}`)
     if (newCacheNewPhase) {
