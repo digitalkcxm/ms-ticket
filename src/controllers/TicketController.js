@@ -27,10 +27,10 @@ const sla_status = {
   atrasado: 2,
   aberto: 3
 }
-let redis 
+
 export default class TicketController {
   constructor(database = {}, logger = {}, redisConnection = {}) {
-    redis = redisConnection
+    this.redis = redisConnection
     this.logger = logger
     this.database = database
     this.tabModel = new TabModel(database)
@@ -985,7 +985,7 @@ export default class TicketController {
         companyVerified[0].callback
       )
 
-      await redis.del(`ticket:phase:${data.authorization}`)
+      await this.redis.del(`ticket:phase:${data.authorization}`)
       if (result) return true
 
       return false
@@ -1009,7 +1009,7 @@ export default class TicketController {
 
       if (result && result[0].id) {
         let ticket = await this.ticketModel.getTicketById(req.params.id, req.headers.authorization)
-        await redis.del(`msTicket:${req.headers.authorization}:closeTickets:${ticket[0].phase_id}`)
+        await this.redis.del(`msTicket:${req.headers.authorization}:closeTickets:${ticket[0].phase_id}`)
 
         await this.slaController.updateSLA(ticket[0].id, ticket[0].phase_id, 3)
 
@@ -1048,7 +1048,7 @@ export default class TicketController {
         return res.status(200).send(ticket[0])
       }
 
-      await redis.del(`ticket:phase:${req.headers.authorization}`)
+      await this.redis.del(`ticket:phase:${req.headers.authorization}`)
 
       return res.status(400).send({ error: 'There was an error' })
     } catch (err) {

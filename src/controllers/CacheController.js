@@ -7,10 +7,10 @@ import FormTemplate from '../documents/FormTemplate.js'
 import TypeColumnModel from '../models/TypeColumnModel.js'
 import ResponsibleModel from '../models/ResponsibleModel.js'
 import FormatTicket from '../helpers/FormatTicket.js'
-let redis
+
 export default class CacheController {
   constructor(database, logger, redisConnection = {}) {
-    redis = redisConnection
+    this.redis = redisConnection
     this.logger = logger
     this.database = database
     this.formTemplate = new FormTemplate(logger)
@@ -41,13 +41,13 @@ export default class CacheController {
           : closed_tickets.push(ticket)
       }
 
-      await redis.set(`msTicket:closeTickets:${phase.id}`, JSON.stringify(closed_tickets))
+      await this.redis.set(`msTicket:closeTickets:${phase.id}`, JSON.stringify(closed_tickets))
 
-      await redis.set(`msTicket:openTickets:${phase.id}`, JSON.stringify(open_tickets))
+      await this.redis.set(`msTicket:openTickets:${phase.id}`, JSON.stringify(open_tickets))
 
-      await redis.set(`msTicket:inProgressTickets:${phase.id}`, JSON.stringify(in_progress_tickets))
+      await this.redis.set(`msTicket:inProgressTickets:${phase.id}`, JSON.stringify(in_progress_tickets))
 
-      await redis.set(`msTicket:tickets:${phase.id}`, JSON.stringify(tickets))
+      await this.redis.set(`msTicket:tickets:${phase.id}`, JSON.stringify(tickets))
     }
     this.logger.info('End create cache tickets.')
   }

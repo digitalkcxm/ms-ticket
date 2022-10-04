@@ -6,10 +6,10 @@ import TicketModel from '../models/TicketModel.js'
 import PhaseModel from '../models/PhaseModel.js'
 
 import FormDocuments from '../documents/FormDocuments.js'
-let redis
+
 export default class FormatTicket {
   constructor(database = {}, logger = {}, redisConnection = {}) {
-    redis = redisConnection
+    this.redis = redisConnection
     this.slaController = new SLAController(database, logger)
     this.responsibleModel = new ResponsibleModel(database, logger)
     this.ticketModel = new TicketModel(database, logger)
@@ -22,27 +22,27 @@ export default class FormatTicket {
     ticket = await this.formatTicketForPhase({ id: id_phase }, ticket)
 
     const removeTk = async function (key) {
-      let openTickets = await redis.get(key)
+      let openTickets = await this.redis.get(key)
 
       if (openTickets) {
         openTickets = JSON.parse(openTickets)
 
         openTickets = await openTickets.filter((x) => x.id !== ticket.id)
 
-        await redis.set(key, JSON.stringify(openTickets))
+        await this.redis.set(key, JSON.stringify(openTickets))
       }
     }
 
     const addTk = async function (key) {
-      let openTickets = await redis.get(key)
+      let openTickets = await this.redis.get(key)
       if (openTickets) {
         openTickets = JSON.parse(openTickets)
 
         openTickets = openTickets.concat(ticket)
 
-        await redis.set(key, JSON.stringify(openTickets))
+        await this.redis.set(key, JSON.stringify(openTickets))
       } else {
-        await redis.set(key, JSON.stringify([ticket]))
+        await this.redis.set(key, JSON.stringify([ticket]))
       }
     }
 
@@ -69,7 +69,7 @@ export default class FormatTicket {
       }
     }
 
-    let cache = await redis.get(`msTicket:tickets:${ticket.phase_id}`)
+    let cache = await this.redis.get(`msTicket:tickets:${ticket.phase_id}`)
 
     if (cache) {
       cache = JSON.parse(cache)
@@ -81,14 +81,14 @@ export default class FormatTicket {
         await validationRemove[oldTk[0].id_status].func(key)
 
         const newCacheOldPhase = await cache.filter((x) => x.id !== ticket.id)
-        await redis.set(`msTicket:tickets:${ticket.phase_id}`, JSON.stringify(newCacheOldPhase))
+        await this.redis.set(`msTicket:tickets:${ticket.phase_id}`, JSON.stringify(newCacheOldPhase))
       }
     }
 
     const key = validationAdd[ticket.id_status].key
     validationAdd[ticket.id_status].func(key)
 
-    let newCacheNewPhase = await redis.get(`msTicket:tickets:${id_phase}`)
+    let newCacheNewPhase = await this.redis.get(`msTicket:tickets:${id_phase}`)
     if (newCacheNewPhase) {
       newCacheNewPhase = JSON.parse(newCacheNewPhase)
       newCacheNewPhase = newCacheNewPhase.concat({
@@ -106,7 +106,7 @@ export default class FormatTicket {
         responsibles: ticket.responsibles,
         form_data: ticket.form_data
       })
-      await redis.set(`msTicket:tickets:${id_phase}`, JSON.stringify(newCacheNewPhase))
+      await this.redis.set(`msTicket:tickets:${id_phase}`, JSON.stringify(newCacheNewPhase))
     }
 
     return ticket
