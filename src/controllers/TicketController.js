@@ -843,7 +843,7 @@ export default class TicketController {
 
       obj.id_phase = data.id_phase
       obj.phase = phase[0].name
-      
+
       await this.slaController.updateSLA(ticket.id, ticket.phase_id, 2)
 
       //@info ticket.phase_id === fase atual | phase[0].id === fase destino
@@ -940,9 +940,6 @@ export default class TicketController {
           }
         }
       }
-
-      ticket = await this.formatTicket.retriveTicket(ticket, phase[0].id)
-
       await cache(data.authorization, phase[0].id_department, ticket.phase_id, this)
 
       await Notify(ticket.id, phase[0].id, data.authorization, 'progress', companyVerified[0].callback, {
@@ -965,6 +962,9 @@ export default class TicketController {
 
       const result = await this.ticketModel.updateTicket(obj, data.id, data.authorization)
 
+      ticket = await this.ticketModel.getTicketById(data.id, data.authorization)
+      
+      ticket = await this.formatTicket.retriveTicket(ticket[0], phase[0].id)
 
       if (ticket.phase_id === phase[0].id) {
         await CallbackDigitalk(
