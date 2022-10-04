@@ -830,18 +830,20 @@ export default class TicketController {
       if (!ticket || ticket.length <= 0) return false
 
       let obj = {
-        updated_at: moment().format()
+        updated_at: moment().format(),
+        display_name : data.display_name ? data.display_name : ticket[0].display_name
       }
 
       ticket = ticket[0]
 
+      ticket.display_name = data.display_name ? data.display_name : ticket[0].display_name
       let phase = await this.phaseModel.getPhaseById(data.id_phase, data.authorization)
 
       if (!phase || phase.length <= 0) return false
 
       obj.id_phase = data.id_phase
       obj.phase = phase[0].name
-      data.display_name ?? (obj.display_name = data.display_name)
+      
       await this.slaController.updateSLA(ticket.id, ticket.phase_id, 2)
 
       //@info ticket.phase_id === fase atual | phase[0].id === fase destino
@@ -960,7 +962,8 @@ export default class TicketController {
         obj.status = 'Em atendimento'
       }
       delete obj.id_form
-      let result = await this.ticketModel.updateTicket(obj, data.id, data.authorization)
+
+      const result = await this.ticketModel.updateTicket(obj, data.id, data.authorization)
 
 
       if (ticket.phase_id === phase[0].id) {
