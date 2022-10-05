@@ -75,7 +75,7 @@ export default class FormatTicket {
       cache = JSON.parse(cache)
 
       const oldTk = await cache.filter((x) => x.id === ticket.id)
-
+      console.log("old tk =====> ", oldTk)
       if (oldTk.length > 0) {
         const key = validationRemove[oldTk[0].id_status].key
         await validationRemove[oldTk[0].id_status].func(key, this.redis)

@@ -427,7 +427,7 @@ export default class TicketController {
       }
 
       const protocols = await this.ticketModel.getProtocolTicket(result.id, req.headers.authorization)
-      console.log('protocols =>', protocols)
+      
 
       if (protocols && Array.isArray(protocols) && protocols.length > 0) {
         result.protocols = protocols
@@ -479,7 +479,7 @@ export default class TicketController {
         delete x.id
       })
 
-      console.log('result =>', result)
+      
       return res.status(200).send(result)
     } catch (err) {
       console.log('Error when select ticket by id =>', err)
@@ -581,11 +581,11 @@ export default class TicketController {
         const before = await new FormDocuments(db).findRegister(history_phase[index].id_form)
 
         const templateBefore = await this.formTemplate.findRegister(history_phase[index].template)
-        console.log('templateBefore =>', templateBefore)
+        
         const after = await new FormDocuments(db).findRegister(history_phase[index + 1].id_form)
 
         const templateAfter = await this.formTemplate.findRegister(history_phase[index + 1].template)
-        console.log('created at ----->', history_phase[index + 1])
+        
         obj.push({
           before: {
             phase: history_phase[index + 1].id_phase,
@@ -646,23 +646,6 @@ export default class TicketController {
       value.type = 'view'
       obj.push(value)
     })
-    // await history_phase.map(async (value, index, array) => {
-    //   if (array[index + 1]) {
-    //     console.log("array[index + 1]", array[index + 1]);
-    //     const before = await new FormDocuments(db).findRegister(value.id_form);
-    //     const after = await new FormDocuments(db).findRegister(
-    //       array[index + 1].id_form
-    //     );
-    //     obj.push({
-    //       after: after,
-    //       before: before,
-    //       type: "form",
-    //       created_at: array[index + 1].created_at,
-    //     });
-    //     console.log("TESTE ===>", obj);
-    //   }
-    //   value.created_at = moment(value.created_at).format("DD/MM/YYYY HH:mm:ss");
-    // });
 
     const create_protocol = await this.ticketModel.getProtocolCreatedByTicket(id_ticket, id_company)
     create_protocol.map((value) => {
@@ -961,9 +944,8 @@ export default class TicketController {
 
       const result = await this.ticketModel.updateTicket(obj, data.id, data.authorization)
 
-      ticket = await this.ticketModel.getTicketById(data.id, data.authorization)
       
-      ticket = await this.formatTicket.retriveTicket(ticket[0], phase[0].id)
+      ticket = await this.formatTicket.retriveTicket(await this.ticketModel.getTicketById(data.id, data.authorization)[0], phase[0].id)
 
       if (ticket.phase_id === phase[0].id) {
         await CallbackDigitalk(
