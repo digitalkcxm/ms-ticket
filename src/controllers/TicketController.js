@@ -836,7 +836,6 @@ export default class TicketController {
 
       ticket = ticket[0]
 
-      ticket.display_name = data.display_name ? data.display_name : ticket[0].display_name
       let phase = await this.phaseModel.getPhaseById(data.id_phase, data.authorization)
 
       if (!phase || phase.length <= 0) return false
