@@ -943,9 +943,9 @@ export default class TicketController {
       delete obj.id_form
 
       const result = await this.ticketModel.updateTicket(obj, data.id, data.authorization)
-
+const getTicket = await this.ticketModel.getTicketById(data.id, data.authorization)
       
-      ticket = await this.formatTicket.retriveTicket(await this.ticketModel.getTicketById(data.id, data.authorization)[0], phase[0].id)
+      ticket = await this.formatTicket.retriveTicket(getTicket[0], phase[0].id)
 
       if (ticket.phase_id === phase[0].id) {
         await CallbackDigitalk(
