@@ -1,7 +1,6 @@
 import { v1 } from 'uuid'
 import moment from 'moment'
 
-
 import cache from '../helpers/Cache.js'
 import TabModel from '../models/TabModel.js'
 import SLAModel from '../models/SLAModel.js'
@@ -232,18 +231,18 @@ export default class TicketController {
       if (!ticket || ticket.length <= 0) return false
 
       let objUpdateTicket = {
-        updated_at: moment().format(),
+        updated_at: moment().format()
       }
-      if (!ticket[0].closed){
+      if (!ticket[0].closed) {
         objUpdateTicket = {
-          ... objUpdateTicket,
+          ...objUpdateTicket,
           id_status: 2,
           status: 'Em atendimento'
         }
-        
-      ticket[0].id_status = 2
+
+        ticket[0].id_status = 2
       }
-      
+
       if (!ticket[0].start_ticket) {
         await Notify(ticket[0].id, ticket[0].phase_id, data.authorization, 'start_activity', companyVerified[0].callback, {
           phaseModel: this.phaseModel,
@@ -331,19 +330,19 @@ export default class TicketController {
       if (!ticket || ticket.length <= 0) return false
 
       let objUpdateTicket = {
-        updated_at: moment().format(),
+        updated_at: moment().format()
       }
       console.log(ticket)
-      if (!ticket[0].closed){
+      if (!ticket[0].closed) {
         objUpdateTicket = {
-          ... objUpdateTicket,
+          ...objUpdateTicket,
           id_status: 2,
           status: 'Em atendimento'
         }
-        
-      ticket[0].id_status = 2
+
+        ticket[0].id_status = 2
       }
-        
+
       if (!ticket[0].start_ticket) {
         await Notify(ticket[0].id, ticket[0].phase_id, data.authorization, 'start_activity', companyVerified[0].callback, {
           phaseModel: this.phaseModel,
@@ -427,7 +426,6 @@ export default class TicketController {
       }
 
       const protocols = await this.ticketModel.getProtocolTicket(result.id, req.headers.authorization)
-      
 
       if (protocols && Array.isArray(protocols) && protocols.length > 0) {
         result.protocols = protocols
@@ -445,8 +443,6 @@ export default class TicketController {
 
       const department = await this.phaseModel.getDepartmentPhase(result.phase_id)
       result.actual_department = department[0].id_department
-
-      
 
       if (result.form_data) {
         const phase = await this.phaseModel.getPhaseById(result.phase_id, req.headers.authorization)
@@ -468,7 +464,6 @@ export default class TicketController {
             }
           }
         }
-        
       }
 
       result.responsibles = await this.responsibleModel.getActiveResponsibleByTicket(result.id)
@@ -479,7 +474,6 @@ export default class TicketController {
         delete x.id
       })
 
-      
       return res.status(200).send(result)
     } catch (err) {
       console.log('Error when select ticket by id =>', err)
@@ -581,11 +575,11 @@ export default class TicketController {
         const before = await new FormDocuments(db).findRegister(history_phase[index].id_form)
 
         const templateBefore = await this.formTemplate.findRegister(history_phase[index].template)
-        
+
         const after = await new FormDocuments(db).findRegister(history_phase[index + 1].id_form)
 
         const templateAfter = await this.formTemplate.findRegister(history_phase[index + 1].template)
-        
+
         obj.push({
           before: {
             phase: history_phase[index + 1].id_phase,
@@ -752,9 +746,11 @@ export default class TicketController {
         obj.range = obj.range.map((x) => x.replace('[', '').replace(']', ''))
       }
       obj.history_phase = req.query.history_phase
-      req.query.rows && (obj.rows = req.query.rows )
+      req.query.rows && (obj.rows = req.query.rows)
 
-      req.query.offset && obj.rows && (obj.offset = obj.rows * (parseInt(req.query.offset) != 0 ? parseInt(req.query.offset)  - 1 : req.query.offset))
+      req.query.offset &&
+        obj.rows &&
+        (obj.offset = obj.rows * (parseInt(req.query.offset) != 0 ? parseInt(req.query.offset) - 1 : req.query.offset))
       const result = await this.ticketModel.getAllTickets(req.headers.authorization, obj)
 
       if (result.name && result.name == 'error') return res.status(400).send({ error: 'There was an error' })
@@ -776,9 +772,10 @@ export default class TicketController {
               ticketFormated.identification_document = form_data['CNPJ_do_condomínio']
               ticketFormated.phone = form_data.Telefone
               ticketFormated.email = form_data['E-mail']
-            }else if(ticketFormated.form_data){
-              
-              ticketFormated.customer =  ticketFormated.form_data['Nome_do_condomínio'] ? ticketFormated.form_data['Nome_do_condomínio'] : ticketFormated.form_data['CNPJ_do_condomínio']
+            } else if (ticketFormated.form_data) {
+              ticketFormated.customer = ticketFormated.form_data['Nome_do_condomínio']
+                ? ticketFormated.form_data['Nome_do_condomínio']
+                : ticketFormated.form_data['CNPJ_do_condomínio']
               ticketFormated.identification_document = ticketFormated.form_data['CNPJ_do_condomínio']
             }
           }
@@ -814,7 +811,7 @@ export default class TicketController {
 
       let obj = {
         updated_at: moment().format(),
-        display_name : data.display_name ? data.display_name : ticket[0].display_name
+        display_name: data.display_name ? data.display_name : ticket[0].display_name
       }
 
       ticket = ticket[0]
@@ -943,8 +940,8 @@ export default class TicketController {
       delete obj.id_form
 
       const result = await this.ticketModel.updateTicket(obj, data.id, data.authorization)
-const getTicket = await this.ticketModel.getTicketById(data.id, data.authorization)
-      
+      const getTicket = await this.ticketModel.getTicketById(data.id, data.authorization)
+
       ticket = await this.formatTicket.retriveTicket(getTicket[0], phase[0].id)
 
       if (ticket.phase_id === phase[0].id) {
@@ -1040,7 +1037,6 @@ const getTicket = await this.ticketModel.getTicketById(data.id, data.authorizati
       return res.status(400).send({ error: 'There was an error' })
     }
   }
-
 
   async cronCheckSLA(req, res) {
     const tickets = await this.slaModel.checkSLA(req.params.type)
@@ -1223,7 +1219,7 @@ const getTicket = await this.ticketModel.getTicketById(data.id, data.authorizati
 
   async getTicketByCustomerOrProtocol(req, res) {
     try {
-      let result = await this.ticketModel.getTicketByCustomerOrProtocol(req.params.id)
+      let result = await this.ticketModel.getTicketByCustomerOrProtocol(req.params.id, req.headers.authorization)
       for (let ticket of result) {
         ticket = await this.formatTicket.formatTicketForPhase({ id: ticket.phase_id }, ticket, this.database, this.logger)
 
@@ -1537,43 +1533,12 @@ const getTicket = await this.ticketModel.getTicketById(data.id, data.authorizati
         id_tab: ticket[0].id_tab
       })
 
-      // const child_tickets =
-      //   await this.ticketModel.getTicketCreatedByTicketFather(
-      //     req.params.id,
-      //     req.headers.authorization
-      //   );
-      // if (child_tickets && child_tickets.length > 0) {
-      //   for (const child_ticket of child_tickets) {
-
-      //     child_ticket.created_at = moment(child_ticket.created_at).format(
-      //       "DD/MM/YYYY HH:mm:ss"
-      //     );
-      //     child_ticket.type = "ticket";
-      //     const slaInfo = await formatTicketForPhase(
-      //       { id: child_ticket[0].phase_id },
-      //       child_ticket[0],
-      //       this.database,
-      //       this.logger
-      //     );
-
-      //     history.push(child_ticket);
-      //     history.push({
-      //       id_seq: ticket[0].id_seq,
-      //       id_user: ticket[0].id_user,
-      //       user: ticket[0].name,
-      //       created_at: ticket[0].created_at,
-      //       closed: ticket[0].closed,
-      //       department_origin: ticket[0].department_origin,
-      //       phase_name: ticket[0].phase,
-      //       display_name: ticket[0].display_name,
-      //       id_protocol: ticket[0].id_protocol,
-      //       type: "ticket",
-      //       sla_status: sla_status(slaInfo.sla),
-      //       status:ticket[0].status,
-      //       customer: await this.customerModel.getAll(ticket[0].id),
-      //     });
-      //   }
-      // }
+      if (ticket[0].id_protocol) {
+        history.push({
+          id: ticket[0].id_protocol,
+          type: 'protocol'
+        })
+      }
 
       const father_ticket = await this.ticketModel.getTicketById(ticket[0].id_ticket_father, req.headers.authorization)
       if (father_ticket && father_ticket.length > 0) {
@@ -1594,43 +1559,6 @@ const getTicket = await this.ticketModel.getTicketById(data.id, data.authorizati
         })
       }
 
-      // const customers = await this.customerModel.getAll(req.params.id);
-      // if (customers && customers.length > 0) {
-      //   for (const customer of customers) {
-      //     const customersRelated =
-      //       await this.customerModel.getByIdentification_document(
-      //         customer.identification_document
-      //       );
-      //     if (customersRelated && customersRelated.length > 0) {
-      //       for (const customerRelated of customersRelated) {
-      //         const ticketRelated = await this.ticketModel.getTicketById(
-      //           customerRelated.id_ticket,
-      //           req.headers.authorization
-      //         );
-      //         if (ticketRelated && ticketRelated.length > 0) {
-      //           history.push({
-      //             id_seq: ticketRelated[0].id_seq,
-      //             id_user: ticketRelated[0].id_user,
-      //             user: ticketRelated[0].name,
-      //             created_at: moment(ticketRelated[0].created_at).format(
-      //               "DD/MM/YYYY HH:mm:ss"
-      //             ),
-      //             closed: ticketRelated[0].closed,
-      //             department_origin: ticketRelated[0].department_origin,
-      //             phase_name: ticketRelated[0].phase,
-      //             display_name: ticketRelated[0].display_name,
-      //             id_protocol: ticketRelated[0].id_protocol,
-      //             type: "ticket",
-      //             customer: await this.customerModel.getAll(
-      //               ticketRelated[0].id
-      //             ),
-      //           });
-      //         }
-      //       }
-      //     }
-      //   }
-      // }
-
       const protocols = await this.ticketModel.getProtocolTicket(req.params.id, req.headers.authorization)
       if (protocols && protocols.length > 0) {
         for (const protocol of protocols) {
@@ -1639,13 +1567,6 @@ const getTicket = await this.ticketModel.getTicketById(data.id, data.authorizati
             type: 'protocol'
           })
         }
-      }
-
-      if (ticket[0].id_protocol) {
-        history.push({
-          id: ticket[0].id_protocol,
-          type: 'protocol'
-        })
       }
 
       return res.status(200).send(history)
