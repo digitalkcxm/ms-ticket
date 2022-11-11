@@ -126,7 +126,9 @@ export default class TicketModel {
 
   async getAllTickets(id_company, obj) {
     try {
-      let stringWhere = `${tableName}.id_company = '${id_company}' ${obj.history_phase === "true" ? `AND phase_ticket.active = true ` : ""}  `
+      let stringWhere = `${tableName}.id_company = '${id_company}' ${
+        obj.history_phase === 'true' ? `AND phase_ticket.active = true ` : ''
+      }  `
 
       if (obj.department && obj.department.length > 0) {
         stringWhere = stringWhere + ` AND department.id_department_core in (${obj.department}) `
@@ -376,7 +378,7 @@ export default class TicketModel {
     return result[0].count
   }
 
-  async getTicketByCustomerOrProtocol(id) {
+  async getTicketByCustomerOrProtocol(id, id_company) {
     try {
       return this.database(tableName)
         .select({
@@ -403,8 +405,11 @@ export default class TicketModel {
         .leftJoin('phase', 'phase.id', 'phase_ticket.id_phase')
         .leftJoin('customer', 'customer.id_ticket', 'ticket.id')
         .where('phase_ticket.active', true)
+        .andWhere('ticket.id_company', id_company)
         .andWhere('customer.crm_contact_id', id)
         .orWhere('ticket.id_protocol', id)
+        .andWhere('phase_ticket.active', true)
+        .andWhere('ticket.id_company', id_company)
     } catch (err) {
       this.logger.error(err, 'Error when get ticket by customer or protocol.')
       return err
@@ -525,7 +530,7 @@ export default class TicketModel {
     }
   }
 
-  //REGRA DE NEGOCIO DE CLIENTE EM MICROSERVIÇO!!! 
+  //REGRA DE NEGOCIO DE CLIENTE EM MICROSERVIÇO!!!
   async getFormTicketFromComgas(id_ticket) {
     try {
       return await this.database('phase_ticket')
