@@ -303,6 +303,7 @@ export default class TicketModel {
         })
         .leftJoin('users', 'users.id', 'ticket.id_user')
         .where('ticket.id_phase', id_phase)
+        .orderBy('ticket.created_at','desc')
     } catch (err) {
       this.logger.error(err, 'Error when get Ticket by phase.')
       return err
