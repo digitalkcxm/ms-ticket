@@ -75,7 +75,7 @@ export default class FilaController {
       global.amqpConn.prefetch(1)
       global.amqpConn.consume(queueName, async (msg) => {
         this.logger.info('Consumindo create dash.')
-        // await this.phaseController.dashGenerate(JSON.parse(msg.content.toString()))
+        await this.phaseController.dashGenerate(JSON.parse(msg.content.toString()))
         global.amqpConn.ack(msg)
       })
     } catch (err) {
