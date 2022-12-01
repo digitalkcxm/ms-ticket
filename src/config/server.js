@@ -18,7 +18,6 @@ import CacheController from '../controllers/CacheController.js'
 const server = http.createServer(app)
 
 const redis = Redis.newConnection()
-
 app.use(cors())
 app.use(bodyParser.json({ limit: '256mb', extended: true }))
 app.use(bodyParser.urlencoded({ extended: true, limit: '256mb' }))
