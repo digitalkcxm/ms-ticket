@@ -8,11 +8,13 @@ export default class FilaController {
     this.ticketController = new TicketController(database, logger, redis)
   }
   async consumerCreateTicket() {
-    const queueName = 'msticket:create_ticket'
+    const queueName = 'msticket:create_ticket_tmp'
     try {
       global.amqpConn.assertQueue(queueName, { durable: true })
+      global.amqpConn.prefetch(1)
       global.amqpConn.consume(queueName, async (msg) => {
         this.logger.info('Consumindo create ticket')
+
         await this.ticketController.queueCreate(JSON.parse(msg.content.toString()))
         global.amqpConn.ack(msg)
       })
@@ -25,6 +27,7 @@ export default class FilaController {
     const queueName = 'msticket:update_ticket'
     try {
       global.amqpConn.assertQueue(queueName, { durable: true })
+      global.amqpConn.prefetch(1)
       global.amqpConn.consume(queueName, async (msg) => {
         this.logger.info('Consumindo update ticket')
         await this.ticketController.queueUpdateTicket(JSON.parse(msg.content.toString()))
@@ -39,6 +42,7 @@ export default class FilaController {
     const queueName = 'msticket:create_activities'
     try {
       global.amqpConn.assertQueue(queueName, { durable: true })
+      global.amqpConn.prefetch(1)
       global.amqpConn.consume(queueName, async (msg) => {
         this.logger.info('Consumindo create activities')
         await this.ticketController.queueCreateActivities(JSON.parse(msg.content.toString()))
@@ -53,6 +57,7 @@ export default class FilaController {
     const queueName = 'msticket:create_attachments'
     try {
       global.amqpConn.assertQueue(queueName, { durable: true })
+      global.amqpConn.prefetch(1)
       global.amqpConn.consume(queueName, async (msg) => {
         this.logger.info('Consumindo create attachments')
         await this.ticketController.queueCreateAttachments(JSON.parse(msg.content.toString()))
@@ -67,9 +72,10 @@ export default class FilaController {
     const queueName = 'msticket:create_dash'
     try {
       global.amqpConn.assertQueue(queueName, { durable: true })
+      global.amqpConn.prefetch(1)
       global.amqpConn.consume(queueName, async (msg) => {
         this.logger.info('Consumindo create dash.')
-        await this.phaseController.dashGenerate(JSON.parse(msg.content.toString()))
+        // await this.phaseController.dashGenerate(JSON.parse(msg.content.toString()))
         global.amqpConn.ack(msg)
       })
     } catch (err) {
@@ -81,6 +87,7 @@ export default class FilaController {
     const queueName = 'msticket:create_header'
     try {
       global.amqpConn.assertQueue(queueName, { durable: true })
+      global.amqpConn.prefetch(1)
       global.amqpConn.consume(queueName, async (msg) => {
         this.logger.info('Consumindo create header.')
         await this.phaseController.headerGenerate(JSON.parse(msg.content.toString()))
