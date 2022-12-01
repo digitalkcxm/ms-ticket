@@ -8,7 +8,7 @@ export default class FilaController {
     this.ticketController = new TicketController(database, logger, redis)
   }
   async consumerCreateTicket() {
-    const queueName = 'msticket:create_ticket_tmp'
+    const queueName = 'msticket:create_ticket'
     try {
       global.amqpConn.assertQueue(queueName, { durable: true })
       global.amqpConn.prefetch(1)
