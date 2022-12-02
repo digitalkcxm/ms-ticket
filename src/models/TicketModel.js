@@ -303,7 +303,7 @@ export default class TicketModel {
         })
         .leftJoin('users', 'users.id', 'ticket.id_user')
         .where('ticket.id_phase', id_phase)
-        .orderBy('ticket.created_at','desc')
+        .orderBy('ticket.created_at', 'desc')
     } catch (err) {
       this.logger.error(err, 'Error when get Ticket by phase.')
       return err
@@ -393,7 +393,7 @@ export default class TicketModel {
           id_form: 'ticket.id_form',
           name: 'phase.name',
           department_origin: 'department.id_department_core',
-          created_at: 'phase_ticket.created_at',
+          created_at: 'ticket.created_at',
           updated_at: 'ticket.updated_at',
           display_name: 'ticket.display_name',
           id_ticket_father: 'ticket.id_ticket_father',
@@ -401,15 +401,12 @@ export default class TicketModel {
           phase_id: 'phase.id'
         })
         .leftJoin('users', 'users.id', 'ticket.id_user')
-        .leftJoin('phase_ticket', 'phase_ticket.id_ticket', `${tableName}.id`)
         .leftJoin('department', 'department.id', 'ticket.department_origin')
-        .leftJoin('phase', 'phase.id', 'phase_ticket.id_phase')
+        .leftJoin('phase', 'phase.id', 'ticket.id_phase')
         .leftJoin('customer', 'customer.id_ticket', 'ticket.id')
-        .where('phase_ticket.active', true)
-        .andWhere('ticket.id_company', id_company)
+        .where('ticket.id_company', id_company)
         .andWhere('customer.crm_contact_id', id)
         .orWhere('ticket.id_protocol', id)
-        .andWhere('phase_ticket.active', true)
         .andWhere('ticket.id_company', id_company)
     } catch (err) {
       this.logger.error(err, 'Error when get ticket by customer or protocol.')
