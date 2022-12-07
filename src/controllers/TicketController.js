@@ -364,7 +364,7 @@ export default class TicketController {
         id_ticket: data.id_ticket,
         url: data.url,
         type: typeAttachments[0].id,
-        name: data.name,
+        name: data.file_name,
         created_at: moment(),
         updated_at: moment()
       }
