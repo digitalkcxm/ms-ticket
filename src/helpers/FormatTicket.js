@@ -23,22 +23,21 @@ export default class FormatTicket {
     ticket = await this.formatTicketForPhase({ id: ticket.phase_id }, ticket)
 
     const removeTk = async function (key, redis) {
-      console.log('key remove', key)
+      
       const openTickets = await redis.get(key)
-      console.log('openTickets', openTickets)
+      
       if (openTickets) {
         const jsonTickets = JSON.parse(openTickets).filter((x) => x.id !== ticket.id)
-        console.log('jsonTickets', jsonTickets)
-
+        
         const stringTickets = JSON.stringify(jsonTickets)
-        console.log('stringTickets', stringTickets)
+        
 
         await redis.set(key, stringTickets)
       }
     }
 
     const addTk = async function (key, redis) {
-      console.log('key add', key)
+      
       let openTickets = await redis.get(key)
       if (openTickets) {
         openTickets = JSON.parse(openTickets)
