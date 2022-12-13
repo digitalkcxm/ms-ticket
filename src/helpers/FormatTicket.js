@@ -19,21 +19,25 @@ export default class FormatTicket {
   }
 
   async retriveTicket(ticket, id_phase) {
-    ticket = await this.formatTicketForPhase({ id: id_phase }, ticket)
+    //@info id_phase é a phase em que o cache deve ser removido.
+    ticket = await this.formatTicketForPhase({ id: ticket.phase_id }, ticket)
 
     const removeTk = async function (key, redis) {
-      let openTickets = await redis.get(key)
-
+      
+      const openTickets = await redis.get(key)
+      
       if (openTickets) {
-        openTickets = JSON.parse(openTickets)
+        const jsonTickets = JSON.parse(openTickets).filter((x) => x.id !== ticket.id)
+        
+        const stringTickets = JSON.stringify(jsonTickets)
+        
 
-        openTickets = await openTickets.filter((x) => x.id !== ticket.id)
-
-        await redis.set(key, JSON.stringify(openTickets))
+        await redis.set(key, stringTickets)
       }
     }
 
     const addTk = async function (key, redis) {
+      
       let openTickets = await redis.get(key)
       if (openTickets) {
         openTickets = JSON.parse(openTickets)
@@ -48,47 +52,47 @@ export default class FormatTicket {
 
     //@info importante utilizar o phase_id do objeto do ticket, por ser a sua fase atual
     const validationRemove = {
-      1: { key: `msTicket:openTickets:${ticket.phase_id}`, func: removeTk },
-      2: { key: `msTicket:inProgressTickets:${ticket.phase_id}`, func: removeTk },
-      3: { key: `msTicket:closeTickets:${ticket.phase_id}`, func: removeTk }
+      1: { key: `msTicket:openTickets:${id_phase}`, func: removeTk },
+      2: { key: `msTicket:inProgressTickets:${id_phase}`, func: removeTk },
+      3: { key: `msTicket:closeTickets:${id_phase}`, func: removeTk }
     }
 
     //@info importante utilizar o paramêtro id_phase, pois se for o caso de uma transferência ele atualiza no cache da nova fase.
     const validationAdd = {
       1: {
-        key: `msTicket:openTickets:${id_phase}`,
+        key: `msTicket:openTickets:${ticket.phase_id}`,
         func: addTk
       },
       2: {
-        key: `msTicket:inProgressTickets:${id_phase}`,
+        key: `msTicket:inProgressTickets:${ticket.phase_id}`,
         func: addTk
       },
       3: {
-        key: `msTicket:closeTickets:${id_phase}`,
+        key: `msTicket:closeTickets:${ticket.phase_id}`,
         func: addTk
       }
     }
 
-    let cache = await this.redis.get(`msTicket:tickets:${ticket.phase_id}`)
+    let cache = await this.redis.get(`msTicket:tickets:${id_phase}`)
 
     if (cache) {
       cache = JSON.parse(cache)
 
       const oldTk = await cache.filter((x) => x.id === ticket.id)
-      console.log("old tk =====> ", oldTk)
+      console.log('old tk =====> ', oldTk)
       if (oldTk.length > 0) {
         const key = validationRemove[oldTk[0].id_status].key
         await validationRemove[oldTk[0].id_status].func(key, this.redis)
 
         const newCacheOldPhase = await cache.filter((x) => x.id !== ticket.id)
-        await this.redis.set(`msTicket:tickets:${ticket.phase_id}`, JSON.stringify(newCacheOldPhase))
+        await this.redis.set(`msTicket:tickets:${id_phase}`, JSON.stringify(newCacheOldPhase))
       }
     }
 
     const key = validationAdd[ticket.id_status].key
     validationAdd[ticket.id_status].func(key, this.redis)
 
-    let newCacheNewPhase = await this.redis.get(`msTicket:tickets:${id_phase}`)
+    let newCacheNewPhase = await this.redis.get(`msTicket:tickets:${ticket.phase_id}`)
     if (newCacheNewPhase) {
       newCacheNewPhase = JSON.parse(newCacheNewPhase)
       newCacheNewPhase = newCacheNewPhase.concat({
@@ -106,7 +110,7 @@ export default class FormatTicket {
         responsibles: ticket.responsibles,
         form_data: ticket.form_data
       })
-      await this.redis.set(`msTicket:tickets:${id_phase}`, JSON.stringify(newCacheNewPhase))
+      await this.redis.set(`msTicket:tickets:${ticket.phase_id}`, JSON.stringify(newCacheNewPhase))
     }
 
     return ticket
