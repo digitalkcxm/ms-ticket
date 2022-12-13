@@ -824,9 +824,10 @@ export default class TicketController {
       obj.phase = phase[0].name
 
       await this.slaController.updateSLA(ticket.id, ticket.phase_id, 2)
-
-      //@info ticket.phase_id === fase atual | phase[0].id === fase destino
-      if (ticket.phase_id != phase[0].id) {
+      const oldPhase = ticket.phase_id
+      console.log(oldPhase, phase[0].id)
+      //@info oldPhase === fase atual | phase[0].id === fase destino
+      if (oldPhase != phase[0].id) {
         if (data.form) {
           if (Object.keys(data.form).length > 0) {
             if (phase[0].form) {
@@ -942,7 +943,7 @@ export default class TicketController {
       const result = await this.ticketModel.updateTicket(obj, data.id, data.authorization)
       const getTicket = await this.ticketModel.getTicketById(data.id, data.authorization)
 
-      ticket = await this.formatTicket.retriveTicket(getTicket[0], phase[0].id)
+      ticket = await this.formatTicket.retriveTicket(getTicket[0], oldPhase)
 
       if (ticket.phase_id === phase[0].id) {
         await CallbackDigitalk(
