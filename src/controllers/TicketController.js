@@ -128,7 +128,7 @@ export default class TicketController {
         await this.slaController.createSLAControl(phase[0].id, obj.id)
 
         ticket = await this.formatTicket.retriveTicket(ticket[0], phase[0].id)
-        await cache(data.authorization, phase[0].id_department, ticket.phase_id, this)
+        if (data.id_user !== -1) await cache(data.authorization, phase[0].id_department, ticket.phase_id, this)
         await CallbackDigitalk(
           {
             type: 'socket',
