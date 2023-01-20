@@ -310,6 +310,34 @@ export default class TicketModel {
     }
   }
 
+  async getTicketByPhasePaged(id_phase, status, limit, offset = 0) {
+    try {
+      return await this.database('ticket')
+        .select({
+          id: 'ticket.id',
+          id_seq: 'ticket.id_seq',
+          id_user: 'users.id_users',
+          user: 'users.name',
+          closed: 'ticket.closed',
+          created_at: 'ticket.created_at',
+          updated_at: 'ticket.updated_at',
+          display_name: 'ticket.display_name',
+          status: 'ticket.status',
+          id_status: 'ticket.id_status',
+          id_tab: 'ticket.id_tab'
+        })
+        .leftJoin('users', 'users.id', 'ticket.id_user')
+        .whereIn('ticket.id_status', status)
+        .andWhere('ticket.id_phase', id_phase)
+        .orderBy('ticket.created_at', 'desc')
+        .limit(limit)
+        .offset(offset)
+    } catch (err) {
+      this.logger.error(err, 'Error when get Ticket by phase.')
+      return err
+    }
+  }
+
   async getTicketByPhaseAndStatus(id_phase, status) {
     try {
       return await this.database('ticket')
@@ -329,6 +357,7 @@ export default class TicketModel {
         .leftJoin('users', 'users.id', 'ticket.id_user')
         .whereIn('ticket.closed', status)
         .andWhere('ticket.id_phase', id_phase)
+        .orderBy('ticket.created_at', 'desc')
     } catch (err) {
       this.logger.error(err, 'Error when get Ticket by phase.')
       return err
