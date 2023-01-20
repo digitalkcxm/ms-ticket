@@ -17,7 +17,6 @@ import CallbackDigitalk from '../services/CallbackDigitalk.js'
 import FormatTicket from '../helpers/FormatTicket.js'
 import CacheController from './CacheController.js'
 
-
 export default class PhaseController {
   constructor(database = {}, logger = {}, redisConnection = {}) {
     this.redis = redisConnection
@@ -28,7 +27,7 @@ export default class PhaseController {
     this.slaModel = new SLAModel(database, logger)
     this.phaseModel = new PhaseModel(database, logger)
     this.ticketModel = new TicketModel(database, logger)
-    this.formatTicket = new FormatTicket(database, logger,redisConnection)
+    this.formatTicket = new FormatTicket(database, logger, redisConnection)
     this.slaController = new SLAController(database, logger)
     this.userController = new UserController(database, logger)
     this.cacheController = new CacheController(database, logger, redisConnection)
@@ -237,7 +236,7 @@ export default class PhaseController {
         result = await this.phaseModel.getAllPhase(req.headers.authorization, req.query.enable)
 
         for (let i in result) {
-          result[i] = await this._formatPhase(result[i], req.app.locals.db, false, false, req.headers.authorization)
+          result[i] = await this._formatPhase(result[i], req.app.locals.db, false, false, req.headers.authorization, 20, 0)
         }
       }
       return res.status(200).send(result)
@@ -251,7 +250,7 @@ export default class PhaseController {
     try {
       let result = await this.phaseModel.getAllPhasesByDepartmentID(req.params.id, req.headers.authorization)
       for (let phase of result) {
-        phase = await this._formatPhase(phase, req.app.locals.db, false, false, req.headers.authorization)
+        phase = await this._formatPhase(phase, req.app.locals.db, false, false, req.headers.authorization, 20, 0)
       }
       return res.status(200).send(result)
     } catch (err) {
@@ -263,9 +262,8 @@ export default class PhaseController {
   async _queryDepartment(department, authorization, status, db, enable) {
     let result = await this.phaseModel.getAllPhasesByDepartmentID(department, authorization, enable)
     for (let phase of result) {
-      phase = await this._formatPhase(phase, db, false, status, authorization)
+      phase = await this._formatPhase(phase, db, false, status, authorization, 20, 0)
     }
-
     return result
   }
 
@@ -433,7 +431,7 @@ export default class PhaseController {
     return register
   }
 
-  async _formatPhase(result, mongodb, search = false, status, authorization) {
+  async _formatPhase(result, mongodb, search = false, status, authorization, limit, offset) {
     status = JSON.parse(status)
     result.ticket = []
     result.header = {}
@@ -451,27 +449,25 @@ export default class PhaseController {
     }
 
     if (!search) {
-      let openTickets = []
-      let closeTickets = []
-      let in_progress_ticket = []
+      const tickets = {
+        1: [],
+        2: [],
+        3: []
+      }
+
       if (status && Array.isArray(status)) {
         for await (const x of status) {
-          if (!x) {
-            openTickets = await this.redis.get(`msTicket:openTickets:${result.id}`)
-            openTickets = openTickets ? JSON.parse(openTickets) : []
-            in_progress_ticket = await this.redis.get(`msTicket:inProgressTickets:${result.id}`)
-            in_progress_ticket = in_progress_ticket ? JSON.parse(in_progress_ticket) : []
-          } else {
-            closeTickets = await this.redis.get(`msTicket:closeTickets:${result.id}`)
-            closeTickets = closeTickets ? JSON.parse(closeTickets) : []
+          tickets[x] = await this.ticketModel.getTicketByPhasePaged(result.id, x, limit, offset)
+          for await (let ticket of tickets[x]) {
+            ticket = await this.formatTicket.formatTicketForPhase(result, ticket)
           }
         }
       } else {
-        openTickets = await this.redis.get(`msTicket:tickets:${result.id}`)
-        openTickets = openTickets ? JSON.parse(openTickets) : []
+        tickets[1] = await this.redis.get(`msTicket:tickets:${result.id}`)
+        tickets[1] = tickets[1] ? JSON.parse(tickets[1]) : []
       }
 
-      result.ticket = result.ticket.concat(openTickets, closeTickets, in_progress_ticket)
+      result.ticket = result.ticket.concat(tickets[1], tickets[2], tickets[3])
     }
 
     result.department_can_create_protocol && result.department_can_create_protocol.department
@@ -1373,5 +1369,18 @@ export default class PhaseController {
     }
 
     return header
+  }
+
+  async getByIDPaged(req, res) {
+    try {
+      const result = await this.ticketModel.getTicketByPhasePaged(req.params.id, req.query.status, req.query.limit, req.query.offset)
+      for await (let ticket of result) {
+        ticket = await this.formatTicket.formatTicketForPhase({ id: req.params.id }, ticket)
+      }
+      return res.status(200).send(result)
+    } catch (err) {
+      console.log('Erro ao buscar a fase =>', err)
+      return res.status(500).send(err)
+    }
   }
 }
