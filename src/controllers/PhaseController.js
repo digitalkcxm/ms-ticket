@@ -214,28 +214,33 @@ export default class PhaseController {
     let result
     try {
       if (search) {
+        console.log('teste search')
         result = await this.phaseModel.getAllPhasesByDepartmentID(req.query.department, req.headers.authorization, req.query.enable)
+        req.query.offset = Math.round(req.query.limit * (req.query.offset - 1))
         for (let i in result) {
-          req.query.offset = Math.round(req.query.limit * (req.query.offset - 1))
           result[i].ticket = { 1: {}, 2: {}, 3: {} }
+          typeof req.query.status === 'string' ? (req.query.status = JSON.parse(req.query.status)) : ''
           for await (const status of req.query.status) {
             result[i].ticket[status] = await this.ticketModel.searchTicket(
               req.headers.authorization,
               search,
               result[i].id,
-              req.query.status,
+              status,
               req.query.limit,
               req.query.offset
             )
+            
 
             for (const x in result[i].ticket[status].tickets) {
-              result[i].ticket[status].tickets[x] = await this.formatTicket.formatTicketForPhase(result[i], x)
+              console.log(result[i].ticket[status].tickets[x])
+              result[i].ticket[status].tickets[x] = await this.formatTicket.formatTicketForPhase(result[i], result[i].ticket[status].tickets[x])
             }
           }
 
           result[i] = await this._formatPhase(result[i], req.app.locals.db, true, false, req.headers.authorization)
         }
       } else if (req.query.department) {
+        console.log('teste')
         result = await this._queryDepartment(
           req.query.department,
           req.headers.authorization,
@@ -454,7 +459,7 @@ export default class PhaseController {
 
   async _formatPhase(result, mongodb, search = false, status, authorization, limit = 0, offset = 1) {
     status = JSON.parse(status)
-    result.ticket = []
+    
     result.header = {}
     result.sla = await this.slaController.settingsSLA(result.id)
     if (result.id_form_template) {
@@ -470,6 +475,7 @@ export default class PhaseController {
     }
 
     if (!search) {
+      result.ticket = []
       offset = Math.round(limit * (offset - 1))
       console.log('offset', offset)
 
@@ -1443,7 +1449,7 @@ export default class PhaseController {
           )
 
           for (const x in tickets[id].tickets) {
-            tickets[id].tickets[x] = await this.formatTicket.formatTicketForPhase({ id: req.params.id }, x)
+            tickets[id].tickets[x] = await this.formatTicket.formatTicketForPhase({ id: req.params.id }, tickets[id].tickets[x])
           }
         }
       } else if (status && Array.isArray(status)) {

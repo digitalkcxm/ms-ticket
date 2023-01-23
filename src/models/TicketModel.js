@@ -728,6 +728,7 @@ export default class TicketModel {
 
   async searchTicket(id_company, search, id_phase, status, limit, offset) {
     try {
+      console.log(search)
       if (typeof search === 'string') search = search.toLowerCase()
       const default_where = `ticket.id_company = '${id_company}' AND phase.id = '${id_phase}' AND phase_ticket.active = true AND ticket.id_status = ${status} AND phase_ticket.active = true AND`
       let query
@@ -782,7 +783,7 @@ export default class TicketModel {
       left join phase on phase.id = phase_ticket.id_phase
       left join customer on customer.id_ticket = ticket.id
       left join ticket_protocol on ticket_protocol.id_ticket = ticket.id
-      where ${query} order by ticket.created_at desc`)
+      where ${query}`)
 
       return { total: count.rows, tickets: result.rows }
     } catch (err) {

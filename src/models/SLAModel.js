@@ -65,6 +65,7 @@ export default class SLAModel {
   }
 
   async getByPhaseTicket(id_phase, id_ticket) {
+    
     try {
       return await this.database("ticket_sla_control as tsc")
         .select({
@@ -82,7 +83,7 @@ export default class SLAModel {
         .andWhere("pt.active", true)
         .orderBy("tsc.id_sla_type", "asc");
     } catch (err) {
-      this.logger.error(err, "error when get sla's.");
+      this.logger.error(err, "getByPhaseTicket error =>.");
       return err;
     }
   }
