@@ -214,7 +214,7 @@ export default class PhaseController {
     let result
     try {
       if (search) {
-        console.log('teste search')
+        
         result = await this.phaseModel.getAllPhasesByDepartmentID(req.query.department, req.headers.authorization, req.query.enable)
         req.query.offset = Math.round(req.query.limit * (req.query.offset - 1))
         for (let i in result) {
@@ -240,7 +240,6 @@ export default class PhaseController {
           result[i] = await this._formatPhase(result[i], req.app.locals.db, true, false, req.headers.authorization)
         }
       } else if (req.query.department) {
-        console.log('teste')
         result = await this._queryDepartment(
           req.query.department,
           req.headers.authorization,
