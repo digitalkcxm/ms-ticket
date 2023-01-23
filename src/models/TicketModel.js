@@ -726,13 +726,10 @@ export default class TicketModel {
     }
   }
 
-  async searchTicket(id_company, search, id_phase, status) {
+  async searchTicket(id_company, search, id_phase, status, limit, offset) {
     try {
       if (typeof search === 'string') search = search.toLowerCase()
-      const default_where = `ticket.id_company = '${id_company}' AND phase.id = '${id_phase}' AND phase_ticket.active = true AND ticket.closed IN (${status
-        .replace('[', '')
-        .replace(']', '')
-        .replace(/\"/g, "'")}) AND phase_ticket.active = true AND`
+      const default_where = `ticket.id_company = '${id_company}' AND phase.id = '${id_phase}' AND phase_ticket.active = true AND ticket.id_status = ${status} AND phase_ticket.active = true AND`
       let query
       if (isNaN(search)) {
         search = search.replace('"', '').replace('"', '')
@@ -772,9 +769,22 @@ export default class TicketModel {
       left join customer on customer.id_ticket = ticket.id
       left join ticket_protocol on ticket_protocol.id_ticket = ticket.id
       left join status_ticket on status_ticket.id = ticket.id_status
+      where ${query} order by ticket.created_at desc
+      limit ${limit} offset ${offset}`)
+
+      const count = await this.database.raw(`
+      select 
+        COUNT(ticket.id)
+      from ticket
+      left join (select id_ticket, id_user from responsible_ticket limit 1) as rt on rt.id_ticket = ticket.id
+      left join users on users.id = rt.id_user
+      left join phase_ticket on phase_ticket.id_ticket = ticket.id
+      left join phase on phase.id = phase_ticket.id_phase
+      left join customer on customer.id_ticket = ticket.id
+      left join ticket_protocol on ticket_protocol.id_ticket = ticket.id
       where ${query} order by ticket.created_at desc`)
 
-      return result.rows
+      return { total: count.rows, tickets: result.rows }
     } catch (err) {
       this.logger.error(err, 'Error when get ticket by id.')
       return err

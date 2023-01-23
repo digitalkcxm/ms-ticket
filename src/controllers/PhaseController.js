@@ -216,13 +216,24 @@ export default class PhaseController {
       if (search) {
         result = await this.phaseModel.getAllPhasesByDepartmentID(req.query.department, req.headers.authorization, req.query.enable)
         for (let i in result) {
-          result[i].ticket = []
-          const tickets = await this.ticketModel.searchTicket(req.headers.authorization, search, result[i].id, req.query.status)
-          result[i] = await this._formatPhase(result[i], req.app.locals.db, true, false, req.headers.authorization)
+          req.query.offset = Math.round(req.query.limit * (req.query.offset - 1))
+          result[i].ticket = { 1: {}, 2: {}, 3: {} }
+          for await (const status of req.query.status) {
+            result[i].ticket[status] = await this.ticketModel.searchTicket(
+              req.headers.authorization,
+              search,
+              result[i].id,
+              req.query.status,
+              req.query.limit,
+              req.query.offset
+            )
 
-          for (const ticket of tickets) {
-            result[i].ticket = result[i].ticket.concat(await this.formatTicket.formatTicketForPhase(result[i], ticket))
+            for (const x in result[i].ticket[status].tickets) {
+              result[i].ticket[status].tickets[x] = await this.formatTicket.formatTicketForPhase(result[i], x)
+            }
           }
+
+          result[i] = await this._formatPhase(result[i], req.app.locals.db, true, false, req.headers.authorization)
         }
       } else if (req.query.department) {
         result = await this._queryDepartment(
@@ -238,7 +249,15 @@ export default class PhaseController {
         result = await this.phaseModel.getAllPhase(req.headers.authorization, req.query.enable)
 
         for (let i in result) {
-          result[i] = await this._formatPhase(result[i], req.app.locals.db, false, false, req.headers.authorization, 20, 0)
+          result[i] = await this._formatPhase(
+            result[i],
+            req.app.locals.db,
+            false,
+            false,
+            req.headers.authorization,
+            req.query.limit,
+            req.query.offset
+          )
         }
       }
       return res.status(200).send(result)
@@ -433,9 +452,7 @@ export default class PhaseController {
     return register
   }
 
-  async _formatPhase(result, mongodb, search = false, status, authorization, limit, offset = 1) {
-    offset = Math.round(limit * (offset - 1))
-    console.log('offset', offset)
+  async _formatPhase(result, mongodb, search = false, status, authorization, limit = 0, offset = 1) {
     status = JSON.parse(status)
     result.ticket = []
     result.header = {}
@@ -453,6 +470,9 @@ export default class PhaseController {
     }
 
     if (!search) {
+      offset = Math.round(limit * (offset - 1))
+      console.log('offset', offset)
+
       const tickets = {
         1: {
           total: 0,
@@ -1388,6 +1408,8 @@ export default class PhaseController {
   }
 
   async getByIDPaged(req, res) {
+    const search = req.query.search ? req.query.search : false
+
     try {
       req.query.offset = Math.round(req.query.limit * (req.query.offset - 1))
       let status,
@@ -1409,7 +1431,22 @@ export default class PhaseController {
         status = [1, 2, 3]
       } else status = JSON.parse(req.query.status)
 
-      if (status && Array.isArray(status)) {
+      if (search) {
+        for await (const id of status) {
+          tickets[id] = await this.ticketModel.searchTicket(
+            req.headers.authorization,
+            search,
+            req.params.id,
+            id,
+            req.query.limit,
+            req.query.offset
+          )
+
+          for (const x in tickets[id].tickets) {
+            tickets[id].tickets[x] = await this.formatTicket.formatTicketForPhase({ id: req.params.id }, x)
+          }
+        }
+      } else if (status && Array.isArray(status)) {
         for await (const id of status) {
           const result = await this.ticketModel.getTicketByPhasePaged(req.params.id, id, req.query.limit, req.query.offset)
           tickets[id].total = await this.ticketModel.countTicket(req.params.id, id)
