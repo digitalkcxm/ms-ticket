@@ -310,7 +310,7 @@ export default class TicketModel {
     }
   }
 
-  async getTicketByPhasePaged(id_phase, status, limit, offset = 0) {
+  async getTicketByPhasePaged(id_phase, status, limit = 30, offset = 0) {
     try {
       return await this.database('ticket')
         .select({
@@ -327,7 +327,7 @@ export default class TicketModel {
           id_tab: 'ticket.id_tab'
         })
         .leftJoin('users', 'users.id', 'ticket.id_user')
-        .whereIn('ticket.id_status', status)
+        .where('ticket.id_status', status)
         .andWhere('ticket.id_phase', id_phase)
         .orderBy('ticket.created_at', 'desc')
         .limit(limit)
@@ -373,7 +373,7 @@ export default class TicketModel {
         .leftJoin('customer', 'customer.id_ticket', 'phase_ticket.id_ticket')
         .where('phase_ticket.id_phase', id_phase)
         .andWhere('phase_ticket.active', true)
-        .andWhere('ticket.closed', status)
+        .andWhere('ticket.id_status', status)
         .andWhere('customer.crm_contact_id', customer)
     } else {
       result = await this.database('phase_ticket')
@@ -381,7 +381,7 @@ export default class TicketModel {
         .leftJoin('ticket', 'ticket.id', 'phase_ticket.id_ticket')
         .where('phase_ticket.id_phase', id_phase)
         .andWhere('phase_ticket.active', true)
-        .andWhere('ticket.closed', status)
+        .andWhere('ticket.id_status', status)
     }
 
     return result[0].count
