@@ -214,7 +214,6 @@ export default class PhaseController {
     let result
     try {
       if (search) {
-        
         result = await this.phaseModel.getAllPhasesByDepartmentID(req.query.department, req.headers.authorization, req.query.enable)
         req.query.offset = Math.round(req.query.limit * (req.query.offset - 1))
         for (let i in result) {
@@ -227,13 +226,16 @@ export default class PhaseController {
               result[i].id,
               status,
               req.query.limit,
-              req.query.offset
+              req.query.offset,
+              req.query.me
             )
-            
 
             for (const x in result[i].ticket[status].tickets) {
               console.log(result[i].ticket[status].tickets[x])
-              result[i].ticket[status].tickets[x] = await this.formatTicket.formatTicketForPhase(result[i], result[i].ticket[status].tickets[x])
+              result[i].ticket[status].tickets[x] = await this.formatTicket.formatTicketForPhase(
+                result[i],
+                result[i].ticket[status].tickets[x]
+              )
             }
           }
 
@@ -247,7 +249,8 @@ export default class PhaseController {
           req.app.locals.db,
           req.query.enable,
           req.query.limit,
-          req.query.offset
+          req.query.offset,
+          req.query.me
         )
       } else {
         result = await this.phaseModel.getAllPhase(req.headers.authorization, req.query.enable)
@@ -260,7 +263,8 @@ export default class PhaseController {
             false,
             req.headers.authorization,
             req.query.limit,
-            req.query.offset
+            req.query.offset,
+            req.query.me
           )
         }
       }
@@ -456,9 +460,9 @@ export default class PhaseController {
     return register
   }
 
-  async _formatPhase(result, mongodb, search = false, status, authorization, limit = 0, offset = 1) {
+  async _formatPhase(result, mongodb, search = false, status, authorization, limit = 0, offset = 1, me) {
     status = JSON.parse(status)
-    
+
     result.header = {}
     result.sla = await this.slaController.settingsSLA(result.id)
     if (result.id_form_template) {
@@ -496,9 +500,9 @@ export default class PhaseController {
       if (status && Array.isArray(status)) {
         for await (let x of status) {
           x = x.toString()
-          tickets[x].tickets = await this.ticketModel.getTicketByPhasePaged(result.id, x, limit, offset)
-          tickets[x].total = await this.ticketModel.countTicket(result.id, x)
-          console.log('tickets[x].tickets', tickets[x].tickets)
+          tickets[x].tickets = await this.ticketModel.getTicketByPhasePaged(result.id, x, limit, offset, me)
+          tickets[x].total = await this.ticketModel.countTicket(result.id, x, me)
+
           if (tickets[x].tickets) {
             for await (let ticket of tickets[x].tickets) {
               ticket = await this.formatTicket.formatTicketForPhase(result, ticket)
@@ -1444,7 +1448,8 @@ export default class PhaseController {
             req.params.id,
             id,
             req.query.limit,
-            req.query.offset
+            req.query.offset,
+            req.query.me
           )
 
           for (const x in tickets[id].tickets) {
@@ -1453,8 +1458,8 @@ export default class PhaseController {
         }
       } else if (status && Array.isArray(status)) {
         for await (const id of status) {
-          const result = await this.ticketModel.getTicketByPhasePaged(req.params.id, id, req.query.limit, req.query.offset)
-          tickets[id].total = await this.ticketModel.countTicket(req.params.id, id)
+          const result = await this.ticketModel.getTicketByPhasePaged(req.params.id, id, req.query.limit, req.query.offset, req.query.me)
+          tickets[id].total = await this.ticketModel.countTicket(req.params.id, id, false, req.query.me)
           for await (let ticket of result) {
             tickets[id].tickets = tickets[id].tickets.concat(await this.formatTicket.formatTicketForPhase({ id: req.params.id }, ticket))
           }
