@@ -310,34 +310,6 @@ export default class TicketModel {
     }
   }
 
-  async getTicketByPhasePaged(id_phase, status, limit = 30, offset = 0) {
-    try {
-      return await this.database('ticket')
-        .select({
-          id: 'ticket.id',
-          id_seq: 'ticket.id_seq',
-          id_user: 'users.id_users',
-          user: 'users.name',
-          closed: 'ticket.closed',
-          created_at: 'ticket.created_at',
-          updated_at: 'ticket.updated_at',
-          display_name: 'ticket.display_name',
-          status: 'ticket.status',
-          id_status: 'ticket.id_status',
-          id_tab: 'ticket.id_tab'
-        })
-        .leftJoin('users', 'users.id', 'ticket.id_user')
-        .where('ticket.id_status', status)
-        .andWhere('ticket.id_phase', id_phase)
-        .orderBy('ticket.created_at', 'desc')
-        .limit(limit)
-        .offset(offset)
-    } catch (err) {
-      this.logger.error(err, 'Error when get Ticket by phase.')
-      return err
-    }
-  }
-
   async getTicketByPhaseAndStatus(id_phase, status) {
     try {
       return await this.database('ticket')
@@ -364,7 +336,7 @@ export default class TicketModel {
     }
   }
 
-  async countTicket(id_phase, status, customer = false) {
+  async countTicket(id_phase, status, customer = false, me) {
     let result
     if (customer) {
       result = await this.database('phase_ticket')
@@ -376,12 +348,25 @@ export default class TicketModel {
         .andWhere('ticket.id_status', status)
         .andWhere('customer.crm_contact_id', customer)
     } else {
-      result = await this.database('phase_ticket')
-        .count('ticket.id')
-        .leftJoin('ticket', 'ticket.id', 'phase_ticket.id_ticket')
-        .where('phase_ticket.id_phase', id_phase)
-        .andWhere('phase_ticket.active', true)
-        .andWhere('ticket.id_status', status)
+      const count = this.database.raw(`
+      WITH responsibles_dataset AS (
+        SELECT r.id_ticket, u.id_users
+        FROM responsible_ticket r 
+        LEFT JOIN users u on u.id = r.id_user 
+      )
+      SELECT COUNT(tk.id)
+      FROM ticket tk
+      LEFT JOIN users u ON u.id = tk.id_user
+      LEFT JOIN responsibles_dataset rd ON rd.id_ticket = tk.id
+      WHERE tk.id_status = ${status} AND
+      tk.id_phase = ${id_phase} AND
+      u.id_users = ${me} OR
+      tk.id_status = ${status} AND
+      tk.id_phase = ${id_phase} AND
+      rd.id_users = ${me} 
+      `)
+
+      result = count.rows
     }
 
     return result[0].count
@@ -726,11 +711,12 @@ export default class TicketModel {
     }
   }
 
-  async searchTicket(id_company, search, id_phase, status, limit, offset) {
+  async searchTicket(id_company, search, id_phase, status, limit, offset, me) {
     try {
-      console.log(search)
       if (typeof search === 'string') search = search.toLowerCase()
-      const default_where = `ticket.id_company = '${id_company}' AND phase.id = '${id_phase}' AND phase_ticket.active = true AND ticket.id_status = ${status} AND phase_ticket.active = true AND`
+      const default_where = `ticket.id_company = '${id_company}' AND phase.id = '${id_phase}' AND phase_ticket.active = true AND ticket.id_status = ${status} AND phase_ticket.active = true AND ${
+        me ? `rd.id_users =  ${me}   AND ` : ''
+      }`
       let query
       if (isNaN(search)) {
         search = search.replace('"', '').replace('"', '')
@@ -747,6 +733,11 @@ export default class TicketModel {
       }
 
       const result = await this.database.raw(`
+      WITH responsibles_dataset AS (
+        SELECT r.id_ticket, u.id_users
+        FROM responsible_ticket r 
+        LEFT JOIN users u on u.id = r.id_user 
+      )
       select 
         ticket.id,
         ticket.id_seq,
@@ -770,6 +761,7 @@ export default class TicketModel {
       left join customer on customer.id_ticket = ticket.id
       left join ticket_protocol on ticket_protocol.id_ticket = ticket.id
       left join status_ticket on status_ticket.id = ticket.id_status
+      LEFT JOIN respnsibles_dataset rd ON rd.id_ticket = tk.id
       where ${query} order by ticket.created_at desc
       limit ${limit} offset ${offset}`)
 
@@ -783,9 +775,10 @@ export default class TicketModel {
       left join phase on phase.id = phase_ticket.id_phase
       left join customer on customer.id_ticket = ticket.id
       left join ticket_protocol on ticket_protocol.id_ticket = ticket.id
+      LEFT JOIN respnsibles_dataset rd ON rd.id_ticket = tk.id
       where ${query}`)
 
-      return { total: count.rows, tickets: result.rows }
+      return { total: count.rows[0].count, tickets: result.rows }
     } catch (err) {
       this.logger.error(err, 'Error when get ticket by id.')
       return err
@@ -816,6 +809,33 @@ export default class TicketModel {
     } catch (err) {
       this.logger.error(err, 'error get ticket created by ticket.')
       return []
+    }
+  }
+  async getTicketByPhasePaged(id_phase, status, limit = 30, offset = 0, me) {
+    try {
+      const result = this.database.raw(`
+      WITH responsibles_dataset AS (
+        SELECT r.id_ticket, u.id_users
+        FROM responsible_ticket r 
+        LEFT JOIN users u on u.id = r.id_user 
+      )
+      SELECT tk.id, tk.id_seq, u.name, tk.closed, tk.created_at, tk.updated_at, tk.display_name, tk.status, tk.id_status, tk.id_tab
+      FROM ticket tk
+      LEFT JOIN users u ON u.id = tk.id_user
+      LEFT JOIN respnsibles_dataset rd ON rd.id_ticket = tk.id
+      WHERE tk.id_status = ${status} AND
+      tk.id_phase = ${id_phase} AND
+      u.id_users = ${me} OR
+      tk.id_status = ${status} AND
+      tk.id_phase = ${id_phase} AND
+      rd.id_users = ${me} 
+      LIMIT ${limit} OFFSET ${offset}
+      `)
+
+      return result.rows
+    } catch (err) {
+      console.log('Erro no get do ticket paginado', err)
+      return false
     }
   }
 }
