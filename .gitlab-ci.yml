@@ -6,6 +6,9 @@ stages:
   - prod
   - check_prod
 
+variables:
+  WEBHOOK_URL: "https://discord.com/api/webhooks/1072308956535463976/nSlzRWXytHn4kRyL6OxmCuMVD8NRRmiDVXxFDGKVhByuM2EneHovUbd8UjWEhVDZxix9" 
+
 integration:
   stage: test
   image: ubuntu
@@ -32,19 +35,33 @@ integration:
     
     - chmod +x integration_tests_exec.sh 
     - ./integration_tests_exec.sh
+
+  after_script:
+    - >
+      if [[ "$CI_JOB_STATUS" == "success" ]]; then
+
+        curl -s \
+          -H "Content-Type: application/json" \
+          -d '{"embeds": [{"title": "'${CI_JOB_NAME}'","description": "'${CI_JOB_STATUS}' - Ao executar o job '${CI_JOB_NAME}' do projeto '${CI_PROJECT_NAME}'","color": 3065620}]}' \
+          $WEBHOOK_URL       
+
+      else
+
+        curl -s \
+          -H "Content-Type: application/json" \
+          -d '{"embeds": [{"title": "'${CI_JOB_NAME}'","description": "'${CI_JOB_STATUS}' - Ao executar o job '${CI_JOB_NAME}' do projeto '${CI_PROJECT_NAME}'","color": 12389167}]}' \
+          $WEBHOOK_URL
+
+      fi 
+      
   only:
     - master
   tags:
-    - eks
-    - homol
+    - microservicos
 
 build_homol:
   stage: build_homol 
   image: docker:18.09
-  variables:
-    DOCKER_HOST: tcp://docker:2375
-  services:
-    - docker:18.09-dind
   before_script:
     - apk update 
     - apk add --no-cache tzdata python3 py-pip py3-pip jq git unzip zip curl bash openssl wget tar bash bash-completion > /dev/null 2>&1
@@ -79,6 +96,25 @@ build_homol:
       wget --header='PRIVATE-TOKEN: '${GITLAB_TOKEN}'' 'https://gitlab.com/api/v4/projects/24070595/repository/files/build_img.sh/raw?ref=master' -O build_img.sh
     - chmod +x build_img.sh 
     - ./build_img.sh
+
+  after_script:
+    - >
+      if [[ "$CI_JOB_STATUS" == "success" ]]; then
+
+        curl -s \
+          -H "Content-Type: application/json" \
+          -d '{"embeds": [{"title": "'${CI_JOB_NAME}'","description": "'${CI_JOB_STATUS}' - Ao executar o job '${CI_JOB_NAME}' do projeto '${CI_PROJECT_NAME}'","color": 3065620}]}' \
+          $WEBHOOK_URL       
+
+      else
+
+        curl -s \
+          -H "Content-Type: application/json" \
+          -d '{"embeds": [{"title": "'${CI_JOB_NAME}'","description": "'${CI_JOB_STATUS}' - Ao executar o job '${CI_JOB_NAME}' do projeto '${CI_PROJECT_NAME}'","color": 12389167}]}' \
+          $WEBHOOK_URL
+
+      fi 
+
   only:
    - master
   allow_failure: false
@@ -87,8 +123,7 @@ build_homol:
   dependencies:
     - integration
   tags:
-    - eks
-    - homol  
+    - microservicos 
 
 deploy_homol:
   stage: deploy_homol
@@ -136,6 +171,24 @@ deploy_homol:
     - chmod +x deploy_ms_k8s.sh 
     - ./deploy_ms_k8s.sh
 
+  after_script:
+    - >
+      if [[ "$CI_JOB_STATUS" == "success" ]]; then
+
+        curl -s \
+          -H "Content-Type: application/json" \
+          -d '{"embeds": [{"title": "'${CI_JOB_NAME}'","description": "'${CI_JOB_STATUS}' - Ao executar o job '${CI_JOB_NAME}' do projeto '${CI_PROJECT_NAME}'","color": 3065620}]}' \
+          $WEBHOOK_URL       
+
+      else
+
+        curl -s \
+          -H "Content-Type: application/json" \
+          -d '{"embeds": [{"title": "'${CI_JOB_NAME}'","description": "'${CI_JOB_STATUS}' - Ao executar o job '${CI_JOB_NAME}' do projeto '${CI_PROJECT_NAME}'","color": 12389167}]}' \
+          $WEBHOOK_URL
+
+
+      fi 
   only:
    - master
   allow_failure: false
@@ -144,8 +197,7 @@ deploy_homol:
   dependencies:
     - build_homol
   tags:
-    - eks
-    - homol    
+    - microservicos   
 
 
 create-release:
@@ -170,6 +222,25 @@ create-release:
       echo " "
       
       semantic-release
+
+  after_script:
+    - >
+      if [[ "$CI_JOB_STATUS" == "success" ]]; then
+
+        curl -s \
+          -H "Content-Type: application/json" \
+          -d '{"embeds": [{"title": "'${CI_JOB_NAME}'","description": "'${CI_JOB_STATUS}' - Ao executar o job '${CI_JOB_NAME}' do projeto '${CI_PROJECT_NAME}'","color": 3065620}]}' \
+          $WEBHOOK_URL       
+
+      else
+
+        curl -s \
+          -H "Content-Type: application/json" \
+          -d '{"embeds": [{"title": "'${CI_JOB_NAME}'","description": "'${CI_JOB_STATUS}' - Ao executar o job '${CI_JOB_NAME}' do projeto '${CI_PROJECT_NAME}'","color": 12389167}]}' \
+          $WEBHOOK_URL
+
+      fi 
+
   only:
    - master
   when: manual
@@ -179,8 +250,7 @@ create-release:
   dependencies:
     - deploy_homol
   tags:
-    - eks
-    - homol
+    - microservicos
 
 deploy_prod:
   stage: prod
@@ -215,23 +285,34 @@ deploy_prod:
     - export TAG_RELEASE=`git describe --abbrev=0 --tags`
   script:
     - >
-      wget --header='PRIVATE-TOKEN: '${AUTOMACAO_TOKEN}'' 'https://gitlab.com/api/v4/projects/24070595/repository/files/add_downtime_checkmk.sh/raw?ref=master' -O add_downtime_checkmk.sh
-    - chmod +x add_downtime_checkmk.sh 
-    - ./add_downtime_checkmk.sh
-
-    - >
       wget --header='PRIVATE-TOKEN: '${AUTOMACAO_TOKEN}'' 'https://gitlab.com/api/v4/projects/24070595/repository/files/deploy_ms_node.sh/raw?ref=master' -O deploy_ms_node.sh
     - chmod +x deploy_ms_node.sh 
     - ./deploy_ms_node.sh
 
+  after_script:
     - >
-      wget --header='PRIVATE-TOKEN: '${AUTOMACAO_TOKEN}'' 'https://gitlab.com/api/v4/projects/24070595/repository/files/remove_downtime_checkmk.sh/raw?ref=master' -O remove_downtime_checkmk.sh
-    - chmod +x remove_downtime_checkmk.sh 
-    - ./remove_downtime_checkmk.sh
+      if [[ "$CI_JOB_STATUS" == "success" ]]; then
+
+        curl -s \
+          -H "Content-Type: application/json" \
+          -d '{"embeds": [{"title": "'${CI_JOB_NAME}'","description": "'${CI_JOB_STATUS}' - Ao executar o job '${CI_JOB_NAME}' do projeto '${CI_PROJECT_NAME}'","color": 3065620}]}' \
+          $WEBHOOK_URL       
+
+      else
+
+        curl -s \
+          -H "Content-Type: application/json" \
+          -d '{"embeds": [{"title": "'${CI_JOB_NAME}'","description": "'${CI_JOB_STATUS}' - Ao executar o job '${CI_JOB_NAME}' do projeto '${CI_PROJECT_NAME}'","color": 12389167}]}' \
+          $WEBHOOK_URL
+
+      fi 
+
   only:
     - tags
   when: manual
   allow_failure: false
+  tags:
+    - microservicos
 
 check_prod:
   stage: check_prod
@@ -269,10 +350,31 @@ check_prod:
       wget --header='PRIVATE-TOKEN: '${AUTOMACAO_TOKEN}'' 'https://gitlab.com/api/v4/projects/24070595/repository/files/check_services.sh/raw?ref=master' -O check_services.sh
     - chmod +x check_services.sh 
     - ./check_services.sh
+
+  after_script:
+    - >
+      if [[ "$CI_JOB_STATUS" == "success" ]]; then
+
+        curl -s \
+          -H "Content-Type: application/json" \
+          -d '{"embeds": [{"title": "'${CI_JOB_NAME}'","description": "'${CI_JOB_STATUS}' - Ao executar o job '${CI_JOB_NAME}' do projeto '${CI_PROJECT_NAME}'","color": 3065620}]}' \
+          $WEBHOOK_URL       
+
+      else
+
+        curl -s \
+          -H "Content-Type: application/json" \
+          -d '{"embeds": [{"title": "'${CI_JOB_NAME}'","description": "'${CI_JOB_STATUS}' - Ao executar o job '${CI_JOB_NAME}' do projeto '${CI_PROJECT_NAME}'","color": 12389167}]}' \
+          $WEBHOOK_URL
+
+      fi 
+
   only:
     - tags
   allow_failure: false
   needs: ["deploy_prod"]
+  tags:
+    - microservicos
 
 deploy_bs:
   stage: prod
@@ -307,24 +409,35 @@ deploy_bs:
     - export TAG_RELEASE=`git describe --abbrev=0 --tags`
   script:
     - >
-      wget --header='PRIVATE-TOKEN: '${AUTOMACAO_TOKEN}'' 'https://gitlab.com/api/v4/projects/24070595/repository/files/add_downtime_checkmk.sh/raw?ref=master' -O add_downtime_checkmk.sh
-    - chmod +x add_downtime_checkmk.sh 
-    - ./add_downtime_checkmk.sh
-
-    - >
       wget --header='PRIVATE-TOKEN: '${AUTOMACAO_TOKEN}'' 'https://gitlab.com/api/v4/projects/24070595/repository/files/deploy_ms_node.sh/raw?ref=master' -O deploy_ms_node.sh
     - chmod +x deploy_ms_node.sh 
     - sed -i '/ms-server/s/ms-server/apps-servers/g' deploy_ms_node.sh
     - ./deploy_ms_node.sh
 
+  after_script:
     - >
-      wget --header='PRIVATE-TOKEN: '${AUTOMACAO_TOKEN}'' 'https://gitlab.com/api/v4/projects/24070595/repository/files/remove_downtime_checkmk.sh/raw?ref=master' -O remove_downtime_checkmk.sh
-    - chmod +x remove_downtime_checkmk.sh 
-    - ./remove_downtime_checkmk.sh
+      if [[ "$CI_JOB_STATUS" == "success" ]]; then
+
+        curl -s \
+          -H "Content-Type: application/json" \
+          -d '{"embeds": [{"title": "'${CI_JOB_NAME}'","description": "'${CI_JOB_STATUS}' - Ao executar o job '${CI_JOB_NAME}' do projeto '${CI_PROJECT_NAME}'","color": 3065620}]}' \
+          $WEBHOOK_URL       
+
+      else
+
+        curl -s \
+          -H "Content-Type: application/json" \
+          -d '{"embeds": [{"title": "'${CI_JOB_NAME}'","description": "'${CI_JOB_STATUS}' - Ao executar o job '${CI_JOB_NAME}' do projeto '${CI_PROJECT_NAME}'","color": 12389167}]}' \
+          $WEBHOOK_URL
+
+
+      fi 
   only:
     - tags
   when: manual
   allow_failure: false
+  tags:
+    - microservicos
 
 check_bs:
   stage: check_prod
@@ -363,7 +476,28 @@ check_bs:
     - chmod +x check_services.sh 
     - sed -i '/ms-server/s/ms-server/apps-servers/g' check_services.sh
     - ./check_services.sh
+
+  after_script:
+    - >
+      if [[ "$CI_JOB_STATUS" == "success" ]]; then
+
+        curl -s \
+          -H "Content-Type: application/json" \
+          -d '{"embeds": [{"title": "'${CI_JOB_NAME}'","description": "'${CI_JOB_STATUS}' - Ao executar o job '${CI_JOB_NAME}' do projeto '${CI_PROJECT_NAME}'","color": 3065620}]}' \
+          $WEBHOOK_URL       
+
+      else
+
+        curl -s \
+          -H "Content-Type: application/json" \
+          -d '{"embeds": [{"title": "'${CI_JOB_NAME}'","description": "'${CI_JOB_STATUS}' - Ao executar o job '${CI_JOB_NAME}' do projeto '${CI_PROJECT_NAME}'","color": 12389167}]}' \
+          $WEBHOOK_URL
+
+      fi 
+
   only:
     - tags
   allow_failure: false
   needs: ["deploy_bs"]
+  tags:
+    - microservicos
