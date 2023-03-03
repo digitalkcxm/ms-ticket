@@ -501,7 +501,8 @@ export default class PhaseController {
         for await (let x of status) {
           x = x.toString()
           tickets[x].tickets = await this.ticketModel.getTicketByPhasePaged(result.id, x, limit, offset, me)
-          tickets[x].total = await this.ticketModel.countTicket(result.id, x, me)
+          console.log(tickets[x])
+          tickets[x].total = await this.ticketModel.countTicket(result.id, x,false, me)
 
           if (tickets[x].tickets) {
             for await (let ticket of tickets[x].tickets) {

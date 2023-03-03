@@ -348,7 +348,10 @@ export default class TicketModel {
         .andWhere('ticket.id_status', status)
         .andWhere('customer.crm_contact_id', customer)
     } else {
-      const count = this.database.raw(`
+
+      typeof me != 'string' ? me = me.toString(): ''
+
+      const count = await this.database.raw(`
       WITH responsibles_dataset AS (
         SELECT r.id_ticket, u.id_users
         FROM responsible_ticket r 
@@ -359,11 +362,12 @@ export default class TicketModel {
       LEFT JOIN users u ON u.id = tk.id_user
       LEFT JOIN responsibles_dataset rd ON rd.id_ticket = tk.id
       WHERE tk.id_status = ${status} AND
-      tk.id_phase = ${id_phase} AND
-      u.id_users = ${me} OR
+      tk.id_phase = '${id_phase}' ${me == "false" ? '': `AND
+      u.id_users = ${me}` } OR
       tk.id_status = ${status} AND
-      tk.id_phase = ${id_phase} AND
-      rd.id_users = ${me} 
+      tk.id_phase = '${id_phase}' 
+       ${me == "false" ? '': `AND
+      u.id_users = ${me}` }
       `)
 
       result = count.rows
@@ -813,7 +817,10 @@ export default class TicketModel {
   }
   async getTicketByPhasePaged(id_phase, status, limit = 30, offset = 0, me) {
     try {
-      const result = this.database.raw(`
+      
+      typeof me != 'string' ? me = me.toString(): ''
+      
+      const result = await this.database.raw(`
       WITH responsibles_dataset AS (
         SELECT r.id_ticket, u.id_users
         FROM responsible_ticket r 
@@ -822,13 +829,13 @@ export default class TicketModel {
       SELECT tk.id, tk.id_seq, u.name, tk.closed, tk.created_at, tk.updated_at, tk.display_name, tk.status, tk.id_status, tk.id_tab
       FROM ticket tk
       LEFT JOIN users u ON u.id = tk.id_user
-      LEFT JOIN respnsibles_dataset rd ON rd.id_ticket = tk.id
+      LEFT JOIN responsibles_dataset rd ON rd.id_ticket = tk.id
       WHERE tk.id_status = ${status} AND
-      tk.id_phase = ${id_phase} AND
-      u.id_users = ${me} OR
+      tk.id_phase = '${id_phase}' ${me == "false" ? '': `AND
+      u.id_users = ${me}` } OR
       tk.id_status = ${status} AND
-      tk.id_phase = ${id_phase} AND
-      rd.id_users = ${me} 
+      tk.id_phase = '${id_phase}' ${me == "false" ? '': `AND
+      u.id_users = ${me}` }
       LIMIT ${limit} OFFSET ${offset}
       `)
 
