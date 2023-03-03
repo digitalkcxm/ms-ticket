@@ -148,6 +148,7 @@ export default class TicketModel {
         ticket.id, 
         ticket.id_seq, 
         ticket.id_protocol, 
+        ticket.protocol_pattern,
         phase.id AS id_phase, 
         phase.name AS phase, 
         users.id_users, 
