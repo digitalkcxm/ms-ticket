@@ -336,7 +336,7 @@ export default class TicketModel {
     }
   }
 
-  async countTicket(id_phase, status, customer = false, me) {
+  async countTicket(id_phase, status, customer = false) {
     let result
     if (customer) {
       result = await this.database('phase_ticket')
@@ -348,27 +348,12 @@ export default class TicketModel {
         .andWhere('ticket.id_status', status)
         .andWhere('customer.crm_contact_id', customer)
     } else {
-
-      typeof me != 'string' ? me = me.toString(): ''
-
       const count = await this.database.raw(`
-      WITH responsibles_dataset AS (
-        SELECT r.id_ticket, u.id_users
-        FROM responsible_ticket r 
-        LEFT JOIN users u on u.id = r.id_user 
-      )
       SELECT COUNT(tk.id)
       FROM ticket tk
       LEFT JOIN users u ON u.id = tk.id_user
-      LEFT JOIN responsibles_dataset rd ON rd.id_ticket = tk.id
       WHERE tk.id_status = ${status} AND
-      tk.id_phase = '${id_phase}' ${me == "false" ? '': `AND
-      u.id_users = ${me}` } OR
-      tk.id_status = ${status} AND
-      tk.id_phase = '${id_phase}' 
-       ${me == "false" ? '': `AND
-      u.id_users = ${me}` }
-      `)
+      tk.id_phase = '${id_phase}'`)
 
       result = count.rows
     }
@@ -815,11 +800,11 @@ export default class TicketModel {
       return []
     }
   }
-  async getTicketByPhasePaged(id_phase, status, limit = 30, offset = 0, me) {
+  async getTicketByPhasePagedWithMe(id_phase, status, limit = 30, offset = 0, me = false) {
     try {
-      
-      typeof me != 'string' ? me = me.toString(): ''
-      
+      console.log('me', me)
+      typeof me != 'string' ? (me = me.toString()) : ''
+
       const result = await this.database.raw(`
       WITH responsibles_dataset AS (
         SELECT r.id_ticket, u.id_users
@@ -831,11 +816,11 @@ export default class TicketModel {
       LEFT JOIN users u ON u.id = tk.id_user
       LEFT JOIN responsibles_dataset rd ON rd.id_ticket = tk.id
       WHERE tk.id_status = ${status} AND
-      tk.id_phase = '${id_phase}' ${me == "false" ? '': `AND
-      u.id_users = ${me}` } OR
+      tk.id_phase = '${id_phase}' AND
+      u.id_users =  ${me} OR
       tk.id_status = ${status} AND
-      tk.id_phase = '${id_phase}' ${me == "false" ? '': `AND
-      u.id_users = ${me}` }
+      tk.id_phase = '${id_phase}' AND
+      rd.id_users = ${me}
       LIMIT ${limit} OFFSET ${offset}
       `)
 
@@ -844,5 +829,50 @@ export default class TicketModel {
       console.log('Erro no get do ticket paginado', err)
       return false
     }
+  }
+
+  async getTicketByPhasePaged(id_phase, status, limit = 30, offset = 0) {
+    try {
+      const result = await this.database.raw(`
+      SELECT tk.id, tk.id_seq, u.name, tk.closed, tk.created_at, tk.updated_at, tk.display_name, tk.status, tk.id_status, tk.id_tab
+      FROM ticket tk
+      LEFT JOIN users u ON u.id = tk.id_user
+      WHERE tk.id_status = ${status} AND
+      tk.id_phase = '${id_phase}' 
+      LIMIT ${limit} OFFSET ${offset}
+      `)
+
+      return result.rows
+    } catch (err) {
+      console.log('Erro no get do ticket paginado', err)
+      return false
+    }
+  }
+
+  async countTicketWithMe(id_phase, status, me = false) {
+    let result
+
+    typeof me != 'string' ? (me = me.toString()) : ''
+    const count = await this.database.raw(`
+      WITH responsibles_dataset AS (
+        SELECT r.id_ticket, u.id_users
+        FROM responsible_ticket r 
+        LEFT JOIN users u on u.id = r.id_user 
+      )
+      SELECT COUNT(tk.id)
+      FROM ticket tk
+      LEFT JOIN users u ON u.id = tk.id_user
+      LEFT JOIN responsibles_dataset rd ON rd.id_ticket = tk.id
+      WHERE tk.id_status = ${status} AND
+      tk.id_phase = '${id_phase}' AND
+      u.id_users = ${me} OR
+      tk.id_status = ${status} AND
+      tk.id_phase = '${id_phase}' AND
+      rd.id_users =${me}
+      `)
+
+    result = count.rows
+
+    return result[0].count
   }
 }

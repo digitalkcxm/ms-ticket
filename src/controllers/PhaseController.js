@@ -500,9 +500,15 @@ export default class PhaseController {
       if (status && Array.isArray(status)) {
         for await (let x of status) {
           x = x.toString()
-          tickets[x].tickets = await this.ticketModel.getTicketByPhasePaged(result.id, x, limit, offset, me)
-          console.log(tickets[x])
-          tickets[x].total = await this.ticketModel.countTicket(result.id, x,false, me)
+
+          if (!me || me == "false") {
+            tickets[x].tickets = await this.ticketModel.getTicketByPhasePaged(result.id, x, limit, offset)
+            tickets[x].total = await this.ticketModel.countTicket(result.id, x, false)
+          } else {
+            tickets[x].tickets = await this.ticketModel.getTicketByPhasePagedWithMe(result.id, x, limit, offset, me)
+            tickets[x].total = await this.ticketModel.countTicketWithMe(result.id, x,  me)
+          }
+
 
           if (tickets[x].tickets) {
             for await (let ticket of tickets[x].tickets) {
@@ -1459,8 +1465,15 @@ export default class PhaseController {
         }
       } else if (status && Array.isArray(status)) {
         for await (const id of status) {
-          const result = await this.ticketModel.getTicketByPhasePaged(req.params.id, id, req.query.limit, req.query.offset, req.query.me)
-          tickets[id].total = await this.ticketModel.countTicket(req.params.id, id, false, req.query.me)
+          let result
+          if (!req.query.me || req.query.me == "false") {
+            result = await this.ticketModel.getTicketByPhasePaged(req.params.id, id, req.query.limit, req.query.offset)
+            tickets[id].total = await this.ticketModel.countTicket(req.params.id, id, false)
+          } else {
+            result = await this.ticketModel.getTicketByPhasePagedWithMe(req.params.id, id, req.query.limit, req.query.offset, req.query.me)
+            tickets[id].total = await this.ticketModel.countTicketWithMe(req.params.id, id, req.query.me)
+          }
+
           for await (let ticket of result) {
             tickets[id].tickets = tickets[id].tickets.concat(await this.formatTicket.formatTicketForPhase({ id: req.params.id }, ticket))
           }
