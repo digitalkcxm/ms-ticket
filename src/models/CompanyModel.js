@@ -54,4 +54,5 @@ export default class CompanyModel {
       this.logger.error(err, `Error when get active company with ID ${id}.`);
       return false;
     }
+  }
 }
