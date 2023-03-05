@@ -45,4 +45,14 @@ export default class CompanyModel {
       return err;
     }
   }
+
+  async getByIdActive(name) {
+    try {
+      return await this.database(tableName)
+        .where("name", name)
+    } catch (err) {
+      this.logger.error(err, `Error when get active company with ID ${id}.`);
+      return false;
+    }
+  }
 }

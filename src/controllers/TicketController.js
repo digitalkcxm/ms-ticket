@@ -292,7 +292,7 @@ export default class TicketController {
           },
           companyVerified[0].callback
         )
-        await Notify(ticket[0].id, ticket[0].phase_id, data.authorization, 'first_reply', companyVerified[0].callback, {
+        await Notify(ticket[0].id, ticket[0].phase_id, data.authorization, 'progress', companyVerified[0].callback, {
           phaseModel: this.phaseModel,
           ticketModel: this.ticketModel,
           customerModel: this.customerModel
