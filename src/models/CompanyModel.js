@@ -46,7 +46,7 @@ export default class CompanyModel {
     }
   }
 
-  async getByIdActive(name) {
+  async getByName(name) {
     try {
       return await this.database(tableName)
         .where("name", name)
