@@ -100,6 +100,7 @@ export default class TicketController {
       }
       if (data.id_protocol) {
         obj.id_protocol = data.id_protocol
+        obj.protocol_pattern = data.protocol_pattern
         obj.created_by_protocol = true
       }
 
