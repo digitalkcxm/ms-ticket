@@ -6,13 +6,13 @@ export default async function (
   props
 ) {
   const filaController = new FilaController({}, props.logger);
-  await filaController.sendToQueue(
-    {
-      id: department,
-      authorization: authorization,
-    },
-    "msticket:create_dash"
-  );
+  // await filaController.sendToQueue(
+  //   {
+  //     id: department,
+  //     authorization: authorization,
+  //   },
+  //   "msticket:create_dash"
+  // );
 
   await filaController.sendToQueue(
     {
