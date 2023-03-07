@@ -68,21 +68,6 @@ export default class FilaController {
     }
   }
 
-  async consumerCreateDash() {
-    const queueName = 'msticket:create_dash'
-    try {
-      global.amqpConn.assertQueue(queueName, { durable: true })
-      global.amqpConn.prefetch(1)
-      global.amqpConn.consume(queueName, async (msg) => {
-        this.logger.info('Consumindo create dash.')
-        await this.phaseController.dashGenerate(JSON.parse(msg.content.toString()))
-        global.amqpConn.ack(msg)
-      })
-    } catch (err) {
-      this.logger.error(err, 'Error when consume message to create Dash.')
-    }
-  }
-
   async consumerCreateHeader() {
     const queueName = 'msticket:create_header'
     try {
