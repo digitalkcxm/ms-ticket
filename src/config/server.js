@@ -41,7 +41,6 @@ setTimeout(() => {
   filaController.consumerCreateTicket()
   filaController.consumerUpdateTicket()
   filaController.consumerCreateAttachments()
-  filaController.consumerCreateDash()
   filaController.consumerCreateHeader()
   cache.cachePhase()
 }, 5000)

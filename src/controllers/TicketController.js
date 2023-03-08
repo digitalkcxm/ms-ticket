@@ -736,7 +736,7 @@ export default class TicketController {
   }
 
   async getAllTicket(req, res) {
-    console.log(req.query)
+    console.log('@INFO getAllTicket query =>', req.query)
     try {
       let obj = {}
       req.query.department ? (obj.department = JSON.parse(req.query.department)) : ''
@@ -745,6 +745,8 @@ export default class TicketController {
       if (req.query.range) {
         obj.range = req.query.range.split(',')
         obj.range = obj.range.map((x) => x.replace('[', '').replace(']', ''))
+      } else {
+        obj.range = [moment().format('YYYY-MM-DD'),  moment().format('YYYY-MM-DD')]
       }
       obj.history_phase = req.query.history_phase
       req.query.rows && (obj.rows = req.query.rows)
