@@ -420,10 +420,7 @@ export default class TicketController {
       if (result && result.length <= 0) return res.status(400).send({ error: 'There is no ticket with this ID' })
 
       result = await this.formatTicket.formatTicketForPhase({ id: result[0].phase_id }, result[0])
-      const customer = await this.customerModel.getAll(result.id)
-      if (customer && Array.isArray(customer) && customer.length > 0) {
-        result.customers = customer
-      }
+
 
       const protocols = await this.ticketModel.getProtocolTicket(result.id, req.headers.authorization)
 
@@ -489,10 +486,6 @@ export default class TicketController {
       if (result && result.length <= 0) return res.status(400).send({ error: 'There is no ticket with this ID' })
 
       result = await this.formatTicket.formatTicketForPhase({ id: result[0].phase_id }, result[0], this.database, this.logger)
-      const customer = await this.customerModel.getAll(result.id)
-      if (customer && Array.isArray(customer) && customer.length > 0) {
-        result.customers = customer
-      }
 
       const protocols = await this.ticketModel.getProtocolTicket(result.id, req.headers.authorization)
       console.log('protocols =>', protocols)

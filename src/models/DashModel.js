@@ -91,7 +91,8 @@ export default class DashModel {
     LEFT JOIN phase on phase.id = ticket.id_phase
     LEFT JOIN department_phase dp ON dp.id_phase = phase.id
     LEFT JOIN department ON department.id = dp.id_department
-    LEFT JOIN ticket_sla_control tsc ON tsc.id_ticket = ticket.id AND tsc.id_phase = phase.id
+    LEFT JOIN ticket_sla_control tsc ON tsc.id_ticket = ticket.id AND tsc.id_phase = ticket.id_phase
+    LEFT JOIN phase_sla_settings pss ON pss.id_phase = ticket.id_phase AND pss.active = true
     WHERE ticket.id_company = '${id_company}'
     AND phase.active = true
     AND dp.active = true
@@ -99,18 +100,21 @@ export default class DashModel {
     AND department.id_department_core = ${department}
     AND tsc.id_sla_type = 1
     AND tsc.id_sla_status = 1
+    AND pss.id_sla_type = 1
     `)
     return total_tickets_nao_iniciados_em_dia.rows[0].count
   }
 
   async total_tickets_nao_iniciados_atrasado(department, id_company) {
+
     const total_tickets_nao_iniciados_atrasado = await this.database.raw(`
     SELECT COUNT(ticket.id)
     FROM ticket
     LEFT JOIN phase on phase.id = ticket.id_phase
     LEFT JOIN department_phase dp ON dp.id_phase = phase.id
     LEFT JOIN department ON department.id = dp.id_department
-    LEFT JOIN ticket_sla_control tsc ON tsc.id_ticket = ticket.id AND tsc.id_phase = phase.id
+    LEFT JOIN ticket_sla_control tsc ON tsc.id_ticket = ticket.id AND tsc.id_phase = ticket.id_phase
+    LEFT JOIN phase_sla_settings pss ON pss.id_phase = ticket.id_phase AND pss.active = true
     WHERE ticket.id_company = '${id_company}'
     AND phase.active = true
     AND dp.active = true
@@ -118,6 +122,7 @@ export default class DashModel {
     AND department.id_department_core = ${department}
     AND tsc.id_sla_type = 1
     AND tsc.id_sla_status = 2
+    AND pss.id_sla_type = 1
     `)
     return total_tickets_nao_iniciados_atrasado.rows[0].count
   }
@@ -162,7 +167,8 @@ export default class DashModel {
     LEFT JOIN phase on phase.id = ticket.id_phase
     LEFT JOIN department_phase dp ON dp.id_phase = phase.id
     LEFT JOIN department ON department.id = dp.id_department
-    LEFT JOIN ticket_sla_control tsc ON tsc.id_ticket = ticket.id AND tsc.id_phase = phase.id
+    LEFT JOIN ticket_sla_control tsc ON tsc.id_ticket = ticket.id AND tsc.id_phase = ticket.id_phase
+    LEFT JOIN phase_sla_settings pss ON pss.id_phase = ticket.id_phase AND pss.active = true
     WHERE ticket.id_company = '${id_company}'
     AND phase.active = true
     AND dp.active = true
@@ -171,6 +177,7 @@ export default class DashModel {
     AND tsc.id_sla_type = 2
     AND tsc.id_sla_status = 1
     AND tsc.interaction_time is null
+    AND pss.id_sla_type = 2
     `)
     return total_tickets_iniciados_emdia.rows[0].count
   }
@@ -182,7 +189,8 @@ export default class DashModel {
     LEFT JOIN phase on phase.id = ticket.id_phase
     LEFT JOIN department_phase dp ON dp.id_phase = phase.id
     LEFT JOIN department ON department.id = dp.id_department
-    LEFT JOIN ticket_sla_control tsc ON tsc.id_ticket = ticket.id AND tsc.id_phase = phase.id
+    LEFT JOIN ticket_sla_control tsc ON tsc.id_ticket = ticket.id AND tsc.id_phase = ticket.id_phase
+    LEFT JOIN phase_sla_settings pss ON pss.id_phase = ticket.id_phase AND pss.active = true
     WHERE ticket.id_company = '${id_company}'
     AND phase.active = true
     AND dp.active = true
@@ -191,6 +199,7 @@ export default class DashModel {
     AND tsc.id_sla_type = 2
     AND tsc.id_sla_status = 2
     AND tsc.interaction_time is null
+    AND pss.id_sla_type = 2
     `)
     return total_tickets_iniciados_sem_resposta_atrasado.rows[0].count
   }
@@ -203,7 +212,8 @@ export default class DashModel {
     LEFT JOIN phase on phase.id = ticket.id_phase
     LEFT JOIN department_phase dp ON dp.id_phase = phase.id
     LEFT JOIN department ON department.id = dp.id_department
-    LEFT JOIN ticket_sla_control tsc ON tsc.id_ticket = ticket.id AND tsc.id_phase = phase.id
+    LEFT JOIN ticket_sla_control tsc ON tsc.id_ticket = ticket.id AND tsc.id_phase = ticket.id_phase
+    LEFT JOIN phase_sla_settings pss ON pss.id_phase = ticket.id_phase AND pss.active = true
     WHERE ticket.id_company = '${id_company}'
     AND phase.active = true
     AND dp.active = true
@@ -212,6 +222,7 @@ export default class DashModel {
     AND tsc.id_sla_type = 3
     AND tsc.id_sla_status = 1
     AND tsc.interaction_time is null
+    AND pss.id_sla_type = 3
     `)
     return total_tickets_respondido_emdia.rows[0].count
   }
@@ -223,7 +234,8 @@ export default class DashModel {
     LEFT JOIN phase on phase.id = ticket.id_phase
     LEFT JOIN department_phase dp ON dp.id_phase = phase.id
     LEFT JOIN department ON department.id = dp.id_department
-    LEFT JOIN ticket_sla_control tsc ON tsc.id_ticket = ticket.id AND tsc.id_phase = phase.id
+    LEFT JOIN ticket_sla_control tsc ON tsc.id_ticket = ticket.id AND tsc.id_phase = ticket.id_phase
+    LEFT JOIN phase_sla_settings pss ON pss.id_phase = ticket.id_phase AND pss.active = true
     WHERE ticket.id_company = '${id_company}'
     AND phase.active = true
     AND dp.active = true
@@ -231,6 +243,7 @@ export default class DashModel {
     AND department.id_department_core = ${department}
     AND tsc.id_sla_type = 3
     AND tsc.id_sla_status = 2
+    AND pss.id_sla_type = 3
     `)
     return total_tickets_respondido_atrasado.rows[0].count
   }
@@ -243,7 +256,8 @@ export default class DashModel {
     LEFT JOIN phase on phase.id = ticket.id_phase
     LEFT JOIN department_phase dp ON dp.id_phase = phase.id
     LEFT JOIN department ON department.id = dp.id_department
-    LEFT JOIN ticket_sla_control tsc ON tsc.id_ticket = ticket.id AND tsc.id_phase = phase.id
+    LEFT JOIN ticket_sla_control tsc ON tsc.id_ticket = ticket.id AND tsc.id_phase = ticket.id_phase
+    LEFT JOIN phase_sla_settings pss ON pss.id_phase = ticket.id_phase AND pss.active = true
     WHERE ticket.id_company = '${id_company}'
     AND phase.active = true
     AND dp.active = true
@@ -251,6 +265,7 @@ export default class DashModel {
     AND department.id_department_core = ${department}
     AND tsc.id_sla_type = 3
     AND tsc.id_sla_status = 1
+    AND pss.id_sla_type = 3
     `)
     return total_tickets_concluidos_emdia.rows[0].count
   }
@@ -262,7 +277,8 @@ export default class DashModel {
     LEFT JOIN phase on phase.id = ticket.id_phase
     LEFT JOIN department_phase dp ON dp.id_phase = phase.id
     LEFT JOIN department ON department.id = dp.id_department
-    LEFT JOIN ticket_sla_control tsc ON tsc.id_ticket = ticket.id AND tsc.id_phase = phase.id
+    LEFT JOIN ticket_sla_control tsc ON tsc.id_ticket = ticket.id AND tsc.id_phase = ticket.id_phase
+    LEFT JOIN phase_sla_settings pss ON pss.id_phase = ticket.id_phase AND pss.active = true
     WHERE ticket.id_company = '${id_company}'
     AND phase.active = true
     AND dp.active = true
@@ -270,6 +286,7 @@ export default class DashModel {
     AND department.id_department_core = ${department}
     AND tsc.id_sla_type = 3
     AND tsc.id_sla_status = 2
+    AND pss.id_sla_type = 3
     `)
     return total_tickets_concluidos_atrasado.rows[0].count
   }

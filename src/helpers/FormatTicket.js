@@ -6,7 +6,7 @@ import TicketModel from '../models/TicketModel.js'
 import PhaseModel from '../models/PhaseModel.js'
 
 import FormDocuments from '../documents/FormDocuments.js'
-
+import CustomerModel from '../models/CustomerModel.js'
 export default class FormatTicket {
   constructor(database = {}, logger = {}, redisConnection = {}) {
     this.redis = redisConnection
@@ -16,6 +16,7 @@ export default class FormatTicket {
     this.phaseModel = new PhaseModel(database, logger)
 
     this.formDocuments = new FormDocuments()
+    this.customerModel = new CustomerModel(database, logger)
   }
 
   async retriveTicket(ticket, id_phase) {
@@ -68,6 +69,10 @@ export default class FormatTicket {
     const form = await this.ticketModel.getFormTicket(ticket.id)
     if (form && form.length > 0 && form[0].id_form !== '{}') {
       ticket.form_data = await this.formDocuments.findRegister(form[0].id_form)
+    }
+    const customer = await this.customerModel.getAll(ticket.id)
+    if (customer && Array.isArray(customer) && customer.length > 0) {
+      ticket.customer = customer
     }
 
     ticket.created_at = moment(ticket.created_at).format('DD/MM/YYYY HH:mm:ss')
