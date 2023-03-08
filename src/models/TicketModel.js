@@ -140,7 +140,7 @@ export default class TicketModel {
         stringWhere = stringWhere + ` AND ticket.closed in (${obj.closed}) `
       }
       if (obj.range && obj.range.length > 0) {
-        stringWhere = stringWhere + `AND ticket.created_at >= '${obj.range[0]}' AND ticket.created_at <= '${obj.range[1]}'`
+        stringWhere = stringWhere + `AND ticket.created_at BETWEEN '${obj.range[0]} 00:00:00' AND '${obj.range[1]} 23:59:59'`
       }
 
       const result = await this.database.raw(`
