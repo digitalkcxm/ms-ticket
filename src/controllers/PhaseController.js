@@ -221,15 +221,27 @@ export default class PhaseController {
           result[i].ticket = { 1: {}, 2: {}, 3: {} }
           typeof req.query.status === 'string' ? (req.query.status = JSON.parse(req.query.status)) : ''
           for await (const status of req.query.status) {
-            result[i].ticket[status] = await this.ticketModel.searchTicket(
-              req.headers.authorization,
-              search,
-              result[i].id,
-              status,
-              req.query.limit,
-              req.query.offset,
-              req.query.me
-            )
+            if (!req.query.me || req.query.me === "false"){
+              result[i].ticket[status] = await this.ticketModel.searchTicket(
+                req.headers.authorization,
+                search,
+                result[i].id,
+                status,
+                req.query.limit,
+                req.query.offset
+              )
+            }else{
+              result[i].ticket[status] = await this.ticketModel.searchTicketWithMe(
+                req.headers.authorization,
+                search,
+                result[i].id,
+                status,
+                req.query.limit,
+                req.query.offset,
+                req.query.me
+              )
+            }
+
 
             for (const x in result[i].ticket[status].tickets) {
               console.log(result[i].ticket[status].tickets[x])
@@ -668,6 +680,7 @@ export default class PhaseController {
       }
 
       //Faz um laço de repetição finalizando todos os tickets relacionados a phase.
+      
       for (let ticket of tickets) {
         if (!ticket.closed) {
           ticket = await this.ticketModel.getTicketById(ticket.id, req.headers.authorization)
@@ -1230,6 +1243,8 @@ export default class PhaseController {
 
       if (search) {
         for await (const id of status) {
+          if (!req.query.me || req.query.me === "false"){
+
           tickets[id] = await this.ticketModel.searchTicket(
             req.headers.authorization,
             search,
@@ -1237,8 +1252,19 @@ export default class PhaseController {
             id,
             req.query.limit,
             req.query.offset,
-            req.query.me
+
           )
+          }else{
+            tickets[id] = await this.ticketModel.searchTicketWithMe(
+              req.headers.authorization,
+              search,
+              req.params.id,
+              id,
+              req.query.limit,
+              req.query.offset,
+              req.query.me
+            )
+          }
 
           for (const x in tickets[id].tickets) {
             tickets[id].tickets[x] = await this.formatTicket.formatTicketForPhase({ id: req.params.id }, tickets[id].tickets[x])
