@@ -739,7 +739,7 @@ export default class TicketController {
         obj.range = req.query.range.split(',')
         obj.range = obj.range.map((x) => x.replace('[', '').replace(']', ''))
       } else {
-        obj.range = [moment().format('YYYY-MM-DD'),  moment().format('YYYY-MM-DD')]
+        obj.range = [moment().format('YYYY-MM-DD'), moment().format('YYYY-MM-DD')]
       }
       obj.history_phase = req.query.history_phase
       req.query.rows && (obj.rows = req.query.rows)
@@ -757,7 +757,7 @@ export default class TicketController {
       for (const ticket of result) {
         if (ticket.id_phase) {
           const ticketFormated = await this.formatTicket.formatTicketForPhase({ id: ticket.id_phase }, ticket)
-
+          if (ticketFormated.customer) ticketFormated.customer = ticketFormated.customer[0].name
           //@info REGRA DE NEGOCIO DE COMGAS!
           if (req.headers.authorization === '04c42a90-f0e3-11ec-afda-f705ff2ac16e') {
             const form = await this.ticketModel.getFormTicketFromComgas(ticketFormated.id)
