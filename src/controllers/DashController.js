@@ -10,7 +10,7 @@ export default class DashController {
     if (!data.authorization) return false //@info data.authorization é a company do cliente.
 
     //@info sem essas duas infos acima é impossivel montar o dash.
-    const total_de_fases = await this.dashModel.total_phase(data.id, data.authorization)
+    const total_fases = await this.dashModel.total_phase(data.id, data.authorization)
     const total_tickets = await this.dashModel.total_tickets(data.id, data.authorization)
 
     //Não iniciados
@@ -109,7 +109,7 @@ export default class DashController {
         atrasado: total_tickets_respondido_atrasado,
         sem_sla: 0
       },
-      total_de_fases,
+      total_fases,
       total_tickets,
       total_tickets_fechados,
       total_tickets_iniciados,
