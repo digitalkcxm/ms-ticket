@@ -72,7 +72,7 @@ export default class FormatTicket {
     }
     const customer = await this.customerModel.getAll(ticket.id)
     if (customer && Array.isArray(customer) && customer.length > 0) {
-      ticket.customer = customer
+      ticket.customers = customer
     }
 
     ticket.created_at = moment(ticket.created_at).format('DD/MM/YYYY HH:mm:ss')
