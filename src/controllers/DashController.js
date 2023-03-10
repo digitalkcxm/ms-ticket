@@ -22,7 +22,7 @@ export default class DashController {
     //Fim não iniciados
 
     // Iniciados
-      let total_tickets_iniciados = await this.dashModel.total_tickets_iniciados(data.id, data.authorization)
+      let total_tickets_iniciados_sem_resposta = await this.dashModel.total_tickets_iniciados(data.id, data.authorization)
       const total_tickets_iniciados_sem_resposta_emdia = await this.dashModel.total_tickets_iniciados_sem_resposta_emdia(
         data.id,
         data.authorization
@@ -34,7 +34,7 @@ export default class DashController {
       const total_tickets_respondido_emdia = await this.dashModel.total_tickets_respondido_emdia(data.id, data.authorization)
       const total_tickets_respondido_atrasado = await this.dashModel.total_tickets_respondido_atrasado(data.id, data.authorization)
       const total_ticket_iniciados_sem_sla =
-      parseInt(total_tickets_iniciados) -
+      parseInt(total_tickets_iniciados_sem_resposta) -
         (parseInt(total_tickets_iniciados_sem_resposta_emdia) +
         parseInt(total_tickets_iniciados_sem_resposta_atrasado) +
         parseInt(total_tickets_respondido_emdia) +
@@ -42,7 +42,7 @@ export default class DashController {
 
       const total_tickets_respondidos_sem_conclusao = parseInt(total_tickets_respondido_emdia) +
       parseInt(total_tickets_respondido_atrasado)
-      total_tickets_iniciados = total_tickets_iniciados - total_tickets_respondidos_sem_conclusao 
+      total_tickets_iniciados_sem_resposta = total_tickets_iniciados_sem_resposta - total_tickets_respondidos_sem_conclusao 
     // Fim iniciados.
 
     //Concluidos
@@ -66,10 +66,10 @@ export default class DashController {
       sem_sla: await calc_percentual(total_tickets_nao_iniciados, total_tickets_nao_iniciados_sem_sla)
     }
     const percentual_iniciado_sem_resposta = {
-      total: await calc_percentual(total_tickets, total_tickets_iniciados),
-      emdia: await calc_percentual(total_tickets_iniciados, total_tickets_iniciados_sem_resposta_emdia),
-      atrasado: await calc_percentual(total_tickets_iniciados, total_tickets_iniciados_sem_resposta_atrasado),
-      sem_sla: await calc_percentual(total_tickets_iniciados, total_ticket_iniciados_sem_sla),
+      total: await calc_percentual(total_tickets, total_tickets_iniciados_sem_resposta),
+      emdia: await calc_percentual(total_tickets_iniciados_sem_resposta, total_tickets_iniciados_sem_resposta_emdia),
+      atrasado: await calc_percentual(total_tickets_iniciados_sem_resposta, total_tickets_iniciados_sem_resposta_atrasado),
+      sem_sla: await calc_percentual(total_tickets_iniciados_sem_resposta, total_ticket_iniciados_sem_sla),
     }
     const percentual_respondido_sem_conclusao = {
       total: await calc_percentual(total_tickets, total_tickets_respondidos_sem_conclusao),
@@ -112,7 +112,7 @@ export default class DashController {
       total_fases,
       total_tickets,
       total_tickets_fechados,
-      total_tickets_iniciados,
+      total_tickets_iniciados_sem_resposta,
       total_tickets_nao_iniciados,
       total_tickets_respondidos_sem_conclusao,
     }
