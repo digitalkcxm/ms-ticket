@@ -26,110 +26,13 @@ export default class SLAController {
       atrasado: 0,
       sem_sla: 0,
     };
+
     const slas = await this.slaModel.getSLASettings(phase_id);
-    if (slas && slas.length > 0) {
-      let sla_ticket;
-      if (!customer) {
-        sla_ticket = await this.slaModel.getToCountSLA(phase_id, closed);
-      } else {
-        sla_ticket = await this.slaModel.getToCountSLAWithCustomer(
-          phase_id,
-          closed,
-          customer
-        );
+    if(Array.isArray(slas) && slas.length > 0){
+      for(const sla of slas){
+        
       }
-
-      if (sla_ticket && sla_ticket.rows && sla_ticket.rows.length > 0) {
-        for await (const sla of sla_ticket.rows) {
-          switch (sla.id_sla_type) {
-            case 1:
-              if (sla.active) {
-                if (sla.id_sla_status == 1) {
-                  obj.emdia = obj.emdia + 1;
-                } else if (sla.id_sla_status == 2) {
-                  obj.atrasado = obj.atrasado + 1;
-                }
-              } else {
-                const nextSLA = sla_ticket.rows.filter(
-                  (x) =>
-                    (x.id_ticket === sla.id_ticket && x.id_sla_type === 2) ||
-                    (x.id_ticket === sla.id_ticket && x.id_sla_type === 3)
-                );
-                if (nextSLA.length <= 0) {
-                  switch (sla.id_status) {
-                    case 2:
-                      if (sla.id_sla_status == 1) {
-                        obj.emdia = obj.emdia + 1;
-                      } else if (sla.id_sla_status == 2) {
-                        obj.atrasado = obj.atrasado + 1;
-                      }
-                      break;
-                    case 3:
-                      if (sla.id_sla_status == 1) {
-                        obj.emdia = obj.emdia + 1;
-                      } else if (sla.id_sla_status == 2) {
-                        obj.atrasado = obj.atrasado + 1;
-                      }
-                      break;
-                    default:
-                      break;
-                  }
-                }
-              }
-              break;
-            case 2:
-              if (!sla.interaction_time) {
-                if (sla.id_sla_status === 1) {
-                  obj.emdia = obj.emdia + 1;
-                } else {
-                  obj.atrasado = obj.atrasado + 1;
-                }
-              } else {
-                const nextSLA = sla_ticket.rows.filter(
-                  (x) => x.id_sla_type === 3 && x.active
-                );
-
-                if (nextSLA.length > 0) {
-                  if (nextSLA[0].id_sla_status === 2) {
-                    obj.atrasado = obj.atrasado + 1;
-                  } else {
-                    obj.emdia = obj.emdia + 1;
-                  }
-                }
-              }
-              break;
-            case 3:
-              if (!sla.active) {
-                const nextSLA = sla_ticket.rows.filter(
-                  (x) => x.id_sla_type === 2 && x.interaction_time
-                );
-                if (nextSLA.length > 0) {
-                  if (sla.id_sla_status === 1) {
-                    obj.emdia = obj.emdia + 1;
-                  } else if (sla.id_sla_status === 2) {
-                    obj.atrasado = obj.atrasado + 1;
-                  }
-                }
-              }
-              break;
-
-            default:
-              break;
-          }
-        }
-      } else {
-        obj.sem_sla = obj.sem_sla + sla_ticket.rows.length;
-      }
-    } else {
-      const ticket = await this.ticketModel.getTicketByPhaseAndStatus(
-        phase_id,
-        [closed]
-      );
-      obj.sem_sla = obj.sem_sla + ticket.length;
     }
-    if (phase_id === "2f5820a0-4a70-11ec-8101-bf6389e52d08")
-      console.log("==OBJ ===>", obj);
-    return obj;
   }
 
   async settingsSLA(id) {

@@ -42,7 +42,7 @@ export default class DepartmentModel {
       return await this.database("department_phase")
         .select({
           id_phase: "department_phase.id_phase",
-          name: "phase.name",
+          
         })
         .leftJoin("phase", "phase.id", "department_phase.id_phase")
         .where("department_phase.id_department", id_department)
