@@ -1,9 +1,9 @@
-import SLAController from "./SLAController.js";
 import DepartmentModel from "../models/DepartmentModel.js";
+import SLAModel from "../models/SLAModel.js"
 export default class DepartmentController {
   constructor(database = {}, logger = {}) {
     this.logger = logger;
-    this.slaController = new SLAController(database, logger);
+    this.slaModel = new SLAModel(database, logger);
     this.departmentModel = new DepartmentModel(database, logger);
   }
 
@@ -33,22 +33,21 @@ export default class DepartmentController {
           await this.departmentModel.getDepartmentPhaseByDepartment(
             department.id
           );
-        let emdia = 0;
-        let atrasado = 0;
+        
+        let ids = []
+        Array.isArray(phases) && phases.length > 0 && phases.map(x => ids.push("'"+x.id_phase+"'"))
 
-        for await (const phase of phases) {
-          const sla = await this.slaController.counter_sla(phase.id_phase);
-          emdia = parseInt(sla.emdia) + emdia;
-          atrasado = parseInt(sla.atrasado) + atrasado;
-        }
         obj.push({
           id_department: department.id_department_core,
-          counter_sla: { emdia, atrasado },
+          counter_sla: { 
+            emdia: ids.length> 0 ? await this.slaModel.getSLAEmDia(ids,req.headers.authorization): 0, 
+             atrasado:ids.length> 0 ?  await this.slaModel.getSLAAtrasado(ids,req.headers.authorization): 0,
+           },
         });
       }
       return res.status(200).send(obj);
     } catch (err) {
-      this.logger(err, "Error get count sla department.");
+      this.logger.error(err, "Error get count sla department.");
       return res.status(400).send({ error: "Houve um problema" });
     }
   }
