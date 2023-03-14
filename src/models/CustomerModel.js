@@ -126,7 +126,7 @@ export default class CustomerModel {
       LEFT JOIN department ON department.id = department_phase.id_department
       LEFT JOIN status_ticket ON status_ticket.id = ticket.id_status
       WHERE ticket.closed IN (${newStatus})
-      AND department.id_department_core = ${department}
+       ${department? `AND department.id_department_core =${department}`:""}
       AND phase_ticket.active = true
       AND phase.active = true
       AND customer.crm_contact_id = '${id}'
