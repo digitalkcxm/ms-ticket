@@ -94,10 +94,7 @@ export default class CustomerModel {
 
   async getTicketByIDCRMCustomer(status, id, department) {
     try {
-      let newStatus =
-        JSON.parse(status).length > 0
-          ? status.replace("[", "").replace("]", "")
-          : "0";
+
       const query = await this.database.raw(`
       SELECT DISTINCT ticket.id_seq,
         phase.id,
@@ -125,21 +122,13 @@ export default class CustomerModel {
       LEFT JOIN department_phase ON department_phase.id_phase = phase.id
       LEFT JOIN department ON department.id = department_phase.id_department
       LEFT JOIN status_ticket ON status_ticket.id = ticket.id_status
-      WHERE ticket.closed IN (${newStatus})
+      WHERE ticket.id_status IN (1,2,3)
        ${department? `AND department.id_department_core =${department}`:""}
       AND phase_ticket.active = true
       AND phase.active = true
       AND customer.crm_contact_id = '${id}'
       `);
       return query.rows;
-      // ("customer").select(['DISTINCT ticket.id_seq'])
-      //   .leftJoin("ticket", "ticket.id", "customer.id_ticket")
-      //   .leftJoin("phase_ticket", "phase_ticket.id_ticket", "ticket.id")
-      //   .leftJoin("phase",'phase.id','phase_ticket.id_phase')
-      //   .whereIn('ticket.closed',newStatus)
-      //   .andWhere("phase_ticket.active",true)
-      //   .andWhere("phase.active", true)
-      //   .andWhere('customer.crm_contact_id', id)
     } catch (err) {
       this.logger.error(err, "Error when get ticket by id crm contact id.");
       return err;
