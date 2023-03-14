@@ -86,7 +86,7 @@ export default class CustomerController {
             customer: req.params.id
           })
 
-          phases.push({
+          const phaseObj = {
             id: x.id,
             department: x.id_department_core,
             emoji: phases.icon,
@@ -96,26 +96,41 @@ export default class CustomerController {
             created_at: x.created_at,
             updated_at: x.updated_at,
             header: x.header,
-            ticket: [
-              {
-                closed: x.closed,
-                sla: x.sla,
-                department_origin: x.department_origin,
-                display_name: x.display_name,
-                id: x.id,
-                id_seq: x.id_seq,
-                id_user: x.id_user,
-                status: x.status,
-                start_ticket: x.start_ticket ? moment(x.start_ticket).format('DD/MM/YYYY HH:mm:ss') : '',
-                created_at: moment(x.created_at_ticket).format('DD/MM/YYYY HH:mm:ss'),
-                updated_at: moment(x.updated_at_ticket).format('DD/MM/YYYY HH:mm:ss')
+            ticket: {
+              1: {
+                total: 0,
+                tickets: []
+              },
+              2: {
+                total: 0,
+                tickets: []
+              },
+              3: {
+                total: 0,
+                tickets: []
               }
-            ]
+            }
+          }
+
+          phaseObj.ticket[x.id_status].tickets.push({
+            closed: x.closed,
+            sla: x.sla,
+            department_origin: x.department_origin,
+            display_name: x.display_name,
+            id: x.id,
+            id_seq: x.id_seq,
+            id_user: x.id_user,
+            status: x.status,
+            start_ticket: x.start_ticket ? moment(x.start_ticket).format('DD/MM/YYYY HH:mm:ss') : '',
+            created_at: moment(x.created_at_ticket).format('DD/MM/YYYY HH:mm:ss'),
+            updated_at: moment(x.updated_at_ticket).format('DD/MM/YYYY HH:mm:ss')
           })
+
+          phases.push(phaseObj)
         } else {
           phases.filter((y) => {
             if (y.id === x.id) {
-              y.ticket.push({
+              y.ticket[x.id_status].tickets.push({
                 closed: x.closed,
                 department_origin: x.department_origin,
                 display_name: x.display_name,
@@ -128,6 +143,7 @@ export default class CustomerController {
                 created_at: moment(x.created_at_ticket).format('DD/MM/YYYY HH:mm:ss'),
                 updated_at: moment(x.updated_at_ticket).format('DD/MM/YYYY HH:mm:ss')
               })
+              y.ticket[x.id_status].total += 1
             }
           })
         }
