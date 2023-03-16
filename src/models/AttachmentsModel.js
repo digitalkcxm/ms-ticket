@@ -32,6 +32,7 @@ export default class AttachmentsModel {
           name: "attachments_ticket.name",
           created_at: "attachments_ticket.created_at",
           updated_at: "attachments_ticket.updated_at",
+          text: "attachments_ticket.text"
         })
         .leftJoin(
           "type_attachments",
