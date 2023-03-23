@@ -63,13 +63,18 @@ export default class FormatTicket {
   async formatTicketForPhase(phase, ticket) {
     phase.sla = await this.slaController.settingsSLA(phase.id)
     Object.keys(phase.sla).length > 0 && (ticket.sla = await this.slaController.ticketSLA(phase.id, ticket.id))
-
+ ticket.card_ticket = []
     ticket.responsibles = await this.responsibleModel.getActiveResponsibleByTicket(ticket.id)
 
     const form = await this.ticketModel.getFormTicket(ticket.id)
     if (form && form.length > 0 && form[0].id_form !== '{}') {
       ticket.form_data = await this.formDocuments.findRegister(form[0].id_form)
+      ticket.form_data && phase.formTemplate ? phase.formTemplate.map(x => x.visible_on_card_ticket && ticket.card_ticket.push({
+        value: ticket.form_data[x.column],
+        label: x.label
+      }) ): ""
     }
+    
     const customer = await this.customerModel.getAll(ticket.id)
     if (customer && Array.isArray(customer) && customer.length > 0) {
       ticket.customers = customer
