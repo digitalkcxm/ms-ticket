@@ -1191,7 +1191,7 @@ export default class PhaseController {
     header.total_tickets = await this.ticketModel.countAllTicket(data.id, data.customer)
 
     header.open_tickets =
-      (await this.ticketModel.countTicket(data.id, 1, data.customer)) + (await this.ticketModel.countTicket(data.id, 2, data.customer))
+    parseInt(await this.ticketModel.countTicket(data.id, 1, data.customer)) + parseInt(await this.ticketModel.countTicket(data.id, 2, data.customer))
     header.closed_tickets = await this.ticketModel.countTicket(data.id, 3, data.customer)
 
     if (header.open_tickets != '0') {
