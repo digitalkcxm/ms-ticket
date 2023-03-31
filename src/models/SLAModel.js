@@ -201,34 +201,40 @@ export default class SLAModel {
   }
 
   async getToCountSLA(id_phase, closed = false) {
+    let tickets
     if (closed) {
-      return await this.database.raw(`
+      tickets = await this.database.raw(`
       select ticket_sla_control.*, ticket.id_status 
       from ticket_sla_control 
       left join phase_ticket on phase_ticket.id_ticket = ticket_sla_control.id_ticket 
       left join ticket on ticket.id = ticket_sla_control.id_ticket 
       where ticket_sla_control.id_phase = '${id_phase}'
       and phase_Ticket.id_phase = '${id_phase}' 
+      and ticket_sla_control.id_sla_type = 1
       and phase_ticket.active = true 
       and ticket.id_status = 3;
       `)
     } else {
-      return await this.database.raw(`
+      tickets = await this.database.raw(`
       select ticket_sla_control.*, ticket.id_status 
       from ticket_sla_control 
       left join phase_ticket on phase_ticket.id_ticket = ticket_sla_control.id_ticket 
       left join ticket on ticket.id = ticket_sla_control.id_ticket 
       where ticket_sla_control.id_phase = '${id_phase}' 
+      and ticket_sla_control.id_sla_type = 1
       and phase_Ticket.id_phase = '${id_phase}'
       and phase_ticket.active = true 
       and ticket.id_status != 3;
       `)
     }
+
+    return tickets.rows
   }
 
   async getToCountSLAWithCustomer(id_phase, closed = false, customer) {
+    let tickets
     if (closed) {
-      return await this.database.raw(`
+      tickets = await this.database.raw(`
       select ticket_sla_control.*, ticket.id_status 
       from ticket_sla_control 
       left join phase_ticket on phase_ticket.id_ticket = ticket_sla_control.id_ticket 
@@ -236,23 +242,32 @@ export default class SLAModel {
       left join customer on customer.id_ticket = ticket.id
       where ticket_sla_control.id_phase = '${id_phase}'
       and phase_ticket.id_phase = '${id_phase}' 
+      and ticket_sla_control.id_sla_type = 1
       and phase_ticket.active = true 
       and ticket.id_status = 3
       and customer.crm_contact_id = '${customer}';
       `)
     } else {
-      return await this.database.raw(`
+      tickets = await this.database.raw(`
       select ticket_sla_control.*, ticket.id_status 
       from ticket_sla_control 
       left join phase_ticket on phase_ticket.id_ticket = ticket_sla_control.id_ticket 
       left join ticket on ticket.id = ticket_sla_control.id_ticket 
       left join customer on customer.id_ticket = ticket.id
       where ticket_sla_control.id_phase = '${id_phase}' 
+      and ticket_sla_control.id_sla_type = 1
       and phase_ticket.id_phase = '${id_phase}'
       and phase_ticket.active = true 
       and ticket.id_status != 3
       and customer.crm_contact_id = '${customer}';
       `)
     }
+
+    return tickets.rows
+  }
+
+  async getAllTicketsWithoutSLA(id_phase, closed) {
+    const tickets = await this.database('ticket').count().where({ id_phase }).andWhere('closed', closed)
+    return tickets[0].count
   }
 }
