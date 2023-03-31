@@ -71,6 +71,7 @@ export default class CustomerController {
       if (result.length <= 0) return res.status(400).send({ error: 'Without customer with this ID' })
 
       const phases = []
+
       for await (const x of result) {
         if (phases.filter((y) => y.id === x.id).length <= 0) {
           x.phase_sla = await this.slaController.settingsSLA(x.id)
@@ -111,41 +112,47 @@ export default class CustomerController {
               }
             }
           }
-
-          phaseObj.ticket[x.id_status].tickets.push({
+          let ticket = {
             closed: x.closed,
             sla: x.sla,
             department_origin: x.department_origin,
             display_name: x.display_name,
-            id: x.id,
+            id: x.id_ticket,
             id_seq: x.id_seq,
             id_user: x.id_user,
             status: x.status,
             start_ticket: x.start_ticket ? moment(x.start_ticket).format('DD/MM/YYYY HH:mm:ss') : '',
-            created_at: moment(x.created_at_ticket).format('DD/MM/YYYY HH:mm:ss'),
-            updated_at: moment(x.updated_at_ticket).format('DD/MM/YYYY HH:mm:ss')
-          })
-
+            created_at: x.created_at_ticket,
+            updated_at: x.updated_at_ticket
+          }
+          ticket = await this.formatTicket.formatTicketForPhase(phaseObj, ticket)
+          phaseObj.ticket[x.id_status].tickets.push(ticket)
+          phaseObj.ticket[x.id_status].total += 1
           phases.push(phaseObj)
         } else {
-          phases.filter((y) => {
+          for(const y of phases){
             if (y.id === x.id) {
-              y.ticket[x.id_status].tickets.push({
+
+              let ticket = {
                 closed: x.closed,
                 department_origin: x.department_origin,
                 display_name: x.display_name,
-                id: x.id,
+                id: x.id_ticket,
                 sla: x.sla,
                 id_seq: x.id_seq,
                 id_user: x.id_user,
                 status: x.status,
                 start_ticket: x.start_ticket ? moment(x.start_ticket).format('DD/MM/YYYY HH:mm:ss') : '',
-                created_at: moment(x.created_at_ticket).format('DD/MM/YYYY HH:mm:ss'),
-                updated_at: moment(x.updated_at_ticket).format('DD/MM/YYYY HH:mm:ss')
-              })
+                created_at: x.created_at_ticket,
+                updated_at: x.updated_at_ticket
+              }
+              ticket = await this.formatTicket.formatTicketForPhase(y, ticket)
+
+              y.ticket[x.id_status].tickets.push(ticket)
               y.ticket[x.id_status].total += 1
             }
-          })
+          }
+
         }
       }
       return res.status(200).send(phases)
