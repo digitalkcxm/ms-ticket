@@ -21,18 +21,27 @@ export default class SLAController {
   }
 
   async counter_sla(phase_id, closed = false, customer = false) {
-    let obj = {
-      emdia: 0,
-      atrasado: 0,
-      sem_sla: 0,
-    };
+    let [sla_tickets, result] = ['', { 'emdia': 0, 'atrasado': 0, 'sem_sla': 0 }]
 
-    const slas = await this.slaModel.getSLASettings(phase_id);
-    if(Array.isArray(slas) && slas.length > 0){
-      for(const sla of slas){
-        
-      }
+    !customer
+      ? sla_tickets = await this.slaModel.getToCountSLA(phase_id, closed)
+      : sla_tickets = await this.slaModel.getToCountSLAWithCustomer(phase_id, closed, customer)
+
+    for (let i = 0; i < sla_tickets.length; i++) {
+      const timeLimit = moment(sla_tickets[i].limit_sla_time).format('DD-MM-YYYY HH:MM:ss')
+      const lastInteraction = sla_tickets[i].interaction_time
+        ? moment(sla_tickets[i].interaction_time).format('DD-MM-YYYY HH:MM:ss')
+        : moment().format('DD-MM-YYYY HH:MM:ss')
+
+      timeLimit < lastInteraction ? result.emdia = result.emdia + 1 : result.atrasado = result.atrasado + 1
     }
+
+    const slaPhaseSettings = await this.slaModel.getSLASettings(phase_id)
+    slaPhaseSettings && slaPhaseSettings.length <= 0
+      ? result.sem_sla = await this.slaModel.getAllTicketsWithoutSLA(phase_id, closed)
+      : result.sem_sla = 0
+
+    return { emdia: result.emdia, atrasado: result.atrasado, sem_sla: result.sem_sla }
   }
 
   async settingsSLA(id) {

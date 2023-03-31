@@ -221,7 +221,7 @@ export default class PhaseController {
           result[i].ticket = { 1: {}, 2: {}, 3: {} }
           typeof req.query.status === 'string' ? (req.query.status = JSON.parse(req.query.status)) : ''
           for await (const status of req.query.status) {
-            if (!req.query.me || req.query.me === "false"){
+            if (!req.query.me || req.query.me === "false") {
               result[i].ticket[status] = await this.ticketModel.searchTicket(
                 req.headers.authorization,
                 search,
@@ -230,7 +230,7 @@ export default class PhaseController {
                 req.query.limit,
                 req.query.offset
               )
-            }else{
+            } else {
               result[i].ticket[status] = await this.ticketModel.searchTicketWithMe(
                 req.headers.authorization,
                 search,
@@ -342,26 +342,26 @@ export default class PhaseController {
       if (!oldPhase || oldPhase.length <= 0) return res.status(400).send({ error: 'Error when manage phase update' })
 
       await this._departmentPhaseLinked(req.body.department, req.headers.authorization, req.params.id)
-      ;['responsible', 'notify'].map(async (x) => {
-        const usersNotify = []
-        if (req.body[x] && Array.isArray(req.body[x]) && req.body[x].length > 0) {
-          for await (const notified of req.body[x]) {
-            let resultUser
-            resultUser = await this.userController.checkUserCreated(
-              notified,
-              req.headers.authorization,
-              notified.name,
-              notified.phone,
-              notified.email,
-              1
-            )
-            usersNotify.push(resultUser.id)
+        ;['responsible', 'notify'].map(async (x) => {
+          const usersNotify = []
+          if (req.body[x] && Array.isArray(req.body[x]) && req.body[x].length > 0) {
+            for await (const notified of req.body[x]) {
+              let resultUser
+              resultUser = await this.userController.checkUserCreated(
+                notified,
+                req.headers.authorization,
+                notified.name,
+                notified.phone,
+                notified.email,
+                1
+              )
+              usersNotify.push(resultUser.id)
+            }
+            x === 'responsible'
+              ? await this._responsiblePhase(req.params.id, usersNotify)
+              : await this._notifyPhase(req.params.id, usersNotify)
           }
-          x === 'responsible'
-            ? await this._responsiblePhase(req.params.id, usersNotify)
-            : await this._notifyPhase(req.params.id, usersNotify)
-        }
-      })
+        })
 
       // Registra a configuração de SLA da fase.
       req.body.sla && (await this._phaseSLASettings(req.body.sla, req.params.id))
@@ -519,7 +519,7 @@ export default class PhaseController {
             tickets[x].total = await this.ticketModel.countTicket(result.id, x, false)
           } else {
             tickets[x].tickets = await this.ticketModel.getTicketByPhasePagedWithMe(result.id, x, limit, offset, me)
-            tickets[x].total = await this.ticketModel.countTicketWithMe(result.id, x,  me)
+            tickets[x].total = await this.ticketModel.countTicketWithMe(result.id, x, me)
           }
 
 
@@ -680,7 +680,7 @@ export default class PhaseController {
       }
 
       //Faz um laço de repetição finalizando todos os tickets relacionados a phase.
-      
+
       for (let ticket of tickets) {
         if (!ticket.closed) {
           ticket = await this.ticketModel.getTicketById(ticket.id, req.headers.authorization)
@@ -1184,37 +1184,32 @@ export default class PhaseController {
         }
       }
     }
-
-    const header = {
-      campos_calculados: campos_calculados
-    }
-    header.total_tickets = await this.ticketModel.countAllTicket(data.id, data.customer)
-
-    header.open_tickets =
-    parseInt(await this.ticketModel.countTicket(data.id, 1, data.customer)) + parseInt(await this.ticketModel.countTicket(data.id, 2, data.customer))
-    header.closed_tickets = await this.ticketModel.countTicket(data.id, 3, data.customer)
-
-    if (header.open_tickets != '0') {
-      header.percent_open_tickets = ((parseInt(header.open_tickets) * 100) / parseInt(header.total_tickets)).toFixed(2)
-    } else {
-      header.percent_open_tickets = 0.0
-    }
-
-    if (header.closed_tickets != '0') {
-      header.percent_closed_tickets = ((parseInt(header.closed_tickets) * 100) / parseInt(header.total_tickets)).toFixed(2)
-    } else {
-      header.percent_closed_tickets = 0
-    }
-
-    console.log('teste header')
-    header.counter_sla = await this.slaController.counter_sla(data.id, false, data.customer)
-    header.counter_sla_closed = await this.slaController.counter_sla(data.id, true, data.customer)
-
-    if (!data.customer) {
-      await this.redis.set(`msTicket:header:${data.authorization}:phase:${data.id}`, JSON.stringify(header))
-    }
+    const header = await this.#formatHeader({ campos_calculados: campos_calculados }, data)
 
     return header
+  }
+
+  async #formatHeader(header, ticketInfo) {
+    header.total_tickets = await this.ticketModel.countAllTicket(ticketInfo.id, ticketInfo.customer)
+    header.counter_sla = await this.slaController.counter_sla(ticketInfo.id, false, ticketInfo.customer)
+    header.counter_sla_closed = await this.slaController.counter_sla(ticketInfo.id, true, ticketInfo.customer)
+    header.closed_tickets = parseInt(await this.ticketModel.countTicket(ticketInfo.id, 3, ticketInfo.customer))
+    header.open_tickets =
+      parseInt(await this.ticketModel.countTicket(ticketInfo.id, 1, ticketInfo.customer))
+      + parseInt(await this.ticketModel.countTicket(ticketInfo.id, 2, ticketInfo.customer))
+
+    header.open_tickets > 0
+      ? header.percent_open_tickets = (header.open_tickets * 100 / parseInt(header.total_tickets)).toFixed(2)
+      : header.percent_open_tickets = 0
+
+    header.closed_tickets > 0
+      ? header.percent_closed_tickets = (header.closed_tickets * 100 / parseInt(header.total_tickets)).toFixed(2)
+      : header.percent_closed_tickets = 0
+
+    if (!ticketInfo.customer)
+      await this.redis.set(`msTicket:header:${ticketInfo.authorization}:phase:${ticketInfo.id}`, JSON.stringify(header))
+
+      return header
   }
 
   async getByIDPaged(req, res) {
@@ -1243,18 +1238,18 @@ export default class PhaseController {
 
       if (search) {
         for await (const id of status) {
-          if (!req.query.me || req.query.me === "false"){
+          if (!req.query.me || req.query.me === "false") {
 
-          tickets[id] = await this.ticketModel.searchTicket(
-            req.headers.authorization,
-            search,
-            req.params.id,
-            id,
-            req.query.limit,
-            req.query.offset,
+            tickets[id] = await this.ticketModel.searchTicket(
+              req.headers.authorization,
+              search,
+              req.params.id,
+              id,
+              req.query.limit,
+              req.query.offset,
 
-          )
-          }else{
+            )
+          } else {
             tickets[id] = await this.ticketModel.searchTicketWithMe(
               req.headers.authorization,
               search,
