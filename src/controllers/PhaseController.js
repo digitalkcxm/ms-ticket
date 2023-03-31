@@ -543,18 +543,8 @@ export default class PhaseController {
       : (result.department_can_create_ticket = [])
 
     result.separate && result.separate.separate ? (result.separate = result.separate.separate) : (result.separate = null)
-
-    const header = await this.redis.get(`msTicket:header:${authorization}:phase:${result.id}`)
-
-    if (header) {
-      result.header = JSON.parse(header)
-    } else {
-      result.header = await this.headerGenerate({
-        id: result.id,
-        authorization
-      })
-    }
-
+    
+    result.header = await this.headerGenerate({ id: result.id, authorization })
     result.created_at = moment(result.created_at).format('DD/MM/YYYY HH:mm:ss')
     result.updated_at = moment(result.updated_at).format('DD/MM/YYYY HH:mm:ss')
     delete result.id_form_template
@@ -1206,10 +1196,7 @@ export default class PhaseController {
       ? header.percent_closed_tickets = (header.closed_tickets * 100 / parseInt(header.total_tickets)).toFixed(2)
       : header.percent_closed_tickets = 0
 
-    if (!ticketInfo.customer)
-      await this.redis.set(`msTicket:header:${ticketInfo.authorization}:phase:${ticketInfo.id}`, JSON.stringify(header))
-
-      return header
+    return header
   }
 
   async getByIDPaged(req, res) {

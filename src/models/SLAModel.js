@@ -221,7 +221,7 @@ export default class SLAModel {
       left join phase_ticket on phase_ticket.id_ticket = ticket_sla_control.id_ticket 
       left join ticket on ticket.id = ticket_sla_control.id_ticket 
       where ticket_sla_control.id_phase = '${id_phase}' 
-      and ticket_sla_control.id_sla_type IN (1,2)
+      and ticket_sla_control.id_sla_type = 1
       and phase_Ticket.id_phase = '${id_phase}'
       and phase_ticket.active = true 
       and ticket.id_status != 3;
@@ -255,7 +255,7 @@ export default class SLAModel {
       left join ticket on ticket.id = ticket_sla_control.id_ticket 
       left join customer on customer.id_ticket = ticket.id
       where ticket_sla_control.id_phase = '${id_phase}' 
-      and ticket_sla_control.id_sla_type IN (1,2)
+      and ticket_sla_control.id_sla_type = 1
       and phase_ticket.id_phase = '${id_phase}'
       and phase_ticket.active = true 
       and ticket.id_status != 3

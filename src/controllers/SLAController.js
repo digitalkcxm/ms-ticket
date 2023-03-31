@@ -39,7 +39,11 @@ export default class SLAController {
     const slaPhaseSettings = await this.slaModel.getSLASettings(phase_id)
     slaPhaseSettings && slaPhaseSettings.length <= 0
       ? result.sem_sla = await this.slaModel.getAllTicketsWithoutSLA(phase_id, closed)
-      : result.sem_sla = 0
+      : result.sem_sla = Math.abs(
+        parseInt(await this.slaModel.getAllTicketsWithoutSLA(phase_id, closed))
+        - parseInt(result.emdia)
+        - parseInt(result.atrasado)
+      )
 
     return { emdia: result.emdia, atrasado: result.atrasado, sem_sla: result.sem_sla }
   }
