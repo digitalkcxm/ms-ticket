@@ -81,12 +81,14 @@ export default class FormatTicket {
                 ? ticket.form_data[x.column].map((y) =>
                     Object.keys(y).map((z) =>
                       ticket.card_ticket.push({
+                        type: 'ticket',
                         value: y[z],
                         label: x.fields.filter((w) => w.column === z)[0].label
                       })
                     )
                   )
                 : ticket.card_ticket.push({
+                    type: 'ticket',
                     value: ticket.form_data[x.column],
                     label: x.label
                   }))
