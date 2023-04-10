@@ -543,7 +543,7 @@ export default class PhaseController {
       : (result.department_can_create_ticket = [])
 
     result.separate && result.separate.separate ? (result.separate = result.separate.separate) : (result.separate = null)
-    
+
     result.header = await this.headerGenerate({ id: result.id, authorization })
     result.created_at = moment(result.created_at).format('DD/MM/YYYY HH:mm:ss')
     result.updated_at = moment(result.updated_at).format('DD/MM/YYYY HH:mm:ss')
@@ -1264,7 +1264,10 @@ export default class PhaseController {
           }
 
           for await (let ticket of result) {
-            tickets[id].tickets = tickets[id].tickets.concat(await this.formatTicket.formatTicketForPhase({ id: req.params.id }, ticket))
+            tickets[id].tickets = tickets[id].tickets.concat(await this.formatTicket.formatTicketForPhase(
+              { id: req.params.id, id_form_template: ticket.id_form_template },
+              ticket
+            ))
           }
         }
       }
