@@ -6,6 +6,7 @@ import TicketModel from '../models/TicketModel.js'
 import PhaseModel from '../models/PhaseModel.js'
 
 import FormDocuments from '../documents/FormDocuments.js'
+import FormTemplate from '../documents/FormTemplate.js'
 import CustomerModel from '../models/CustomerModel.js'
 export default class FormatTicket {
   constructor(database = {}, logger = {}, redisConnection = {}) {
@@ -16,6 +17,7 @@ export default class FormatTicket {
     this.phaseModel = new PhaseModel(database, logger)
 
     this.formDocuments = new FormDocuments()
+    this.formTemplate = new FormTemplate(logger)
     this.customerModel = new CustomerModel(database, logger)
   }
 
@@ -73,24 +75,32 @@ export default class FormatTicket {
     if (form && form.length > 0 && form[0].id_form !== '{}') {
       ticket.form_data = await this.formDocuments.findRegister(form[0].id_form)
 
+      if (!phase.formTemplate && phase.id_form_template) {
+        phase.formTemplate = await this.formTemplate.findRegister(phase.id_form_template)
+        phase.formTemplate = phase.formTemplate.column
+      }
+
       ticket.form_data && phase.formTemplate
         ? phase.formTemplate.map(
-            (x) =>
-              x.visible_on_card_ticket && 
-              (x.type === 'array' && ticket.form_data[x.column]
-                ? ticket.form_data[x.column].map((y) =>
-                    Object.keys(y).map((z) =>
-                      ticket.card_ticket.push({
-                        value: y[z],
-                        label: x.fields.filter((w) => w.column === z)[0].label
-                      })
-                    )
-                  )
-                : ticket.card_ticket.push({
-                    value: ticket.form_data[x.column],
-                    label: x.label
-                  }))
-          ): ''
+          (x) =>
+            x.visible_on_card_ticket &&
+            (x.type === 'array' && ticket.form_data[x.column]
+              ? ticket.form_data[x.column].map((y) =>
+                Object.keys(y).map((z) =>
+                  ticket.card_ticket.push({
+                    type: 'ticket',
+                    value: y[z],
+                    label: x.fields.filter((w) => w.column === z)[0].label
+                  })
+                )
+              )
+              : ticket.card_ticket.push({
+                type: 'ticket',
+                value: ticket.form_data[x.column],
+                label: x.label
+              }))
+        )
+        : ''
     }
 
     const customer = await this.customerModel.getAll(ticket.id)

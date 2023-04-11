@@ -905,9 +905,22 @@ export default class TicketModel {
   async getTicketByPhasePaged(id_phase, status, limit = 30, offset = 0) {
     try {
       const result = await this.database.raw(`
-      SELECT tk.id, tk.id_seq, u.name, tk.closed, tk.created_at, tk.updated_at, tk.display_name, tk.status, tk.id_status, tk.id_tab
+      SELECT 
+        tk.id,
+        u.name,
+        tk.id_seq,
+        tk.closed,
+        tk.status, 
+        tk.id_tab, 
+        tk.id_status, 
+        tk.created_at, 
+        tk.updated_at, 
+        tk.display_name,
+        p.id_form_template,
+        department_origin as department
       FROM ticket tk
       LEFT JOIN users u ON u.id = tk.id_user
+      LEFT JOIN phase p ON p.id = tk.id_phase
       WHERE tk.id_status = ${status} AND
       tk.id_phase = '${id_phase}' 
       LIMIT ${limit} OFFSET ${offset}
