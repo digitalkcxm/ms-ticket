@@ -292,6 +292,17 @@ export default class PhaseController {
           )
         }
       }
+
+      result.map(phase => {
+        let tickets = Object.values(phase.ticket)
+        tickets.map((ticket) =>
+          ticket.tickets.filter((item) => {
+            delete item.form_data._id
+            delete item.id_form_template
+          })
+        )
+      })
+
       return res.status(200).send(result)
     } catch (err) {
       this.logger.error(err, 'Get all phase => ')
@@ -395,7 +406,7 @@ export default class PhaseController {
               visible_on_card_ticket: item.visible_on_card_ticket,
             })
           })
-    
+
           validations.column = column
           await this.formTemplate.updateRegister(validations._id, validations)
           phase[0].department = req.body.department
@@ -1294,6 +1305,11 @@ export default class PhaseController {
               { id: req.params.id, id_form_template: ticket.id_form_template },
               ticket
             ))
+
+            tickets[id].tickets.map(item => {
+              delete item.form_data._id
+              delete item.id_form_template
+            })
           }
         }
       }
