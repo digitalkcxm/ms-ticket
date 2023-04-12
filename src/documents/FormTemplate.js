@@ -19,8 +19,7 @@ export default class FormTemplate {
 
   async findRegister(id) {
     try {
-      id = JSON.parse(id);
-      
+      typeof id == "string" ? id = JSON.parse(id) : ""
 
       return await global.mongodb.collection(collection).findOne({ _id: new ObjectID(id) });
     } catch (err) {
