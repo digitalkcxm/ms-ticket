@@ -73,9 +73,8 @@ export default class PhaseController {
       if (req.body.form) {
         const templateValidate = await this._formPhase(req.body.column)
 
-        if (!templateValidate) {
-          return res.status(400).send({ errors: templateValidate })
-        }
+        if (templateValidate.error) return res.status(400).send(templateValidate)
+
         this.logger.info('Return of validate template', templateValidate)
         obj.id_form_template = templateValidate
       }
@@ -97,7 +96,19 @@ export default class PhaseController {
       // Formata o obj de retorno.
       delete obj.id_company
 
-      obj.column = req.body.column
+      let column = []
+      req.body.column.map(item => {
+        column.push({
+          type: item.type,
+          label: item.label,
+          column: item.column,
+          required: item.required,
+          editable: item.editable,
+          visible_on_card_ticket: item.visible_on_card_ticket,
+        })
+      })
+
+      obj.column = column
       obj.created_at = moment(obj.created_at).format('DD/MM/YYYY HH:mm:ss')
       obj.updated_at = moment(obj.updated_at).format('DD/MM/YYYY HH:mm:ss')
 
@@ -142,19 +153,19 @@ export default class PhaseController {
 
   async _formPhase(column) {
     const errorsColumns = await templateValidate(column, this.database, this.logger)
-    if (errorsColumns.length > 0) return errorsColumns
+    if (errorsColumns.length > 0) return { 'error': errorsColumns }
 
     const formTemplate = await this.formTemplate.createRegister(column)
 
     if (!formTemplate) return false
 
     for (const formatcolumn of column) {
-      this.logger.info({
-        msg: 'Chamada ao get type by id ',
-        data: formatcolumn.type
-      })
-      const type = await this.typeColumnModel.getTypeByID(formatcolumn.type)
-      formatcolumn.type = type[0].name
+      this.logger.info({ msg: 'Chamada ao get type by id ', data: formatcolumn.type })
+
+      if (formatcolumn.type) {
+        const type = await this.typeColumnModel.getTypeByID(formatcolumn.type)
+        formatcolumn.type = type[0]?.name
+      }
     }
 
     return formTemplate
@@ -373,10 +384,22 @@ export default class PhaseController {
           let validations = await this._checkColumnsFormTemplate(req.body.column, phase[0].id_form_template)
           if (validations.length > 0) return res.status(400).send({ error: validations })
 
-          validations.column = req.body.column
+          let column = []
+          req.body.column.map(item => {
+            column.push({
+              type: item.type,
+              label: item.label,
+              column: item.column,
+              required: item.required,
+              editable: item.editable,
+              visible_on_card_ticket: item.visible_on_card_ticket,
+            })
+          })
+    
+          validations.column = column
           await this.formTemplate.updateRegister(validations._id, validations)
           phase[0].department = req.body.department
-          phase[0].formTemplate = req.body.column
+          phase[0].formTemplate = column
           delete phase[0].id_form_template
         } else {
           const templateValidate = await this._formPhase(req.body.column)
@@ -456,6 +479,10 @@ export default class PhaseController {
     const errors = []
 
     if (newTemplate.length < register.column.length) errors.push('Não é possivel remover campos do formulario, apenas inativa-los')
+
+    const errorsColumns = await templateValidate(newTemplate, this.database, this.logger)
+
+    if (errorsColumns.length > 0) errorsColumns.map(error => errors.push(error))
 
     register.column.map((valueA) => {
       let validate = 0
@@ -545,8 +572,7 @@ export default class PhaseController {
     result.separate && result.separate.separate ? (result.separate = result.separate.separate) : (result.separate = null)
 
     result.header = await this.headerGenerate({ id: result.id, authorization })
-    result.created_at = moment(result.created_at).format('DD/MM/YYYY HH:mm:ss')
-    result.updated_at = moment(result.updated_at).format('DD/MM/YYYY HH:mm:ss')
+
     delete result.id_form_template
 
     return result
