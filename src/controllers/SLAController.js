@@ -49,6 +49,8 @@ export default class SLAController {
   }
 
   async settingsSLA(id) {
+    if (!id) return false
+    
     const slas = await this.slaModel.getSLASettings(id);
     let sla = {};
     await slas.map(async value => {

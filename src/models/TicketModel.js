@@ -100,6 +100,7 @@ export default class TicketModel {
           closed: `${tableName}.closed`,
           id_form: `phase_ticket.id_form`,
           department_origin: 'department.id_department_core',
+          id_department: 'department_phase.id_department',
           created_at: `${tableName}.created_at`,
           updated_at: `${tableName}.updated_at`,
           start_ticket: 'ticket.start_ticket',
@@ -114,6 +115,7 @@ export default class TicketModel {
         .leftJoin('phase', 'phase.id', 'phase_ticket.id_phase')
         .leftJoin('department', 'department.id', 'ticket.department_origin')
         .leftJoin('status_ticket', 'status_ticket.id', 'ticket.id_status')
+        .leftJoin('department_phase', 'department_phase.id_phase', 'phase.id')
         .where(`${tableName}.id_seq`, id_seq)
         .andWhere(`${tableName}.id_company`, id_company)
         .orderBy('phase_ticket.id', 'desc')
