@@ -441,7 +441,7 @@ export default class TicketController {
       })
 
       const department = await this.phaseModel.getDepartmentPhase(result.phase_id)
-      result.actual_department = department[0].id_department
+      result.actual_department = department[0]?.id_department ? department[0].id_department : result.id_department
 
       if (result.form_data) {
         const phase = await this.phaseModel.getPhaseById(result.phase_id, req.headers.authorization)
