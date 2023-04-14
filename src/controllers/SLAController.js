@@ -21,22 +21,24 @@ export default class SLAController {
   }
 
   async counter_sla(phase_id, closed = false, customer = false) {
-    let [sla_tickets, result] = ['', { 'emdia': 0, 'atrasado': 0, 'sem_sla': 0 }]
+    let [sla_tickets, result] = ['', { 'emdia': 0, 'atrasado': 0, 'sem_sla': 0 }];
 
     !customer
       ? sla_tickets = await this.slaModel.getToCountSLA(phase_id, closed)
       : sla_tickets = await this.slaModel.getToCountSLAWithCustomer(phase_id, closed, customer)
 
     for (let i = 0; i < sla_tickets.length; i++) {
-      const timeLimit = moment(sla_tickets[i].limit_sla_time).format('DD-MM-YYYY HH:MM:ss')
+      const timeLimit = moment(sla_tickets[i].limit_sla_time).format('DD-MM-YYYY HH:mm:ss');
       const lastInteraction = sla_tickets[i].interaction_time
-        ? moment(sla_tickets[i].interaction_time).format('DD-MM-YYYY HH:MM:ss')
-        : moment().format('DD-MM-YYYY HH:MM:ss')
+        ? moment(sla_tickets[i].interaction_time).format('DD-MM-YYYY HH:mm:ss')
+        : null
 
-      timeLimit < lastInteraction ? result.emdia = result.emdia + 1 : result.atrasado = result.atrasado + 1
+      sla_tickets[i].id_status == 1 || timeLimit >= lastInteraction
+        ? result.emdia = result.emdia + 1
+        : result.atrasado = result.atrasado + 1
     }
 
-    const slaPhaseSettings = await this.slaModel.getSLASettings(phase_id)
+    const slaPhaseSettings = await this.slaModel.getSLASettings(phase_id);
     slaPhaseSettings && slaPhaseSettings.length <= 0
       ? result.sem_sla = await this.slaModel.getAllTicketsWithoutSLA(phase_id, closed)
       : result.sem_sla = Math.abs(
@@ -45,7 +47,7 @@ export default class SLAController {
         - parseInt(result.atrasado)
       )
 
-    return { emdia: result.emdia, atrasado: result.atrasado, sem_sla: result.sem_sla }
+    return { emdia: result.emdia, atrasado: result.atrasado, sem_sla: result.sem_sla };
   }
 
   async settingsSLA(id) {
@@ -71,6 +73,7 @@ export default class SLAController {
     const slas = await this.slaModel.getSLASettings(phase_id);
     let sla = {};
     if (slas && slas.length > 0) {
+      let status = []
       for await (const value of slas) {
         const ticket = await this.slaModel.getByPhaseTicket(
           phase_id,
@@ -78,20 +81,20 @@ export default class SLAController {
         );
 
         if (ticket && ticket.length > 0) {
-          const controleSLA = ticket.filter(
-            (x) => x.id_sla_type === value.id_sla_type
-          );
+          ticket.filter((x) => {
+            if (x.id_sla_type === value.id_sla_type) return status.push(x);
+          });
 
-          if (Array.isArray(controleSLA) && controleSLA.length > 0) {
+          if (status.length > 0) {
             sla = {
               ...sla,
               [value.id_sla_type]: {
                 name: value.name,
-                status: controleSLA[0].name,
+                status: status[0].name,
                 limit_sla_time: moment(ticket[0].limit_sla_time).format(
                   "DD/MM/YYYY HH:mm:ss"
                 ),
-                active: controleSLA[0].active,
+                active: status[0].active,
               },
             };
           }
