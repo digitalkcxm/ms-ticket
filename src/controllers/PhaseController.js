@@ -295,10 +295,11 @@ export default class PhaseController {
 
       result.map(phase => {
         let tickets = Object.values(phase.ticket)
+        if (!tickets) return false
         tickets.map((ticket) =>
           ticket.tickets.filter((item) => {
-            delete item.form_data._id
-            delete item.id_form_template
+            if (item.form_data?._id) delete item.form_data._id
+            if (item.id_form_template) delete item.id_form_template
           })
         )
       })
@@ -531,7 +532,6 @@ export default class PhaseController {
     if (!search) {
       result.ticket = []
       offset = Math.round(limit * (offset - 1))
-      console.log('offset', offset)
 
       const tickets = {
         1: {
