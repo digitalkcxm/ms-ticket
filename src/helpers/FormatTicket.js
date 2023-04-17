@@ -21,9 +21,9 @@ export default class FormatTicket {
     this.customerModel = new CustomerModel(database, logger)
   }
 
-  async retriveTicket(ticket, id_phase) {
+  async retriveTicket(ticket, id_phase, utc = 'America/Sao_Paulo', formatTimestamp = false) {
     //@info id_phase é a phase em que o cache deve ser removido.
-    ticket = await this.formatTicketForPhase({ id: ticket.phase_id }, ticket)
+    ticket = await this.formatTicketForPhase({ id: ticket.phase_id }, ticket, utc, formatTimestamp)
 
     let cache = await this.redis.get(`msTicket:tickets:${id_phase}`)
 
@@ -62,7 +62,7 @@ export default class FormatTicket {
     return ticket
   }
 
-  async formatTicketForPhase(phase, ticket, utc = 'America/Sao_Paulo') {
+  async formatTicketForPhase(phase, ticket, utc = 'America/Sao_Paulo', formatTimestamp = true) {
     phase.sla = await this.slaController.settingsSLA(phase.id)
 
     Object.keys(phase.sla).length > 0 && (ticket.sla = await this.slaController.ticketSLA(phase.id, ticket.id))
@@ -108,9 +108,11 @@ export default class FormatTicket {
       ticket.customers = customer
     }
 
-    ticket.created_at = moment(ticket.created_at).tz(utc).format('DD/MM/YYYY HH:mm:ss')
-    ticket.updated_at = moment(ticket.updated_at).tz(utc).format('DD/MM/YYYY HH:mm:ss')
-    ticket.time_closed_ticket ? (ticket.time_closed_ticket = moment(ticket.time_closed_ticket).tz(utc).format('DD/MM/YYYY HH:mm:ss')) : ''
+    if (formatTimestamp) {
+      ticket.created_at = moment(ticket.created_at).tz(utc).format('DD/MM/YYYY HH:mm:ss')
+      ticket.updated_at = moment(ticket.updated_at).tz(utc).format('DD/MM/YYYY HH:mm:ss')
+      ticket.time_closed_ticket ? (ticket.time_closed_ticket = moment(ticket.time_closed_ticket).tz(utc).format('DD/MM/YYYY HH:mm:ss')) : ''
+    }
     return ticket
   }
 }

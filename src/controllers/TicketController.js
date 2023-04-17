@@ -21,6 +21,8 @@ import AttachmentsModel from '../models/AttachmentsModel.js'
 import CallbackDigitalk from '../services/CallbackDigitalk.js'
 import FormatTicket from '../helpers/FormatTicket.js'
 import Notify from '../helpers/Notify.js'
+
+const default_utc = 'America/Sao_Paulo'
 const sla_status = {
   emdia: 1,
   atrasado: 2,
@@ -128,7 +130,7 @@ export default class TicketController {
       if (result && result.length > 0 && result[0].id) {
         await this.slaController.createSLAControl(phase[0].id, obj.id)
 
-        ticket = await this.formatTicket.retriveTicket(ticket[0], phase[0].id)
+        ticket = await this.formatTicket.retriveTicket(ticket[0], phase[0].id, default_utc, false)
         if (data.id_user !== -1) await cache(data.authorization, phase[0].id_department, ticket.phase_id, this)
         await CallbackDigitalk(
           {
@@ -276,12 +278,12 @@ export default class TicketController {
           type: 'note',
           source: user.source,
           name: user.name,
-          created_at: moment(obj.created_at).format('DD/MM/YYYY HH:mm:ss'),
-          updated_at: moment(obj.updated_at).format('DD/MM/YYYY HH:mm:ss')
+          created_at: obj.created_at, //moment(obj.created_at).format('DD/MM/YYYY HH:mm:ss'),
+          updated_at: obj.updated_at //moment(obj.updated_at).format('DD/MM/YYYY HH:mm:ss')
         }
 
         const phase = await this.phaseModel.getPhaseById(ticket[0].phase_id, data.authorization)
-        ticket[0] = await this.formatTicket.retriveTicket(ticket[0], phase[0].id)
+        ticket[0] = await this.formatTicket.retriveTicket(ticket[0], phase[0].id, default_utc, false)
 
         await cache(data.authorization, phase[0].id_department, ticket[0].phase_id, this)
         await CallbackDigitalk(
@@ -378,14 +380,14 @@ export default class TicketController {
       if (result && result.length > 0) {
         obj.id = result[0].id
 
-        obj.created_at = moment(obj.created_at).format('DD/MM/YYYY HH:mm:ss')
-        obj.updated_at = moment(obj.updated_at).format('DD/MM/YYYY HH:mm:ss')
+        obj.created_at = obj.created_at, //moment(obj.created_at).format('DD/MM/YYYY HH:mm:ss')
+        obj.updated_at = obj.updated_at, //moment(obj.updated_at).format('DD/MM/YYYY HH:mm:ss')
         obj.type = 'file'
         obj.id_user = data.id_user
 
         const dashPhase = await this.phaseModel.getPhaseById(ticket[0].phase_id, data.authorization)
 
-        ticket[0] = await this.formatTicket.retriveTicket(ticket[0], dashPhase[0].id)
+        ticket[0] = await this.formatTicket.retriveTicket(ticket[0], dashPhase[0].id, default_utc, false)
 
         await cache(data.authorization, dashPhase[0].id_department, ticket[0].phase_id, this)
 
@@ -416,7 +418,7 @@ export default class TicketController {
 
   async getTicketByID(req, res) {
     try {
-      const utc = (req.query.utc) ? req.query.utc : 'America/Sao_Paulo'
+      const utc = (req.query.utc) ? req.query.utc : default_utc
 
       let result = await this.ticketModel.getTicketByIdSeq(req.params.id, req.headers.authorization)
       if (result.name && result.name == 'error') return res.status(400).send({ error: 'There was an error' })
@@ -484,7 +486,7 @@ export default class TicketController {
 
   async getTicket(req, res) {
     try {
-      const utc = (req.query.utc) ? req.query.utc : 'America/Sao_Paulo'
+      const utc = (req.query.utc) ? req.query.utc : default_utc
 
       let result = await this.ticketModel.getTicketById(req.params.id, req.headers.authorization)
       if (result.name && result.name == 'error') return res.status(400).send({ error: 'There was an error' })
@@ -548,7 +550,7 @@ export default class TicketController {
     }
   }
 
-  async _activities(id_ticket, db, id_company, tab = false, utc = 'America/Sao_Paulo') {
+  async _activities(id_ticket, db, id_company, tab = false, utc = default_utc) {
     const obj = []
 
     const activities = await this.activitiesModel.getActivities(id_ticket)
@@ -896,7 +898,7 @@ export default class TicketController {
                 id: ticket.phase_id,
                 name: ticket.phase
               },
-              created_at: moment().format('DD/MM/YYYY HH:mm:ss')
+              created_at: moment() //moment().format('DD/MM/YYYY HH:mm:ss')
             }
           },
           companyVerified[0].callback
