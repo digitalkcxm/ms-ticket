@@ -416,12 +416,14 @@ export default class TicketController {
 
   async getTicketByID(req, res) {
     try {
+      const utc = (req.query.utc) ? req.query.utc : 'America/Sao_Paulo'
+
       let result = await this.ticketModel.getTicketByIdSeq(req.params.id, req.headers.authorization)
       if (result.name && result.name == 'error') return res.status(400).send({ error: 'There was an error' })
 
       if (result && result.length <= 0) return res.status(400).send({ error: 'There is no ticket with this ID' })
 
-      result = await this.formatTicket.formatTicketForPhase({ id: result[0].phase_id }, result[0])
+      result = await this.formatTicket.formatTicketForPhase({ id: result[0].phase_id }, result[0], utc)
 
 
       const protocols = await this.ticketModel.getProtocolTicket(result.id, req.headers.authorization)
@@ -430,7 +432,7 @@ export default class TicketController {
         result.protocols = protocols
       }
 
-      result.activities = await this._activities(result.id, req.app.locals.db, req.headers.authorization, result.id_tab)
+      result.activities = await this._activities(result.id, req.app.locals.db, req.headers.authorization, result.id_tab, utc)
 
       result.activities.sort((a, b) => {
         if (moment(a.created_at, 'DD/MM/YYYY HH:mm:ss').format('X') === moment(b.created_at, 'DD/MM/YYYY HH:mm:ss').format('X')) {
@@ -482,12 +484,15 @@ export default class TicketController {
 
   async getTicket(req, res) {
     try {
+      const utc = (req.query.utc) ? req.query.utc : 'America/Sao_Paulo'
+
       let result = await this.ticketModel.getTicketById(req.params.id, req.headers.authorization)
       if (result.name && result.name == 'error') return res.status(400).send({ error: 'There was an error' })
 
       if (result && result.length <= 0) return res.status(400).send({ error: 'There is no ticket with this ID' })
 
-      result = await this.formatTicket.formatTicketForPhase({ id: result[0].phase_id }, result[0], this.database, this.logger)
+      //result = await this.formatTicket.formatTicketForPhase({ id: result[0].phase_id }, result[0], this.database, this.logger)
+      result = await this.formatTicket.formatTicketForPhase({ id: result[0].phase_id }, result[0], utc)
 
       const protocols = await this.ticketModel.getProtocolTicket(result.id, req.headers.authorization)
       console.log('protocols =>', protocols)
@@ -495,7 +500,7 @@ export default class TicketController {
         result.protocols = protocols[0]
       }
 
-      result.activities = await this._activities(result.id, req.app.locals.db, req.headers.authorization, result.id_tab)
+      result.activities = await this._activities(result.id, req.app.locals.db, req.headers.authorization, result.id_tab, utc)
 
       result.activities.sort((a, b) => {
         if (moment(a.created_at, 'DD/MM/YYYY HH:mm:ss').format('x') === moment(b.created_at, 'DD/MM/YYYY HH:mm:ss').format('x')) {
@@ -543,21 +548,21 @@ export default class TicketController {
     }
   }
 
-  async _activities(id_ticket, db, id_company, tab = false) {
+  async _activities(id_ticket, db, id_company, tab = false, utc = 'America/Sao_Paulo') {
     const obj = []
 
     const activities = await this.activitiesModel.getActivities(id_ticket)
     activities.map((value) => {
-      value.created_at = moment(value.created_at).format('DD/MM/YYYY HH:mm:ss')
-      value.updated_at = moment(value.updated_at).format('DD/MM/YYYY HH:mm:ss')
+      value.created_at = moment(value.created_at).tz(utc).format('DD/MM/YYYY HH:mm:ss')
+      value.updated_at = moment(value.updated_at).tz(utc).format('DD/MM/YYYY HH:mm:ss')
       value.type = 'note'
       obj.push(value)
     })
 
     const attachments = await this.attachmentsModel.getAttachments(id_ticket)
     attachments.map((value) => {
-      value.created_at = moment(value.created_at).format('DD/MM/YYYY HH:mm:ss')
-      value.updated_at = moment(value.updated_at).format('DD/MM/YYYY HH:mm:ss')
+      value.created_at = moment(value.created_at).tz(utc).format('DD/MM/YYYY HH:mm:ss')
+      value.updated_at = moment(value.updated_at).tz(utc).format('DD/MM/YYYY HH:mm:ss')
       value.type = 'file'
       obj.push(value)
     })
@@ -588,8 +593,8 @@ export default class TicketController {
           },
           type: 'change_form',
           id_user: history_phase[index].id_user,
-          created_at: moment(history_phase[index].created_at).format('DD/MM/YYYY HH:mm:ss'),
-          updated_at: moment(history_phase[index].updated_at).format('DD/MM/YYYY HH:mm:ss')
+          created_at: moment(history_phase[index].created_at).tz(utc).format('DD/MM/YYYY HH:mm:ss'),
+          updated_at: moment(history_phase[index].updated_at).tz(utc).format('DD/MM/YYYY HH:mm:ss')
         })
 
         if (history_phase[index].id_phase != history_phase[index + 1].id_phase) {
@@ -604,7 +609,7 @@ export default class TicketController {
               id: history_phase[index + 1].id_phase,
               name: history_phase[index + 1].name
             },
-            created_at: moment(history_phase[index].created_at).format('DD/MM/YYYY HH:mm:ss')
+            created_at: moment(history_phase[index].created_at).tz(utc).format('DD/MM/YYYY HH:mm:ss')
           })
         }
       }
@@ -629,8 +634,8 @@ export default class TicketController {
 
     const view_ticket = await this.ticketModel.getViewTicket(id_ticket)
     view_ticket.map((value) => {
-      value.start = moment(value.start).format('DD/MM/YYYY HH:mm:ss')
-      value.end ? (value.end = moment(value.end).format('DD/MM/YYYY HH:mm:ss')) : ''
+      value.start = moment(value.start).tz(utc).format('DD/MM/YYYY HH:mm:ss')
+      value.end ? (value.end = moment(value.end).tz(utc).format('DD/MM/YYYY HH:mm:ss')) : ''
       value.created_at = value.start
       value.type = 'view'
       obj.push(value)
@@ -638,15 +643,15 @@ export default class TicketController {
 
     const create_protocol = await this.ticketModel.getProtocolCreatedByTicket(id_ticket, id_company)
     create_protocol.map((value) => {
-      value.created_at = moment(value.created_at).format('DD/MM/YYYY HH:mm:ss')
-      value.updated_at = moment(value.updated_at).format('DD/MM/YYYY HH:mm:ss')
+      value.created_at = moment(value.created_at).tz(utc).format('DD/MM/YYYY HH:mm:ss')
+      value.updated_at = moment(value.updated_at).tz(utc).format('DD/MM/YYYY HH:mm:ss')
       value.type = 'create_protocol'
       obj.push(value)
     })
 
     const create_ticket = await this.ticketModel.getTicketCreatedByTicketFather(id_ticket, id_company)
     create_ticket.map((value) => {
-      value.created_at = moment(value.created_at).format('DD/MM/YYYY HH:mm:ss')
+      value.created_at = moment(value.created_at).tz(utc).format('DD/MM/YYYY HH:mm:ss')
       value.type = 'create_ticket'
       obj.push(value)
     })
@@ -656,21 +661,21 @@ export default class TicketController {
       const ticketFather = await this.ticketModel.getTicketById(ticket[0].id_ticket_father, id_company)
       obj.push({
         type: 'start',
-        created_at: moment(ticket[0].created_at).format('DD/MM/YYYY HH:mm:ss'),
+        created_at: moment(ticket[0].created_at).tz(utc).format('DD/MM/YYYY HH:mm:ss'),
         ticket: ticketFather[0].id_seq,
         id_user: ticket[0].id_user
       })
     } else if (ticket[0].created_by_protocol) {
       obj.push({
         type: 'start',
-        created_at: moment(ticket[0].created_at).format('DD/MM/YYYY HH:mm:ss'),
+        created_at: moment(ticket[0].created_at).tz(utc).format('DD/MM/YYYY HH:mm:ss'),
         protocol: ticket[0].id_protocol,
         id_user: ticket[0].id_user
       })
     } else {
       obj.push({
         type: 'start',
-        created_at: moment(ticket[0].created_at).format('DD/MM/YYYY HH:mm:ss'),
+        created_at: moment(ticket[0].created_at).tz(utc).format('DD/MM/YYYY HH:mm:ss'),
         id_user: ticket[0].id_user
       })
     }
@@ -678,7 +683,7 @@ export default class TicketController {
       const user = await this.userModel.getById(ticket[0].user_closed_ticket, id_company)
       obj.push({
         type: 'closed',
-        created_at: moment(ticket[0].time_closed_ticket).format('DD/MM/YYYY HH:mm:ss'),
+        created_at: moment(ticket[0].time_closed_ticket).tz(utc).format('DD/MM/YYYY HH:mm:ss'),
         id_user: user[0].id_users
       })
     }
@@ -692,7 +697,7 @@ export default class TicketController {
           id_tab: tab[0].id_tab,
           description: tab[0].description,
           id_user: tab[0].id_user,
-          created_at: moment(tab[0].created_at).format('DD/MM/YYYY HH:mm:ss')
+          created_at: moment(tab[0].created_at).tz(utc).format('DD/MM/YYYY HH:mm:ss')
         })
       }
     }
@@ -709,7 +714,7 @@ export default class TicketController {
         name: responsavel.name,
         id_user_add: user_add ? user_add[0].id_user : responsavel.id_user,
         user_add: user_add ? user_add[0].name : responsavel.name,
-        created_at: moment(responsavel.created_at).format('DD/MM/YYYY HH:mm:ss')
+        created_at: moment(responsavel.created_at).tz(utc).format('DD/MM/YYYY HH:mm:ss')
       })
 
       if (!responsavel.active) {
@@ -722,7 +727,7 @@ export default class TicketController {
           name: responsavel.name,
           id_user_remove: user_remove ? user_remove[0].id_user : responsavel.id_user,
           user_remove: user_remove ? user_remove[0].name : responsavel.name,
-          created_at: moment(responsavel.updated_at).format('DD/MM/YYYY HH:mm:ss')
+          created_at: moment(responsavel.updated_at).tz(utc).format('DD/MM/YYYY HH:mm:ss')
         })
       }
     }

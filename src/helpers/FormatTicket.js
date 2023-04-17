@@ -62,7 +62,7 @@ export default class FormatTicket {
     return ticket
   }
 
-  async formatTicketForPhase(phase, ticket) {
+  async formatTicketForPhase(phase, ticket, utc = 'America/Sao_Paulo') {
     phase.sla = await this.slaController.settingsSLA(phase.id)
 
     Object.keys(phase.sla).length > 0 && (ticket.sla = await this.slaController.ticketSLA(phase.id, ticket.id))
@@ -108,9 +108,9 @@ export default class FormatTicket {
       ticket.customers = customer
     }
 
-    ticket.created_at = moment(ticket.created_at).format('DD/MM/YYYY HH:mm:ss')
-    ticket.updated_at = moment(ticket.updated_at).format('DD/MM/YYYY HH:mm:ss')
-    ticket.time_closed_ticket ? (ticket.time_closed_ticket = moment(ticket.time_closed_ticket).format('DD/MM/YYYY HH:mm:ss')) : ''
+    ticket.created_at = moment(ticket.created_at).tz(utc).format('DD/MM/YYYY HH:mm:ss')
+    ticket.updated_at = moment(ticket.updated_at).tz(utc).format('DD/MM/YYYY HH:mm:ss')
+    ticket.time_closed_ticket ? (ticket.time_closed_ticket = moment(ticket.time_closed_ticket).tz(utc).format('DD/MM/YYYY HH:mm:ss')) : ''
     return ticket
   }
 }
