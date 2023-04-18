@@ -1306,10 +1306,12 @@ export default class PhaseController {
               ticket
             ))
 
-            tickets[id].tickets.map(item => {
-              delete item.form_data._id
-              delete item.id_form_template
-            })
+            if (tickets[id].tickets) {
+              tickets[id].tickets.map(item => {
+                if (item.form_data?._id) delete item.form_data._id
+                if (item.id_form_template) delete item.id_form_template
+              })
+            }
           }
         }
       }

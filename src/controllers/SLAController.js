@@ -28,14 +28,8 @@ export default class SLAController {
       : sla_tickets = await this.slaModel.getToCountSLAWithCustomer(phase_id, closed, customer)
 
     for (let i = 0; i < sla_tickets.length; i++) {
-      const timeLimit = moment(sla_tickets[i].limit_sla_time).format('DD-MM-YYYY HH:mm:ss');
-      const lastInteraction = sla_tickets[i].interaction_time
-        ? moment(sla_tickets[i].interaction_time).format('DD-MM-YYYY HH:mm:ss')
-        : null
-
-      sla_tickets[i].id_status == 1 || timeLimit >= lastInteraction
-        ? result.emdia = result.emdia + 1
-        : result.atrasado = result.atrasado + 1
+      if (sla_tickets[i].id_sla_status == 1) result.emdia = result.emdia + 1
+      if (sla_tickets[i].id_sla_status == 2) result.atrasado = result.atrasado + 1
     }
 
     const slaPhaseSettings = await this.slaModel.getSLASettings(phase_id);
@@ -52,7 +46,7 @@ export default class SLAController {
 
   async settingsSLA(id) {
     if (!id) return false
-    
+
     const slas = await this.slaModel.getSLASettings(id);
     let sla = {};
     await slas.map(async value => {
