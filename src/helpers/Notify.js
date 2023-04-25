@@ -38,19 +38,6 @@ const handleMassage = async function (
   phase,
   callback
 ) {
-  obj = {
-    ...obj,
-    message: `
-      Uma atividade foi criada\n\n
-      Identificador da atividade: ${ticket.id_seq}\n${
-      ticket.id_protocol ? `\n        Protocolo: ${ticket.id_protocol}\n` : ""
-    }
-      Fase: ${phase.name}\n
-      Data de criação: ${moment().format("DD/MM/YYYY")}\n
-      Hora: ${moment().format("HH:mm:ss")}
-      `,
-  };
-
   if (perfil === "separate") {
     if (phase[perfil] && phase[perfil].separate.length > 0) {
       for (const separate of phase[perfil].separate) {

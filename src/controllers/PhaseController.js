@@ -109,8 +109,8 @@ export default class PhaseController {
       })
 
       obj.column = column
-      obj.created_at = moment(obj.created_at).format('DD/MM/YYYY HH:mm:ss')
-      obj.updated_at = moment(obj.updated_at).format('DD/MM/YYYY HH:mm:ss')
+      // obj.created_at = moment(obj.created_at).format('DD/MM/YYYY HH:mm:ss')
+      // obj.updated_at = moment(obj.updated_at).format('DD/MM/YYYY HH:mm:ss')
 
       obj = await this._formatPhase(obj, req.app.locals.db, false, false, req.headers.authorization)
 
@@ -221,7 +221,7 @@ export default class PhaseController {
     }
   }
 
-  async getAllPhase(req, res) {
+  async getAllPhase(req, res) {    
     const search = req.query.search ? req.query.search : ''
     let result
     try {
@@ -255,7 +255,7 @@ export default class PhaseController {
 
 
             for (const x in result[i].ticket[status].tickets) {
-              console.log(result[i].ticket[status].tickets[x])
+              //console.log(result[i].ticket[status].tickets[x])
               result[i].ticket[status].tickets[x] = await this.formatTicket.formatTicketForPhase(
                 result[i],
                 result[i].ticket[status].tickets[x]
@@ -263,7 +263,7 @@ export default class PhaseController {
             }
           }
 
-          result[i] = await this._formatPhase(result[i], req.app.locals.db, true, false, req.headers.authorization)
+          result[i] = await this._formatPhase(result[i], req.app.locals.db, true, false, req.headers.authorization, 0, 1, undefined)
         }
       } else if (req.query.department) {
         result = await this._queryDepartment(
@@ -273,8 +273,7 @@ export default class PhaseController {
           req.app.locals.db,
           req.query.enable,
           req.query.limit,
-          req.query.offset,
-          req.query.me
+          req.query.offset
         )
       } else {
         result = await this.phaseModel.getAllPhase(req.headers.authorization, req.query.enable)
@@ -300,8 +299,7 @@ export default class PhaseController {
           ticket.tickets.filter((item) => {
             if (item.form_data?._id) delete item.form_data._id
             if (item.id_form_template) delete item.id_form_template
-          })
-        )
+          }))
       })
 
       return res.status(200).send(result)
@@ -315,7 +313,7 @@ export default class PhaseController {
     try {
       let result = await this.phaseModel.getAllPhasesByDepartmentID(req.params.id, req.headers.authorization)
       for (let phase of result) {
-        phase = await this._formatPhase(phase, req.app.locals.db, false, false, req.headers.authorization, 20, 0)
+        phase = await this._formatPhase(phase, req.app.locals.db, false, false, req.headers.authorization, 20, 0, undefined)
       }
       return res.status(200).send(result)
     } catch (err) {
@@ -327,7 +325,7 @@ export default class PhaseController {
   async _queryDepartment(department, authorization, status, db, enable, limit, offset) {
     let result = await this.phaseModel.getAllPhasesByDepartmentID(department, authorization, enable)
     for (let phase of result) {
-      phase = await this._formatPhase(phase, db, false, status, authorization, limit, offset)
+      phase = await this._formatPhase(phase, db, false, status, authorization, limit, offset, undefined)
     }
     return result
   }

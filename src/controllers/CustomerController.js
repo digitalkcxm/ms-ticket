@@ -43,8 +43,9 @@ export default class CustomerController {
 
       if (result.code == '23502') return res.status(400).send({ error: 'Please check your body' })
 
-      obj.created_at = moment(obj.created_at).format('DD/MM/YYYY HH:mm:ss')
-      obj.updated_at = moment(obj.updated_at).format('DD/MM/YYYY HH:mm:ss')
+      // obj.created_at = moment(obj.created_at).format('DD/MM/YYYY HH:mm:ss')
+      // obj.updated_at = moment(obj.updated_at).format('DD/MM/YYYY HH:mm:ss')
+
       let ticket = await this.ticketModel.getTicketById(req.body.id_ticket, req.headers.authorization)
 
       ticket = await this.formatTicket.retriveTicket(ticket[0], ticket[0].phase_id)
@@ -121,7 +122,7 @@ export default class CustomerController {
             id_seq: x.id_seq,
             id_user: x.id_user,
             status: x.status,
-            start_ticket: x.start_ticket ? moment(x.start_ticket).format('DD/MM/YYYY HH:mm:ss') : '',
+            start_ticket: x.start_ticket, //x.start_ticket ? moment(x.start_ticket).format('DD/MM/YYYY HH:mm:ss') : '',
             created_at: x.created_at_ticket,
             updated_at: x.updated_at_ticket
           }
@@ -142,7 +143,7 @@ export default class CustomerController {
                 id_seq: x.id_seq,
                 id_user: x.id_user,
                 status: x.status,
-                start_ticket: x.start_ticket ? moment(x.start_ticket).format('DD/MM/YYYY HH:mm:ss') : '',
+                start_ticket: x.start_ticket, //x.start_ticket ? moment(x.start_ticket).format('DD/MM/YYYY HH:mm:ss') : '',
                 created_at: x.created_at_ticket,
                 updated_at: x.updated_at_ticket
               }
@@ -167,8 +168,8 @@ export default class CustomerController {
       const result = await this.customerModel.getByIDCore(req.params.id_core)
       if (result.length <= 0) return res.status(400).send({ error: 'Error when get company info' })
 
-      result[0].created_at = moment(result[0].created_at).format('DD/MM/YYYY HH:mm:ss')
-      result[0].updated_at = moment(result[0].updated_at).format('DD/MM/YYYY HH:mm:ss')
+      // result[0].created_at = moment(result[0].created_at).format('DD/MM/YYYY HH:mm:ss')
+      // result[0].updated_at = moment(result[0].updated_at).format('DD/MM/YYYY HH:mm:ss')
 
       return res.status(200).send(result)
     } catch (err) {
@@ -182,8 +183,8 @@ export default class CustomerController {
       const result = await this.customerModel.getAll(req.body.id_ticket)
       if (result.length <= 0) return res.status(400).send({ error: result })
 
-      result[0].created_at = moment(result[0].created_at).format('DD/MM/YYYY HH:mm:ss')
-      result[0].updated_at = moment(result[0].updated_at).format('DD/MM/YYYY HH:mm:ss')
+      // result[0].created_at = moment(result[0].created_at).format('DD/MM/YYYY HH:mm:ss')
+      // result[0].updated_at = moment(result[0].updated_at).format('DD/MM/YYYY HH:mm:ss')
 
       return res.status(200).send(result)
     } catch (err) {

@@ -32,8 +32,8 @@ export default class CompanyController {
 
       if (result.code == '23502') return res.status(400).send({ error: 'Please check your body' })
 
-      obj.created_at = moment(obj.created_at).format('DD/MM/YYYY HH:mm:ss')
-      obj.updated_at = moment(obj.updated_at).format('DD/MM/YYYY HH:mm:ss')
+      // obj.created_at = moment(obj.created_at).format('DD/MM/YYYY HH:mm:ss')
+      // obj.updated_at = moment(obj.updated_at).format('DD/MM/YYYY HH:mm:ss')
 
       this.logger.info(`Company ${obj.name} created.`)
       return res.status(200).send(obj)
@@ -48,8 +48,8 @@ export default class CompanyController {
       const result = await this.companyModel.getById(req.headers.authorization)
       if (result.length <= 0) return res.status(400).send({ error: 'Error when get company info' })
 
-      result[0].created_at = moment(result[0].created_at).format('DD/MM/YYYY HH:mm:ss')
-      result[0].updated_at = moment(result[0].updated_at).format('DD/MM/YYYY HH:mm:ss')
+      // result[0].created_at = moment(result[0].created_at).format('DD/MM/YYYY HH:mm:ss')
+      // result[0].updated_at = moment(result[0].updated_at).format('DD/MM/YYYY HH:mm:ss')
 
       this.logger.info(`Get company ${result[0].name}`)
       return res.status(200).send(result)
@@ -75,8 +75,9 @@ export default class CompanyController {
       const result = await this.companyModel.update(obj, req.headers.authorization)
       if (result.name && result.name == 'error') return res.status(500).send({ error: 'Contact microservice responsible' })
 
-      result[0].created_at = moment(result[0].created_at).format('DD/MM/YYYY HH:mm:ss')
-      result[0].updated_at = moment(result[0].updated_at).format('DD/MM/YYYY HH:mm:ss')
+      // result[0].created_at = moment(result[0].created_at).format('DD/MM/YYYY HH:mm:ss')
+      // result[0].updated_at = moment(result[0].updated_at).format('DD/MM/YYYY HH:mm:ss')
+
       this.logger.info(`Update company ${obj.name}.`)
       return res.status(200).send(result)
     } catch (err) {

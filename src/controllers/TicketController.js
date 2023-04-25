@@ -21,6 +21,7 @@ import AttachmentsModel from '../models/AttachmentsModel.js'
 import CallbackDigitalk from '../services/CallbackDigitalk.js'
 import FormatTicket from '../helpers/FormatTicket.js'
 import Notify from '../helpers/Notify.js'
+
 const sla_status = {
   emdia: 1,
   atrasado: 2,
@@ -276,12 +277,12 @@ export default class TicketController {
           type: 'note',
           source: user.source,
           name: user.name,
-          created_at: moment(obj.created_at).format('DD/MM/YYYY HH:mm:ss'),
-          updated_at: moment(obj.updated_at).format('DD/MM/YYYY HH:mm:ss')
+          created_at: obj.created_at, //moment(obj.created_at).format('DD/MM/YYYY HH:mm:ss'),
+          updated_at: obj.updated_at //moment(obj.updated_at).format('DD/MM/YYYY HH:mm:ss')
         }
 
         const phase = await this.phaseModel.getPhaseById(ticket[0].phase_id, data.authorization)
-        ticket[0] = await this.formatTicket.retriveTicket(ticket[0], phase[0].id)
+        ticket[0] = await this.formatTicket.retriveTicket(ticket[0], phase[0].id, default_utc, false)
 
         await cache(data.authorization, phase[0].id_department, ticket[0].phase_id, this)
         await CallbackDigitalk(
@@ -378,8 +379,8 @@ export default class TicketController {
       if (result && result.length > 0) {
         obj.id = result[0].id
 
-        obj.created_at = moment(obj.created_at).format('DD/MM/YYYY HH:mm:ss')
-        obj.updated_at = moment(obj.updated_at).format('DD/MM/YYYY HH:mm:ss')
+        obj.created_at = obj.created_at, //moment(obj.created_at).format('DD/MM/YYYY HH:mm:ss')
+        obj.updated_at = obj.updated_at, //moment(obj.updated_at).format('DD/MM/YYYY HH:mm:ss')
         obj.type = 'file'
         obj.id_user = data.id_user
 
@@ -487,7 +488,8 @@ export default class TicketController {
 
       if (result && result.length <= 0) return res.status(400).send({ error: 'There is no ticket with this ID' })
 
-      result = await this.formatTicket.formatTicketForPhase({ id: result[0].phase_id }, result[0], this.database, this.logger)
+      //result = await this.formatTicket.formatTicketForPhase({ id: result[0].phase_id }, result[0], this.database, this.logger)
+      result = await this.formatTicket.formatTicketForPhase({ id: result[0].phase_id }, result[0])
 
       const protocols = await this.ticketModel.getProtocolTicket(result.id, req.headers.authorization)
       console.log('protocols =>', protocols)
@@ -548,16 +550,16 @@ export default class TicketController {
 
     const activities = await this.activitiesModel.getActivities(id_ticket)
     activities.map((value) => {
-      value.created_at = moment(value.created_at).format('DD/MM/YYYY HH:mm:ss')
-      value.updated_at = moment(value.updated_at).format('DD/MM/YYYY HH:mm:ss')
+      // value.created_at = moment(value.created_at).tz(utc).format('DD/MM/YYYY HH:mm:ss')
+      // value.updated_at = moment(value.updated_at).tz(utc).format('DD/MM/YYYY HH:mm:ss')
       value.type = 'note'
       obj.push(value)
     })
 
     const attachments = await this.attachmentsModel.getAttachments(id_ticket)
     attachments.map((value) => {
-      value.created_at = moment(value.created_at).format('DD/MM/YYYY HH:mm:ss')
-      value.updated_at = moment(value.updated_at).format('DD/MM/YYYY HH:mm:ss')
+      // value.created_at = moment(value.created_at).tz(utc).format('DD/MM/YYYY HH:mm:ss')
+      // value.updated_at = moment(value.updated_at).tz(utc).format('DD/MM/YYYY HH:mm:ss')
       value.type = 'file'
       obj.push(value)
     })
@@ -588,8 +590,8 @@ export default class TicketController {
           },
           type: 'change_form',
           id_user: history_phase[index].id_user,
-          created_at: moment(history_phase[index].created_at).format('DD/MM/YYYY HH:mm:ss'),
-          updated_at: moment(history_phase[index].updated_at).format('DD/MM/YYYY HH:mm:ss')
+          created_at: history_phase[index].created_at, //moment(history_phase[index].created_at).tz(utc).format('DD/MM/YYYY HH:mm:ss'),
+          updated_at: history_phase[index].updated_at, //moment(history_phase[index].updated_at).tz(utc).format('DD/MM/YYYY HH:mm:ss')
         })
 
         if (history_phase[index].id_phase != history_phase[index + 1].id_phase) {
@@ -604,7 +606,7 @@ export default class TicketController {
               id: history_phase[index + 1].id_phase,
               name: history_phase[index + 1].name
             },
-            created_at: moment(history_phase[index].created_at).format('DD/MM/YYYY HH:mm:ss')
+            created_at: history_phase[index].created_at //moment(history_phase[index].created_at).tz(utc).format('DD/MM/YYYY HH:mm:ss')
           })
         }
       }
@@ -617,11 +619,13 @@ export default class TicketController {
           id_sla_status: sla.id_sla_status,
           sla_type: sla.type,
           id_sla_type: sla.id_sla_type,
-          limit_sla_time: moment(sla.limit_sla_time).format('DD/MM/YYYY HH:mm:ss'),
-          interaction_time: sla.interaction_time ? moment(sla.interaction_time).format('DD/MM/YYYY HH:mm:ss') : '',
+          limit_sla_time: sla.limit_sla_time,       //moment(sla.limit_sla_time).format('DD/MM/YYYY HH:mm:ss'),
+          interaction_time: sla.interaction_time 
+            ? sla.interaction_time 
+            : '', //sla.interaction_time ? moment(sla.interaction_time).format('DD/MM/YYYY HH:mm:ss') : '',
           created_at: sla.created_at
-            ? moment(sla.created_at).format('DD/MM/YYYY HH:mm:ss')
-            : moment(history_phase[index + 1].updated_at).format('DD/MM/YYYY HH:mm:ss'),
+            ? sla.created_at                        //   ? moment(sla.created_at).format('DD/MM/YYYY HH:mm:ss')
+            : history_phase[index + 1].updated_at,  //   : moment(history_phase[index + 1].updated_at).format('DD/MM/YYYY HH:mm:ss'),
           type: 'sla'
         })
       }
@@ -629,8 +633,8 @@ export default class TicketController {
 
     const view_ticket = await this.ticketModel.getViewTicket(id_ticket)
     view_ticket.map((value) => {
-      value.start = moment(value.start).format('DD/MM/YYYY HH:mm:ss')
-      value.end ? (value.end = moment(value.end).format('DD/MM/YYYY HH:mm:ss')) : ''
+      //value.start = moment(value.start).format('DD/MM/YYYY HH:mm:ss')
+      //value.end ? (value.end = moment(value.end).format('DD/MM/YYYY HH:mm:ss')) : ''
       value.created_at = value.start
       value.type = 'view'
       obj.push(value)
@@ -638,15 +642,15 @@ export default class TicketController {
 
     const create_protocol = await this.ticketModel.getProtocolCreatedByTicket(id_ticket, id_company)
     create_protocol.map((value) => {
-      value.created_at = moment(value.created_at).format('DD/MM/YYYY HH:mm:ss')
-      value.updated_at = moment(value.updated_at).format('DD/MM/YYYY HH:mm:ss')
+      //moment(value.created_at).tz(utc).format('DD/MM/YYYY HH:mm:ss')
+      //moment(value.updated_at).tz(utc).format('DD/MM/YYYY HH:mm:ss')
       value.type = 'create_protocol'
       obj.push(value)
     })
 
     const create_ticket = await this.ticketModel.getTicketCreatedByTicketFather(id_ticket, id_company)
     create_ticket.map((value) => {
-      value.created_at = moment(value.created_at).format('DD/MM/YYYY HH:mm:ss')
+      // moment(value.created_at).tz(utc).format('DD/MM/YYYY HH:mm:ss')
       value.type = 'create_ticket'
       obj.push(value)
     })
@@ -656,21 +660,21 @@ export default class TicketController {
       const ticketFather = await this.ticketModel.getTicketById(ticket[0].id_ticket_father, id_company)
       obj.push({
         type: 'start',
-        created_at: moment(ticket[0].created_at).format('DD/MM/YYYY HH:mm:ss'),
+        created_at: ticket[0].created_at, //moment(ticket[0].created_at).format('DD/MM/YYYY HH:mm:ss'),
         ticket: ticketFather[0].id_seq,
         id_user: ticket[0].id_user
       })
     } else if (ticket[0].created_by_protocol) {
       obj.push({
         type: 'start',
-        created_at: moment(ticket[0].created_at).format('DD/MM/YYYY HH:mm:ss'),
+        created_at: ticket[0].created_at, //moment(ticket[0].created_at).format('DD/MM/YYYY HH:mm:ss'), 
         protocol: ticket[0].id_protocol,
         id_user: ticket[0].id_user
       })
     } else {
       obj.push({
         type: 'start',
-        created_at: moment(ticket[0].created_at).format('DD/MM/YYYY HH:mm:ss'),
+        created_at: ticket[0].created_at, //moment(ticket[0].created_at).format('DD/MM/YYYY HH:mm:ss'), 
         id_user: ticket[0].id_user
       })
     }
@@ -678,7 +682,7 @@ export default class TicketController {
       const user = await this.userModel.getById(ticket[0].user_closed_ticket, id_company)
       obj.push({
         type: 'closed',
-        created_at: moment(ticket[0].time_closed_ticket).format('DD/MM/YYYY HH:mm:ss'),
+        created_at: ticket[0].time_closed_ticket, // moment(ticket[0].time_closed_ticket).format('DD/MM/YYYY HH:mm:ss'),
         id_user: user[0].id_users
       })
     }
@@ -692,7 +696,7 @@ export default class TicketController {
           id_tab: tab[0].id_tab,
           description: tab[0].description,
           id_user: tab[0].id_user,
-          created_at: moment(tab[0].created_at).format('DD/MM/YYYY HH:mm:ss')
+          created_at: tab[0].created_at, //moment(tab[0].created_at).format('DD/MM/YYYY HH:mm:ss')
         })
       }
     }
@@ -709,7 +713,7 @@ export default class TicketController {
         name: responsavel.name,
         id_user_add: user_add ? user_add[0].id_user : responsavel.id_user,
         user_add: user_add ? user_add[0].name : responsavel.name,
-        created_at: moment(responsavel.created_at).format('DD/MM/YYYY HH:mm:ss')
+        created_at: responsavel.created_at // moment(responsavel.created_at).tz(utc).format('DD/MM/YYYY HH:mm:ss')
       })
 
       if (!responsavel.active) {
@@ -722,7 +726,7 @@ export default class TicketController {
           name: responsavel.name,
           id_user_remove: user_remove ? user_remove[0].id_user : responsavel.id_user,
           user_remove: user_remove ? user_remove[0].name : responsavel.name,
-          created_at: moment(responsavel.updated_at).format('DD/MM/YYYY HH:mm:ss')
+          created_at: responsavel.updated_at, // moment(responsavel.updated_at).tz(utc).format('DD/MM/YYYY HH:mm:ss')
         })
       }
     }
@@ -870,7 +874,7 @@ export default class TicketController {
             type: 'socket',
             channel: `phase_${phase[0].id}`,
             event: 'move_ticket_new_phase',
-            obj: { ...ticket, created_at: moment(ticket.created_at).format('DD/MM/YYYY HH:mm:ss'), phase_id: phase[0].id }
+            obj: { ...ticket, created_at: ticket.created_at, phase_id: phase[0].id } //moment(ticket.created_at).format('DD/MM/YYYY HH:mm:ss') -> data formatada
           },
           companyVerified[0].callback
         )
@@ -891,7 +895,7 @@ export default class TicketController {
                 id: ticket.phase_id,
                 name: ticket.phase
               },
-              created_at: moment().format('DD/MM/YYYY HH:mm:ss')
+              created_at: moment() //moment().format('DD/MM/YYYY HH:mm:ss')
             }
           },
           companyVerified[0].callback
@@ -1239,9 +1243,9 @@ export default class TicketController {
         }
         ticket.sla_status = sla_status(ticket.sla)
         ticket.history_phase = await this.ticketModel.getHistoryTicket(ticket.id)
-        ticket.history_phase.map((value) => {
-          value.created_at = moment(value.created_at).format('DD/MM/YYYY HH:mm:ss')
-        })
+        // ticket.history_phase.map((value) => {
+        //   value.created_at = moment(value.created_at).format('DD/MM/YYYY HH:mm:ss')
+        // })
       }
 
       if (!result && result.length <= 0) return res.status(400).send({ error: 'There was an error' })
@@ -1374,7 +1378,7 @@ export default class TicketController {
       )
 
       if (responsibleCheck && Array.isArray(responsibleCheck) && responsibleCheck.length > 0 && !responsibleCheck[0].start_ticket) {
-        return res.status(200).send({ start_ticket: moment(time).format('DD/MM/YYYY HH:mm:ss') })
+        return res.status(200).send({ start_ticket: time }) // moment(time).format('DD/MM/YYYY HH:mm:ss')
       } else if (responsibleCheck && Array.isArray(responsibleCheck) && responsibleCheck.length <= 0) {
         await this.ticketModel.createResponsibleTicket({
           id_ticket: req.body.id_ticket,
@@ -1384,7 +1388,7 @@ export default class TicketController {
           active: true,
           id_user_add: result.id
         })
-        return res.status(200).send({ start_ticket: moment(time).format('DD/MM/YYYY HH:mm:ss') })
+        return res.status(200).send({ start_ticket: time }) //moment(time).format('DD/MM/YYYY HH:mm:ss')
       } else if (responsibleCheck && Array.isArray(responsibleCheck) && responsibleCheck.length > 0 && responsibleCheck[0].start_ticket) {
         return res.status(400).send({
           error: 'Não é possivel iniciar um ticket já inicializado'
@@ -1430,8 +1434,9 @@ export default class TicketController {
 
       if (result.length <= 0) return res.status(400).send({ error: 'Houve algum problema' })
 
-      obj.created_at = moment(obj.created_at).format('DD/MM/YYYY HH:mm:ss')
-      obj.updated_at = moment(obj.updated_at).format('DD/MM/YYYY HH:mm:ss')
+      // obj.created_at = moment(obj.created_at).format('DD/MM/YYYY HH:mm:ss')
+      // obj.updated_at = moment(obj.updated_at).format('DD/MM/YYYY HH:mm:ss')
+
       return res.status(200).send(obj)
     } catch (err) {
       console.log('linkProtocolToTicket ====>', err)
@@ -1544,7 +1549,7 @@ export default class TicketController {
           id_seq: father_ticket[0].id_seq,
           id_user: father_ticket[0].id_user,
           user: father_ticket[0].name,
-          created_at: moment(father_ticket[0].created_at).format('DD/MM/YYYY HH:mm:ss'),
+          created_at: father_ticket[0].created_at, //moment(father_ticket[0].created_at).format('DD/MM/YYYY HH:mm:ss'),
           closed: father_ticket[0].closed,
           department_origin: father_ticket[0].department_origin,
           phase_name: father_ticket[0].phase,
