@@ -93,9 +93,7 @@ export default class SLAController {
               [value.id_sla_type]: {
                 name: value.name,
                 status: status[0].name,
-                limit_sla_time: moment(ticket[0].limit_sla_time).format(
-                  "DD/MM/YYYY HH:mm:ss"
-                ),
+                limit_sla_time: ticket[0].limit_sla_time, //moment(ticket[0].limit_sla_time).format("DD/MM/YYYY HH:mm:ss"),
                 active: status[0].active,
               },
             };

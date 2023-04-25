@@ -109,8 +109,8 @@ export default class PhaseController {
       })
 
       obj.column = column
-      obj.created_at = moment(obj.created_at).format('DD/MM/YYYY HH:mm:ss')
-      obj.updated_at = moment(obj.updated_at).format('DD/MM/YYYY HH:mm:ss')
+      // obj.created_at = moment(obj.created_at).format('DD/MM/YYYY HH:mm:ss')
+      // obj.updated_at = moment(obj.updated_at).format('DD/MM/YYYY HH:mm:ss')
 
       obj = await this._formatPhase(obj, req.app.locals.db, false, false, req.headers.authorization)
 
@@ -221,8 +221,7 @@ export default class PhaseController {
     }
   }
 
-  async getAllPhase(req, res) {
-    const utc = (req.query.utc) ? req.query.utc : 'America/Sao_Paulo'
+  async getAllPhase(req, res) {    
     const search = req.query.search ? req.query.search : ''
     let result
     try {
@@ -259,13 +258,12 @@ export default class PhaseController {
               //console.log(result[i].ticket[status].tickets[x])
               result[i].ticket[status].tickets[x] = await this.formatTicket.formatTicketForPhase(
                 result[i],
-                result[i].ticket[status].tickets[x],
-                utc
+                result[i].ticket[status].tickets[x]
               )
             }
           }
 
-          result[i] = await this._formatPhase(result[i], req.app.locals.db, true, false, req.headers.authorization, 0, 1, undefined, utc)
+          result[i] = await this._formatPhase(result[i], req.app.locals.db, true, false, req.headers.authorization, 0, 1, undefined)
         }
       } else if (req.query.department) {
         result = await this._queryDepartment(
@@ -275,8 +273,7 @@ export default class PhaseController {
           req.app.locals.db,
           req.query.enable,
           req.query.limit,
-          req.query.offset,
-          utc
+          req.query.offset
         )
       } else {
         result = await this.phaseModel.getAllPhase(req.headers.authorization, req.query.enable)
@@ -290,8 +287,7 @@ export default class PhaseController {
             req.headers.authorization,
             req.query.limit,
             req.query.offset,
-            req.query.me,
-            utc
+            req.query.me
           )
         }
       }
@@ -315,10 +311,9 @@ export default class PhaseController {
 
   async getBySocket(req, res) {
     try {
-      const utc = (req.query.utc) ? req.query.utc : 'America/Sao_Paulo'
       let result = await this.phaseModel.getAllPhasesByDepartmentID(req.params.id, req.headers.authorization)
       for (let phase of result) {
-        phase = await this._formatPhase(phase, req.app.locals.db, false, false, req.headers.authorization, 20, 0, undefined, utc)
+        phase = await this._formatPhase(phase, req.app.locals.db, false, false, req.headers.authorization, 20, 0, undefined)
       }
       return res.status(200).send(result)
     } catch (err) {
@@ -327,10 +322,10 @@ export default class PhaseController {
     }
   }
   // departments = JSON.parse(departments)
-  async _queryDepartment(department, authorization, status, db, enable, limit, offset, utc = 'America/Sao_Paulo') {
+  async _queryDepartment(department, authorization, status, db, enable, limit, offset) {
     let result = await this.phaseModel.getAllPhasesByDepartmentID(department, authorization, enable)
     for (let phase of result) {
-      phase = await this._formatPhase(phase, db, false, status, authorization, limit, offset, undefined, utc)
+      phase = await this._formatPhase(phase, db, false, status, authorization, limit, offset, undefined)
     }
     return result
   }
@@ -515,7 +510,7 @@ export default class PhaseController {
     return register
   }
 
-  async _formatPhase(result, mongodb, search = false, status, authorization, limit = 0, offset = 1, me, utc = 'America/Sao_Paulo') {
+  async _formatPhase(result, mongodb, search = false, status, authorization, limit = 0, offset = 1, me) {
     status = JSON.parse(status)
 
     result.header = {}
@@ -566,7 +561,7 @@ export default class PhaseController {
 
           if (tickets[x].tickets) {
             for await (let ticket of tickets[x].tickets) {
-              ticket = await this.formatTicket.formatTicketForPhase(result, ticket, utc)
+              ticket = await this.formatTicket.formatTicketForPhase(result, ticket)
             }
           }
         }
