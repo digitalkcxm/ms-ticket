@@ -282,7 +282,7 @@ export default class TicketController {
         }
 
         const phase = await this.phaseModel.getPhaseById(ticket[0].phase_id, data.authorization)
-        ticket[0] = await this.formatTicket.retriveTicket(ticket[0], phase[0].id, default_utc, false)
+        ticket[0] = await this.formatTicket.retriveTicket(ticket[0], phase[0].id)
 
         await cache(data.authorization, phase[0].id_department, ticket[0].phase_id, this)
         await CallbackDigitalk(
