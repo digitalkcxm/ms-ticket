@@ -221,7 +221,7 @@ export default class PhaseController {
     }
   }
 
-  async getAllPhase(req, res) {    
+  async getAllPhase(req, res) {
     const search = req.query.search ? req.query.search : ''
     let result
     try {
@@ -292,16 +292,17 @@ export default class PhaseController {
         }
       }
 
-      result.map(phase => {
-        let tickets = Object.values(phase.ticket)
-        if (!tickets) return false
-        tickets.map((ticket) =>
-          ticket.tickets.filter((item) => {
+      result.map(phase => { 
+        tickets.map((ticket) => {
+          if (ticket.tickets) {
+            ticket.tickets.filter((item) => {
             if (item.form_data?._id) delete item.form_data._id
             if (item.id_form_template) delete item.id_form_template
-          }))
+          })
+          }
+        })
       })
-
+  
       return res.status(200).send(result)
     } catch (err) {
       this.logger.error(err, 'Get all phase => ')
@@ -1216,8 +1217,8 @@ export default class PhaseController {
 
   async #formatHeader(header, ticketInfo) {
     header.total_tickets = await this.ticketModel.countAllTicket(ticketInfo.id, ticketInfo.customer)
-    header.counter_sla = await this.slaController.counter_sla(ticketInfo.id, false, ticketInfo.customer)
-    header.counter_sla_closed = await this.slaController.counter_sla(ticketInfo.id, true, ticketInfo.customer)
+    //header.counter_sla = await this.slaController.counter_sla(ticketInfo.id, false, ticketInfo.customer)
+    //header.counter_sla_closed = await this.slaController.counter_sla(ticketInfo.id, true, ticketInfo.customer)
     header.closed_tickets = parseInt(await this.ticketModel.countTicket(ticketInfo.id, 3, ticketInfo.customer))
     header.open_tickets =
       parseInt(await this.ticketModel.countTicket(ticketInfo.id, 1, ticketInfo.customer))
