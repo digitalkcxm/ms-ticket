@@ -1217,8 +1217,8 @@ export default class PhaseController {
 
   async #formatHeader(header, ticketInfo) {
     header.total_tickets = await this.ticketModel.countAllTicket(ticketInfo.id, ticketInfo.customer)
-    //header.counter_sla = await this.slaController.counter_sla(ticketInfo.id, false, ticketInfo.customer)
-    //header.counter_sla_closed = await this.slaController.counter_sla(ticketInfo.id, true, ticketInfo.customer)
+    header.counter_sla = await this.slaController.counter_sla(ticketInfo.id, false, ticketInfo.customer)
+    header.counter_sla_closed = await this.slaController.counter_sla(ticketInfo.id, true, ticketInfo.customer)
     header.closed_tickets = parseInt(await this.ticketModel.countTicket(ticketInfo.id, 3, ticketInfo.customer))
     header.open_tickets =
       parseInt(await this.ticketModel.countTicket(ticketInfo.id, 1, ticketInfo.customer))
