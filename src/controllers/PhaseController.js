@@ -97,17 +97,18 @@ export default class PhaseController {
       delete obj.id_company
 
       let column = []
-      req.body.column.map(item => {
-        column.push({
-          type: item.type,
-          label: item.label,
-          column: item.column,
-          required: item.required,
-          editable: item.editable,
-          visible_on_card_ticket: item.visible_on_card_ticket,
+      if (req.body.column) {
+        req.body.column.map(item => {
+          column.push({
+            type: item.type,
+            label: item.label,
+            column: item.column,
+            required: item.required,
+            editable: item.editable,
+            visible_on_card_ticket: item.visible_on_card_ticket,
+          })
         })
-      })
-
+      }
       obj.column = column
       // obj.created_at = moment(obj.created_at).format('DD/MM/YYYY HH:mm:ss')
       // obj.updated_at = moment(obj.updated_at).format('DD/MM/YYYY HH:mm:ss')
@@ -292,17 +293,19 @@ export default class PhaseController {
         }
       }
 
-      result.map(phase => { 
+      result.map(phase => {
+        let tickets = Object.values(phase.ticket)
+        if (!tickets) return false
         tickets.map((ticket) => {
           if (ticket.tickets) {
             ticket.tickets.filter((item) => {
-            if (item.form_data?._id) delete item.form_data._id
-            if (item.id_form_template) delete item.id_form_template
-          })
+              if (item.form_data?._id) delete item.form_data._id
+              if (item.id_form_template) delete item.id_form_template
+            })
           }
         })
       })
-  
+
       return res.status(200).send(result)
     } catch (err) {
       this.logger.error(err, 'Get all phase => ')
