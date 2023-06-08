@@ -31,7 +31,7 @@ integration:
     - ln -s /usr/share/zoneinfo/America/Sao_Paulo /etc/localtime
   script:
     - >
-      wget --header='PRIVATE-TOKEN: '${GITLAB_TOKEN}'' 'https://gitlab.com/api/v4/projects/24070595/repository/files/integration_tests_exec.sh/raw?ref=master' -O integration_tests_exec.sh
+      wget --header='PRIVATE-TOKEN: '${GITLAB_TOKEN}'' 'https://'${URL_GITLAB}'/api/v4/projects/'${PROJECT_SCRIPTS_ID}'/repository/files/integration_tests_exec.sh/raw?ref=master' -O integration_tests_exec.sh
     
     - chmod +x integration_tests_exec.sh 
     - ./integration_tests_exec.sh
@@ -93,7 +93,7 @@ build_homol:
     - export VERSION="${TAG_RELEASE}"
   script:
     - >
-      wget --header='PRIVATE-TOKEN: '${GITLAB_TOKEN}'' 'https://gitlab.com/api/v4/projects/24070595/repository/files/build_img.sh/raw?ref=master' -O build_img.sh
+      wget --header='PRIVATE-TOKEN: '${GITLAB_TOKEN}'' 'https://'${URL_GITLAB}'/api/v4/projects/'${PROJECT_SCRIPTS_ID}'/repository/files/build_img.sh/raw?ref=master' -O build_img.sh
     - chmod +x build_img.sh 
     - ./build_img.sh
 
@@ -167,7 +167,7 @@ deploy_homol:
     - export VERSION="${TAG_RELEASE}"
   script:
     - >
-      wget --header='PRIVATE-TOKEN: '${GITLAB_TOKEN}'' 'https://gitlab.com/api/v4/projects/24070595/repository/files/deploy_ms_k8s.sh/raw?ref=master' -O deploy_ms_k8s.sh
+      wget --header='PRIVATE-TOKEN: '${GITLAB_TOKEN}'' 'https://'${URL_GITLAB}'/api/v4/projects/'${PROJECT_SCRIPTS_ID}'/repository/files/deploy_ms_k8s.sh/raw?ref=master' -O deploy_ms_k8s.sh
     - chmod +x deploy_ms_k8s.sh 
     - ./deploy_ms_k8s.sh
 
@@ -284,7 +284,7 @@ deploy_prod:
     - export TAG_RELEASE=`git describe --abbrev=0 --tags`
   script:
     - >
-      wget --header='PRIVATE-TOKEN: '${AUTOMACAO_TOKEN}'' 'https://gitlab.com/api/v4/projects/24070595/repository/files/deploy_ms_node.sh/raw?ref=master' -O deploy_ms_node.sh
+      wget --header='PRIVATE-TOKEN: '${GITLAB_TOKEN}'' 'https://'${URL_GITLAB}'/api/v4/projects/'${PROJECT_SCRIPTS_ID}'/repository/files/deploy_ms_node.sh/raw?ref=master' -O deploy_ms_node.sh
     - chmod +x deploy_ms_node.sh 
     - ./deploy_ms_node.sh
 
@@ -346,7 +346,7 @@ check_prod:
     - export TAG_RELEASE=`git describe --abbrev=0 --tags`
   script:
     - >
-      wget --header='PRIVATE-TOKEN: '${AUTOMACAO_TOKEN}'' 'https://gitlab.com/api/v4/projects/24070595/repository/files/check_services.sh/raw?ref=master' -O check_services.sh
+      wget --header='PRIVATE-TOKEN: '${GITLAB_TOKEN}'' 'https://'${URL_GITLAB}'/api/v4/projects/'${PROJECT_SCRIPTS_ID}'/repository/files/check_services.sh/raw?ref=master' -O check_services.sh
     - chmod +x check_services.sh 
     - ./check_services.sh
 
@@ -408,7 +408,7 @@ deploy_bs:
     - export TAG_RELEASE=`git describe --abbrev=0 --tags`
   script:
     - >
-      wget --header='PRIVATE-TOKEN: '${AUTOMACAO_TOKEN}'' 'https://gitlab.com/api/v4/projects/24070595/repository/files/deploy_ms_node.sh/raw?ref=master' -O deploy_ms_node.sh
+      wget --header='PRIVATE-TOKEN: '${GITLAB_TOKEN}'' 'https://'${URL_GITLAB}'/api/v4/projects/'${PROJECT_SCRIPTS_ID}'/repository/files/deploy_ms_node.sh/raw?ref=master' -O deploy_ms_node.sh
     - chmod +x deploy_ms_node.sh 
     - sed -i '/ms-server/s/ms-server/apps-servers/g' deploy_ms_node.sh
     - ./deploy_ms_node.sh
@@ -471,7 +471,7 @@ check_bs:
     - export TAG_RELEASE=`git describe --abbrev=0 --tags`
   script:
     - >
-      wget --header='PRIVATE-TOKEN: '${AUTOMACAO_TOKEN}'' 'https://gitlab.com/api/v4/projects/24070595/repository/files/check_services.sh/raw?ref=master' -O check_services.sh
+      wget --header='PRIVATE-TOKEN: '${GITLAB_TOKEN}'' 'https://'${URL_GITLAB}'/api/v4/projects/'${PROJECT_SCRIPTS_ID}'/repository/files/check_services.sh/raw?ref=master' -O check_services.sh
     - chmod +x check_services.sh 
     - sed -i '/ms-server/s/ms-server/apps-servers/g' check_services.sh
     - ./check_services.sh
@@ -534,7 +534,7 @@ deploy_ld:
     - export TAG_RELEASE=`git describe --abbrev=0 --tags`
   script:
     - >
-      wget --header='PRIVATE-TOKEN: '${AUTOMACAO_TOKEN}'' 'https://gitlab.com/api/v4/projects/24070595/repository/files/deploy_ms_node.sh/raw?ref=master' -O deploy_ms_node.sh
+      wget --header='PRIVATE-TOKEN: '${GITLAB_TOKEN}'' 'https://'${URL_GITLAB}'/api/v4/projects/'${PROJECT_SCRIPTS_ID}'/repository/files/deploy_ms_node.sh/raw?ref=master' -O deploy_ms_node.sh
     - chmod +x deploy_ms_node.sh 
     - ./deploy_ms_node.sh
 
@@ -596,7 +596,7 @@ check_ld:
     - export TAG_RELEASE=`git describe --abbrev=0 --tags`
   script:
     - >
-      wget --header='PRIVATE-TOKEN: '${AUTOMACAO_TOKEN}'' 'https://gitlab.com/api/v4/projects/24070595/repository/files/check_services.sh/raw?ref=master' -O check_services.sh
+      wget --header='PRIVATE-TOKEN: '${GITLAB_TOKEN}'' 'https://'${URL_GITLAB}'/api/v4/projects/'${PROJECT_SCRIPTS_ID}'/repository/files/check_services.sh/raw?ref=master' -O check_services.sh
     - chmod +x check_services.sh 
     - ./check_services.sh
 
