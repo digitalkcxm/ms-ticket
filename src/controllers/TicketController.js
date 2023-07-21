@@ -367,7 +367,7 @@ export default class TicketController {
         url: data.url,
         type: typeAttachments[0].id,
         name: data.file_name,
-        text: data.text ? data.text: '' ,
+        text: data.text ? data.text : '',
         created_at: moment(),
         updated_at: moment()
       }
@@ -380,8 +380,8 @@ export default class TicketController {
         obj.id = result[0].id
 
         obj.created_at = obj.created_at, //moment(obj.created_at).format('DD/MM/YYYY HH:mm:ss')
-        obj.updated_at = obj.updated_at, //moment(obj.updated_at).format('DD/MM/YYYY HH:mm:ss')
-        obj.type = 'file'
+          obj.updated_at = obj.updated_at, //moment(obj.updated_at).format('DD/MM/YYYY HH:mm:ss')
+          obj.type = 'file'
         obj.id_user = data.id_user
 
         const dashPhase = await this.phaseModel.getPhaseById(ticket[0].phase_id, data.authorization)
@@ -620,8 +620,8 @@ export default class TicketController {
           sla_type: sla.type,
           id_sla_type: sla.id_sla_type,
           limit_sla_time: sla.limit_sla_time,       //moment(sla.limit_sla_time).format('DD/MM/YYYY HH:mm:ss'),
-          interaction_time: sla.interaction_time 
-            ? sla.interaction_time 
+          interaction_time: sla.interaction_time
+            ? sla.interaction_time
             : '', //sla.interaction_time ? moment(sla.interaction_time).format('DD/MM/YYYY HH:mm:ss') : '',
           created_at: sla.created_at
             ? sla.created_at                        //   ? moment(sla.created_at).format('DD/MM/YYYY HH:mm:ss')
@@ -762,7 +762,11 @@ export default class TicketController {
       for (const ticket of result) {
         if (ticket.id_phase) {
           const ticketFormated = await this.formatTicket.formatTicketForPhase({ id: ticket.id_phase }, ticket)
-          if (ticketFormated.customer) ticketFormated.customer = ticketFormated.customer[0].name
+          if (ticketFormated.customer) {
+            ticketFormated.customer = Array.isArray(ticketFormated.customer) && ticketFormated.customer[0].name
+              ? ticketFormated.customer[0].name
+              : ticketFormated.customer
+          }
           //@info REGRA DE NEGOCIO DE COMGAS!
           if (req.headers.authorization === '04c42a90-f0e3-11ec-afda-f705ff2ac16e') {
             const form = await this.ticketModel.getFormTicketFromComgas(ticketFormated.id)
