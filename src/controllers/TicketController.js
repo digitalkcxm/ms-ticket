@@ -762,7 +762,10 @@ export default class TicketController {
       for (const ticket of result) {
         if (ticket.id_phase) {
           const ticketFormated = await this.formatTicket.formatTicketForPhase({ id: ticket.id_phase }, ticket)
-          if (ticketFormated.customer) {
+
+          if (ticketFormated.customer && ticketFormated.customer.includes('ticket#')) {
+            delete ticketFormated.customer
+          } else if (ticketFormated.customer) {
             ticketFormated.customer = Array.isArray(ticketFormated.customer) && ticketFormated.customer[0].name
               ? ticketFormated.customer[0].name
               : ticketFormated.customer
