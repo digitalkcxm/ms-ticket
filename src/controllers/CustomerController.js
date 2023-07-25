@@ -7,6 +7,7 @@ import CustomerModel from '../models/CustomerModel.js'
 import CallbackDigitalk from '../services/CallbackDigitalk.js'
 import PhaseController from '../controllers/PhaseController.js'
 import FormatTicket from '../helpers/FormatTicket.js'
+import PhaseModel from '../models/PhaseModel.js'
 
 export default class CustomerController {
   constructor(database = {}, logger = {}, redis = {}) {
@@ -17,6 +18,7 @@ export default class CustomerController {
     this.customerModel = new CustomerModel(database, logger)
     this.phaseController = new PhaseController(database, logger, redis)
     this.formatTicket = new FormatTicket(database, logger, redis)
+    this.phaseModel = new PhaseModel(database, logger)
   }
 
   async create(req, res) {
@@ -47,6 +49,9 @@ export default class CustomerController {
       // obj.updated_at = moment(obj.updated_at).format('DD/MM/YYYY HH:mm:ss')
 
       let ticket = await this.ticketModel.getTicketById(req.body.id_ticket, req.headers.authorization)
+      const phase = await this.phaseModel.getPhaseById(ticket[0].phase_id,  req.headers.authorization)
+
+      ticket = await this.formatTicket.formatTicketForPhase(phase[0], ticket[0])
 
       await CallbackDigitalk(
         {
