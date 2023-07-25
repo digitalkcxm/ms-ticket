@@ -128,14 +128,6 @@ export default class PhaseController {
 
       await cache(req.headers.authorization, req.body.department, obj.id, this)
 
-      await this.redis.set(`msTicket:closeTickets:${obj.id}`, JSON.stringify([]))
-
-      await this.redis.set(`msTicket:openTickets:${obj.id}`, JSON.stringify([]))
-
-      await this.redis.set(`msTicket:inProgressTickets:${obj.id}`, JSON.stringify([]))
-
-      await this.redis.set(`msTicket:tickets:${obj.id}`, JSON.stringify([]))
-
       return res.status(200).send(obj)
     } catch (err) {
       this.logger.error(err, 'Error when manage phase create.')
@@ -719,8 +711,7 @@ export default class PhaseController {
 
           await this.slaModel.disableSLA(ticket[0].id)
 
-          await this.formatTicket.retriveTicket(ticket[0], ticket[0].phase_id)
-        }
+       }
       }
 
       await cache(req.headers.authorization, phase[0].id_department, req.params.id, this)
