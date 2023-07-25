@@ -34,7 +34,7 @@ await connect(app, () => {
 })
 
 const filaController = new FilaController(database, logger, redis, tracing)
-const cache  = new CacheController(database, logger, redis, tracing)
+
 setTimeout(() => {
   filaController.consumerCreateActivity()
   filaController.consumerCreateTicket()
