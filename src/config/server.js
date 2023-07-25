@@ -14,8 +14,6 @@ import logger from './logger.js'
 import Redis from './redis.js'
 import FilaController from '../controllers/FilaController.js'
 
-import CacheController from '../controllers/CacheController.js'
-
 const server = http.createServer(app)
 
 const redis = Redis.newConnection()
