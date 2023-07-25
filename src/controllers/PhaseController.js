@@ -15,7 +15,7 @@ import DepartmentController from './DepartmentController.js'
 import templateValidate from '../helpers/TemplateValidate.js'
 import CallbackDigitalk from '../services/CallbackDigitalk.js'
 import FormatTicket from '../helpers/FormatTicket.js'
-import CacheController from './CacheController.js'
+
 import DashController from './DashController.js'
 export default class PhaseController {
   constructor(database = {}, logger = {}, redisConnection = {}) {
@@ -30,7 +30,7 @@ export default class PhaseController {
     this.formatTicket = new FormatTicket(database, logger, redisConnection)
     this.slaController = new SLAController(database, logger)
     this.userController = new UserController(database, logger)
-    this.cacheController = new CacheController(database, logger, redisConnection)
+    
     this.typeColumnModel = new TypeColumnModel(database, logger)
     this.departmentModel = new DepartmentModel(database, logger)
     this.departmentController = new DepartmentController(database, logger)
