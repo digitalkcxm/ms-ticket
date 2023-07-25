@@ -129,7 +129,7 @@ export default class TicketController {
       if (result && result.length > 0 && result[0].id) {
         await this.slaController.createSLAControl(phase[0].id, obj.id)
 
-        ticket = await this.formatTicket.retriveTicket(ticket[0], phase[0].id)
+        ticket = await this.formatTicket.formatTicketForPhase(phase[0], ticket[0])
         if (data.id_user !== -1) await cache(data.authorization, phase[0].id_department, ticket.phase_id, this)
         await CallbackDigitalk(
           {
@@ -282,7 +282,7 @@ export default class TicketController {
         }
 
         const phase = await this.phaseModel.getPhaseById(ticket[0].phase_id, data.authorization)
-        ticket[0] = await this.formatTicket.retriveTicket(ticket[0], phase[0].id)
+        ticket[0] = await this.formatTicket.formatTicketForPhase( phase[0],ticket[0])
 
         await cache(data.authorization, phase[0].id_department, ticket[0].phase_id, this)
         await CallbackDigitalk(
@@ -386,7 +386,7 @@ export default class TicketController {
 
         const dashPhase = await this.phaseModel.getPhaseById(ticket[0].phase_id, data.authorization)
 
-        ticket[0] = await this.formatTicket.retriveTicket(ticket[0], dashPhase[0].id)
+        ticket[0] = await this.formatTicket.formatTicketForPhase(dashPhase[0], ticket[0])
 
         await cache(data.authorization, dashPhase[0].id_department, ticket[0].phase_id, this)
 
@@ -951,7 +951,7 @@ export default class TicketController {
       const result = await this.ticketModel.updateTicket(obj, data.id, data.authorization)
       const getTicket = await this.ticketModel.getTicketById(data.id, data.authorization)
 
-      ticket = await this.formatTicket.retriveTicket(getTicket[0], oldPhase)
+      ticket = await this.formatTicket.formatTicketForPhase(phase[0], getTicket[0])
 
       if (ticket.phase_id === phase[0].id) {
         await CallbackDigitalk(
@@ -1006,7 +1006,7 @@ export default class TicketController {
         await this.slaModel.disableSLA(ticket[0].id)
         const phase = await this.phaseModel.getPhaseById(ticket[0].phase_id, req.headers.authorization)
 
-        ticket[0] = await this.formatTicket.retriveTicket(ticket[0], phase[0].id)
+        ticket[0] = await this.formatTicket.formatTicketForPhase(phase[0],ticket[0])
 
         await Notify(ticket[0].id, ticket[0].phase_id, req.headers.authorization, 'close', req.company[0].callback, {
           phaseModel: this.phaseModel,
@@ -1356,7 +1356,7 @@ export default class TicketController {
       const phase = await this.phaseModel.getPhaseById(ticket[0].phase_id, req.headers.authorization)
 
       ticket[0].id_status = 2
-      ticket[0] = await this.formatTicket.retriveTicket(ticket[0], phase[0].id)
+      ticket[0] = await this.formatTicket.formatTicketForPhase(phase[0], ticket[0])
 
       await cache(req.headers.authorization, phase[0].id_department, ticket[0].phase_id, this)
 
@@ -1437,8 +1437,6 @@ export default class TicketController {
 
       const result = await this.ticketModel.linkProtocolToticket(obj)
 
-      ticket[0] = await this.formatTicket.retriveTicket(ticket[0], ticket[0].phase_id)
-
       if (result.length <= 0) return res.status(400).send({ error: 'Houve algum problema' })
 
       // obj.created_at = moment(obj.created_at).format('DD/MM/YYYY HH:mm:ss')
@@ -1491,7 +1489,6 @@ export default class TicketController {
       const result = await this.ticketModel.insertViewTicket(obj)
       if (!result) return res.status(400).send({ error: 'Houve algum problema' })
 
-      await this.formatTicket.retriveTicket(ticket[0], ticket[0].phase_id)
       return res.status(200).send(obj)
     } catch (err) {
       console.log('Error view ticket =>', err)
@@ -1614,8 +1611,6 @@ export default class TicketController {
             req.body.id_ticket,
             req.headers.authorization
           )
-
-          await this.formatTicket.retriveTicket(ticket[0], ticket[0].phase_id)
 
           return res.status(200).send({
             id_ticket: req.body.id_ticket,

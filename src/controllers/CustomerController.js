@@ -48,8 +48,6 @@ export default class CustomerController {
 
       let ticket = await this.ticketModel.getTicketById(req.body.id_ticket, req.headers.authorization)
 
-      ticket = await this.formatTicket.retriveTicket(ticket[0], ticket[0].phase_id)
-
       await CallbackDigitalk(
         {
           type: 'socket',

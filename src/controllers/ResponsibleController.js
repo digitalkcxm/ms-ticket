@@ -55,7 +55,6 @@ export default class ResponsibleController {
         })
       }
 
-      await this.formatTicket.retriveTicket(ticket[0], ticket[0].phase_id)
       return res.status(200).send(req.body)
     } catch (err) {
       this.logger.error(err, 'Erro ao vincular o ticket ao usuario.')

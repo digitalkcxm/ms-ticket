@@ -21,46 +21,6 @@ export default class FormatTicket {
     this.customerModel = new CustomerModel(database, logger)
   }
 
-  async retriveTicket(ticket, id_phase) {
-    //@info id_phase é a phase em que o cache deve ser removido.
-    ticket = await this.formatTicketForPhase({ id: ticket.phase_id }, ticket)
-
-    let cache = await this.redis.get(`msTicket:tickets:${id_phase}`)
-
-    if (cache) {
-      cache = JSON.parse(cache)
-
-      const oldTk = await cache.filter((x) => x.id === ticket.id)
-      console.log('old tk =====> ', oldTk)
-      if (oldTk.length > 0) {
-        const newCacheOldPhase = await cache.filter((x) => x.id !== ticket.id)
-        await this.redis.set(`msTicket:tickets:${id_phase}`, JSON.stringify(newCacheOldPhase))
-      }
-    }
-
-    let newCacheNewPhase = await this.redis.get(`msTicket:tickets:${ticket.phase_id}`)
-    if (newCacheNewPhase) {
-      newCacheNewPhase = JSON.parse(newCacheNewPhase)
-      newCacheNewPhase = newCacheNewPhase.concat({
-        id: ticket.id,
-        id_seq: ticket.id_seq,
-        id_user: ticket.id_user,
-        user: ticket.user,
-        closed: ticket.closed,
-        created_at: ticket.created_at,
-        updated_at: ticket.updated_at,
-        display_name: ticket.display_name,
-        status: ticket.status,
-        id_status: ticket.id_status,
-        id_tab: ticket.id_tab,
-        responsibles: ticket.responsibles,
-        form_data: ticket.form_data
-      })
-      await this.redis.set(`msTicket:tickets:${ticket.phase_id}`, JSON.stringify(newCacheNewPhase))
-    }
-
-    return ticket
-  }
 
   async formatTicketForPhase(phase, ticket) {
     phase.sla = await this.slaController.settingsSLA(phase.id)

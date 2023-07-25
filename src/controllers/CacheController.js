@@ -32,7 +32,7 @@ export default class CacheController {
         ticket = await this.formatTicket.formatTicketForPhase(phase, ticket)
       }
 
-      await this.redis.set(`msTicket:tickets:${phase.id}`, JSON.stringify(tickets))
+      
     }
     this.logger.info('End create cache tickets.')
   }
