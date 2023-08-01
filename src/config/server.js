@@ -23,7 +23,7 @@ app.use(bodyParser.urlencoded({ extended: true, limit: '256mb' }))
 // app.use(expressValidator())
 moment.tz.setDefault('America/Sao_Paulo')
 
-routes(app, database, logger, redis. tracing)
+routes(app, database, logger, redis, tracing)
 // app.use(routes);
 queue()
 
