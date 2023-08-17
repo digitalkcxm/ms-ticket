@@ -15,6 +15,7 @@ import FormTemplate from '../documents/FormTemplate.js'
 import FormDocuments from '../documents/FormDocuments.js'
 import ActivitiesModel from '../models/ActivitiesModel.js'
 import TypeColumnModel from '../models/TypeColumnModel.js'
+import StorageService from '../services/StorageService.js'
 import ResponsibleModel from '../models/ResponsibleModel.js'
 import DepartmentController from './DepartmentController.js'
 import AttachmentsModel from '../models/AttachmentsModel.js'
@@ -34,6 +35,7 @@ export default class TicketController {
     this.logger = logger
     this.database = database
     this.tabModel = new TabModel(database)
+    this.storageService = new StorageService()
     this.formTemplate = new FormTemplate(logger)
     this.slaModel = new SLAModel(database, logger)
     this.userModel = new UserModel(database, logger)
@@ -89,6 +91,16 @@ export default class TicketController {
       obj.phase = phase[0].name
       if (data.form && Object.keys(data.form).length > 0 && phase[0].form) {
         if ((await this._validateForm(global.mongodb, phase[0].id_form_template, data.form).length) > 0) return false
+
+        //@info consulta e validações necessárias para fazermos o upload do documento do formulário ao s3.
+        const template = await this.formTemplate.findRegister(phase[0].id_form_template)
+        const templateTypeDoc = await template?.column.map(item => item.type == 13 && item)
+
+        if (templateTypeDoc && templateTypeDoc.length) {
+          const url = await this.#uploadBase64(Object.values(data.form)[0], data.authorization)
+          data.form[templateTypeDoc[0].column] = url
+        }
+
         obj.id_form = await new FormDocuments(global.mongodb).createRegister(data.form)
       }
 
@@ -282,7 +294,7 @@ export default class TicketController {
         }
 
         const phase = await this.phaseModel.getPhaseById(ticket[0].phase_id, data.authorization)
-        ticket[0] = await this.formatTicket.formatTicketForPhase( phase[0],ticket[0])
+        ticket[0] = await this.formatTicket.formatTicketForPhase(phase[0], ticket[0])
 
         await cache(data.authorization, phase[0].id_department, ticket[0].phase_id, this)
         await CallbackDigitalk(
@@ -1006,7 +1018,7 @@ export default class TicketController {
         await this.slaModel.disableSLA(ticket[0].id)
         const phase = await this.phaseModel.getPhaseById(ticket[0].phase_id, req.headers.authorization)
 
-        ticket[0] = await this.formatTicket.formatTicketForPhase(phase[0],ticket[0])
+        ticket[0] = await this.formatTicket.formatTicketForPhase(phase[0], ticket[0])
 
         await Notify(ticket[0].id, ticket[0].phase_id, req.headers.authorization, 'close', req.company[0].callback, {
           phaseModel: this.phaseModel,
@@ -1184,7 +1196,7 @@ export default class TicketController {
 
       console.log(id_form_template)
       const form_template = await this.formTemplate.findRegister(id_form_template)
-      console.log(form_template)
+      console.log('FORM TEMPLATE ====================>', form_template)
       for (let column of form_template.column) {
         column.required && !form[column.column] && column.active !== false ? errors.push(`O campo ${column.column} é obrigatório`) : ''
       }
@@ -1625,6 +1637,54 @@ export default class TicketController {
     } catch (err) {
       console.log('tab err ====> ', err)
       return res.status(500).send({ error: 'Ocorreu um erro ao tabular o ticket.' })
+    }
+  }
+
+  async #uploadBase64(base64, company_token) {
+    try {
+      const buffer = Buffer.from(base64, 'base64')
+      const type = await this.#checkExtension(buffer.slice(0, 4).toString('hex'))
+      const fileName = `${v1()}.${type}`
+
+      const url = await this.storageService.uploadBase64(`${company_token}/${moment().format('DD-MM-YYYY')}/midia`, base64, fileName, type, true, process.env.BUCKET)
+
+      return { url: url, type: type, file_name: fileName }
+    } catch (err) {
+      console.error('Houve um erro ao realizar upload do arquivo.', err)
+    }
+  }
+
+  async #checkExtension(bufferFile) {
+    try {
+      let extension
+      switch (bufferFile) {
+        case '89504e47':
+          extension = 'png'
+          break
+        case 'ffd8ffe0':
+        case 'ffd8ffe1':
+        case 'ffd8ffe2':
+        case 'ffd8ffe3':
+        case 'ffd8ffe8':
+          extension = 'jpeg'
+          break
+        case 'ffd8ffdb':
+          extension = 'jpg'
+          break
+        case '3c737667':
+          extension = 'svg'
+          break
+        case '25504446':
+          extension = 'pdf'
+          break
+        default:
+          extension = 'unknown'
+          break
+      }
+
+      return extension
+    } catch (err) {
+      console.error('Houve um erro ao checar extensão do arquivo do formulário do ticket.', err)
     }
   }
 }
