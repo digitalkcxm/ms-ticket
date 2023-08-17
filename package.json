@@ -15,6 +15,7 @@
   "author": "Rafael da Silva Mendes",
   "license": "ISC",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.52.0",
     "amqplib": "^0.8.0",
     "axios": "^0.25.0",
     "body-parser": "^1.19.0",
