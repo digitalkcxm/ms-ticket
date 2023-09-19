@@ -388,10 +388,11 @@ export default class PhaseController {
       if (req.body.form && req.body.column) {
         if (phase[0].id_form_template) {
           let validations = await this._checkColumnsFormTemplate(req.body.column, phase[0].id_form_template)
-          if (validations.length > 0) return res.status(400).send({ error: validations })
+          console.log('validations',validations)
+          if (validations?.errors?.length > 0) return res.status(400).send({ error: validations })
 
           let column = []
-          req.body.column.map(item => {
+          validations?.newTemplate.map(item => {
             column.push({
               type: item.type,
               label: item.label,
@@ -403,8 +404,8 @@ export default class PhaseController {
             })
           })
 
-          validations.column = column
-          await this.formTemplate.updateRegister(validations._id, validations)
+          validations.register.column = column
+          await this.formTemplate.updateRegister(validations.register._id, validations.register)
           phase[0].department = req.body.department
           phase[0].formTemplate = column
           delete phase[0].id_form_template
@@ -492,8 +493,13 @@ export default class PhaseController {
     if (errorsColumns.length > 0) errorsColumns.map(error => errors.push(error))
 
     register.column.map((valueA) => {
+      console.log('===>',valueA)
+
       let validate = 0
       let inativado = 0
+      if(valueA.active === false) {
+        newTemplate = [...newTemplate, valueA] 
+      }
       newTemplate.map((valueB) => (valueA.column == valueB.column ? (valueB.column.active ? validate++ : validate++ && inativado++) : ''))
 
       if (validate <= 0)
@@ -502,9 +508,9 @@ export default class PhaseController {
       if (validate > 1 && inativado <= 0) errors.push(`A coluna ${valueA.label} não pode ser igual a um ja criado`)
     })
 
-    if (errors.length > 0) return errors
+    if (errors.length > 0) return {errors: errors}
 
-    return register
+    return {newTemplate:newTemplate, register:register }
   }
 
   async _formatPhase(result, mongodb, search = false, status, authorization, limit = 0, offset = 1, me) {
@@ -520,7 +526,7 @@ export default class PhaseController {
         for await (const x of result.formTemplate) {
           !isNaN(x.type) && x.type != 0 && (x.type = (await this.typeColumnModel.getTypeByID(x.type))[0].name)
         }
-        result.formTemplate = result.formTemplate.filter(column => column.active)
+        result.formTemplate = result.formTemplate.filter(column => (typeof column.active === 'boolean' && column.active) || typeof column.active !== 'boolean')
 
       }
     }
