@@ -399,6 +399,7 @@ export default class PhaseController {
               required: item.required,
               editable: item.editable,
               visible_on_card_ticket: item.visible_on_card_ticket,
+              active: typeof item.active === 'boolean' ? item.active: true 
             })
           })
 
@@ -516,10 +517,11 @@ export default class PhaseController {
 
       if (register && register.column) {
         result.formTemplate = register.column
-
         for await (const x of result.formTemplate) {
           !isNaN(x.type) && x.type != 0 && (x.type = (await this.typeColumnModel.getTypeByID(x.type))[0].name)
         }
+        result.formTemplate = result.formTemplate.filter(column => column.active)
+
       }
     }
 
