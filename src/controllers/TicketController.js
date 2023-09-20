@@ -92,14 +92,14 @@ export default class TicketController {
       if (data.form && Object.keys(data.form).length > 0 && phase[0].form) {
         if ((await this._validateForm(global.mongodb, phase[0].id_form_template, data.form).length) > 0) return false
 
-        //@info consulta e validações necessárias para fazermos o upload do documento do formulário ao s3.
-        const template = await this.formTemplate.findRegister(phase[0].id_form_template)
-        const templateTypeDoc = await template?.column.map(item => item.type == 13 && item)
+        // //@info consulta e validações necessárias para fazermos o upload do documento do formulário ao s3.
+        // const template = await this.formTemplate.findRegister(phase[0].id_form_template)
+        // const templateTypeDoc = await template?.column.map(item => item.type == 13 && item)
 
-        if (templateTypeDoc && templateTypeDoc.length) {
-          const url = await this.#uploadBase64(Object.values(data.form)[0], data.authorization)
-          data.form[templateTypeDoc[0].column] = url
-        }
+        // if (templateTypeDoc && templateTypeDoc.length) {
+        //   const url = await this.#uploadBase64(Object.values(data.form)[0], data.authorization)
+        //   data.form[templateTypeDoc[0].column] = url
+        // }
 
         obj.id_form = await new FormDocuments(global.mongodb).createRegister(data.form)
       }
