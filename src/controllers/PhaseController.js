@@ -485,8 +485,9 @@ export default class PhaseController {
   async _checkColumnsFormTemplate(newTemplate, template) {
     const register = await this.formTemplate.findRegister(template)
     const errors = []
-
-    if (newTemplate.length < register.column.length) errors.push('Não é possivel remover campos do formulario, apenas inativa-los')
+    
+    const activeRegister = register.column.filter(item => (item === true))
+    if (newTemplate.length < activeRegister) errors.push('Não é possivel remover campos do formulario, apenas inativa-los')
 
     const errorsColumns = await templateValidate(newTemplate, this.database, this.logger)
 
