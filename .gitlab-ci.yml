@@ -59,6 +59,26 @@ integration:
   tags:
     - microservicos
 
+quality:
+  stage: test
+  image: 
+    name: sonarsource/sonar-scanner-cli:5.0
+    entrypoint: [""]
+  variables:
+    SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"  # Defines the location of the analysis task cache
+    GIT_DEPTH: "0"  # Tells git to fetch all the branches of the project, required by the analysis task
+  cache:
+    key: "${CI_JOB_NAME}"
+    paths:
+      - .sonar/cache
+  script: 
+    - sonar-scanner
+  allow_failure: true
+  only:
+    - master
+  tags:
+    - microservicos
+
 build_homol:
   stage: build_homol 
   image: docker:18.09
@@ -120,8 +140,10 @@ build_homol:
   allow_failure: false
   needs: 
     - integration
+    - quality
   dependencies:
     - integration
+    - quality
   tags:
     - microservicos 
 
