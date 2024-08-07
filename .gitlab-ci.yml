@@ -522,4 +522,131 @@ check_ld:
   needs: ["deploy_ld"]
   tags:
     - microservicos
+
+deploy_syscob:
+  stage: prod
+  image: ubuntu:20.04
+  before_script:
+    - apt update > /dev/null 2>&1 
+    - apt install dos2unix python3 python3-pip jq git unzip zip curl bash openssl wget rsync -y > /dev/null 2>&1
+    - DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends tzdata > /dev/null 2>&1
+    - rm -rf /etc/localtime
+    - ln -s /usr/share/zoneinfo/America/Sao_Paulo /etc/localtime
+    - curl -s https://releases.hashicorp.com/vault/1.5.3/vault_1.5.3_linux_amd64.zip -o "vault.zip"
+    - unzip -q vault.zip ; mv vault /usr/bin/ ; chmod +x /usr/bin/vault
+    - curl -s "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+    - unzip -q awscliv2.zip
+    - ./aws/install
+    - aws --version
+    - vault -v
+    - echo $DATE
+    - 'which ssh-agent || ( apt-get install -qq openssh-client )'
+    - eval $(ssh-agent -s)
+    # Setup SSH deploy keys
+    - ssh-add <(echo "$SSH_PRIVATE_KEY")
+    - mkdir -p ~/.ssh
+    - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
+    - export TXT_RED="\e[31m" && export TXT_BLUE="\e[34m" && export TXT_GREEN="\e[32m" && export TXT_CYAN="\e[36m" && export TXT_YELLOW="\e[33m"
+    - export DATE=$(date +%d-%m-%YH%H:%M:%S)
+    - export VAULT_ADDR="${VAULT_ADDR}"
+    - export VAULT_TOKEN="${VAULT_TOKEN}"
+    - export ENV=lideranca
+    - export AWS_ACCESS_KEY_ID="${syscob_AWS_ACCESS_KEY_ID}"
+    - export AWS_SECRET_ACCESS_KEY="${syscob_AWS_SECRET_ACCESS_KEY}"
+    - export TAG_RELEASE=`git describe --abbrev=0 --tags`
+  script:
+    - >
+      wget --header='PRIVATE-TOKEN: '${GITLAB_TOKEN}'' 'https://'${URL_GITLAB}'/api/v4/projects/'${PROJECT_SCRIPTS_ID}'/repository/files/deploy_ms_node.sh/raw?ref=master' -O deploy_ms_node.sh
+    - chmod +x deploy_ms_node.sh 
+    - ./deploy_ms_node.sh
+
+  after_script:
+    - >
+      if [[ "$CI_JOB_STATUS" == "success" ]]; then
+
+        curl -s \
+          -H "Content-Type: application/json" \
+          -d '{"embeds": [{"title": "'${CI_JOB_NAME}'","description": "'${CI_JOB_STATUS}' - Ao executar o job '${CI_JOB_NAME}' do projeto '${CI_PROJECT_NAME}'","color": 3065620}]}' \
+          $WEBHOOK_URL       
+
+      else
+
+        curl -s \
+          -H "Content-Type: application/json" \
+          -d '{"embeds": [{"title": "'${CI_JOB_NAME}'","description": "'${CI_JOB_STATUS}' - Ao executar o job '${CI_JOB_NAME}' do projeto '${CI_PROJECT_NAME}'","color": 12389167}]}' \
+          $WEBHOOK_URL
+
+
+      fi 
+  only:
+    - master
+  needs: 
+    - create-release
+  dependencies:
+    - create-release    
+  allow_failure: false
+  tags:
+    - microservicos
+
+check_syscob:
+  stage: check_prod
+  image: ubuntu:20.04
+  before_script:
+    - apt update > /dev/null 2>&1 
+    - apt install dos2unix python3 python3-pip jq git unzip zip curl bash openssl wget rsync -y > /dev/null 2>&1
+    - DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends tzdata > /dev/null 2>&1
+    - rm -rf /etc/localtime
+    - ln -s /usr/share/zoneinfo/America/Sao_Paulo /etc/localtime
+    - curl -s https://releases.hashicorp.com/vault/1.5.3/vault_1.5.3_linux_amd64.zip -o "vault.zip"
+    - unzip -q vault.zip ; mv vault /usr/bin/ ; chmod +x /usr/bin/vault
+    - curl -s "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+    - unzip -q awscliv2.zip
+    - ./aws/install
+    - aws --version
+    - vault -v
+    - echo $DATE
+    - 'which ssh-agent || ( apt-get install -qq openssh-client )'
+    - eval $(ssh-agent -s)
+    # Setup SSH deploy keys
+    - ssh-add <(echo "$SSH_PRIVATE_KEY")
+    - mkdir -p ~/.ssh
+    - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
+    - export TXT_RED="\e[31m" && export TXT_BLUE="\e[34m" && export TXT_GREEN="\e[32m" && export TXT_CYAN="\e[36m" && export TXT_YELLOW="\e[33m"
+    - export DATE=$(date +%d-%m-%YH%H:%M:%S)
+    - export VAULT_ADDR="${VAULT_ADDR}"
+    - export VAULT_TOKEN="${VAULT_TOKEN}"
+    - export ENV=syscob
+    - export AWS_ACCESS_KEY_ID="${syscob_AWS_ACCESS_KEY_ID}"
+    - export AWS_SECRET_ACCESS_KEY="${syscob_AWS_SECRET_ACCESS_KEY}"
+    - export TAG_RELEASE=`git describe --abbrev=0 --tags`
+  script:
+    - >
+      wget --header='PRIVATE-TOKEN: '${GITLAB_TOKEN}'' 'https://'${URL_GITLAB}'/api/v4/projects/'${PROJECT_SCRIPTS_ID}'/repository/files/check_services.sh/raw?ref=master' -O check_services.sh
+    - chmod +x check_services.sh 
+    - ./check_services.sh
+
+  after_script:
+    - >
+      if [[ "$CI_JOB_STATUS" == "success" ]]; then
+
+        curl -s \
+          -H "Content-Type: application/json" \
+          -d '{"embeds": [{"title": "'${CI_JOB_NAME}'","description": "'${CI_JOB_STATUS}' - Ao executar o job '${CI_JOB_NAME}' do projeto '${CI_PROJECT_NAME}'","color": 3065620}]}' \
+          $WEBHOOK_URL       
+
+      else
+
+        curl -s \
+          -H "Content-Type: application/json" \
+          -d '{"embeds": [{"title": "'${CI_JOB_NAME}'","description": "'${CI_JOB_STATUS}' - Ao executar o job '${CI_JOB_NAME}' do projeto '${CI_PROJECT_NAME}'","color": 12389167}]}' \
+          $WEBHOOK_URL
+
+      fi 
+
+  only:
+    - master
+  allow_failure: false
+  needs: ["deploy_syscob"]
+  tags:
+    - microservicos
         
