@@ -550,7 +550,7 @@ deploy_syscob:
     - export DATE=$(date +%d-%m-%YH%H:%M:%S)
     - export VAULT_ADDR="${VAULT_ADDR}"
     - export VAULT_TOKEN="${VAULT_TOKEN}"
-    - export ENV=lideranca
+    - export ENV=syscob
     - export AWS_ACCESS_KEY_ID="${syscob_AWS_ACCESS_KEY_ID}"
     - export AWS_SECRET_ACCESS_KEY="${syscob_AWS_SECRET_ACCESS_KEY}"
     - export TAG_RELEASE=`git describe --abbrev=0 --tags`
