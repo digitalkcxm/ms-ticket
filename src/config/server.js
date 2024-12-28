@@ -1,4 +1,3 @@
-import tracing from './elastic-apm.js'
 import express from 'express'
 import bodyParser from 'body-parser'
 import routes from './routes.js'
@@ -23,7 +22,7 @@ app.use(bodyParser.urlencoded({ extended: true, limit: '256mb' }))
 // app.use(expressValidator())
 moment.tz.setDefault('America/Sao_Paulo')
 
-routes(app, database, logger, redis, tracing)
+routes(app, database, logger, redis)
 // app.use(routes);
 queue()
 
@@ -33,7 +32,7 @@ await connect(app, () => {
   server.listen(port, () => console.log(`Server running in port ${port}`))
 })
 
-const filaController = new FilaController(database, logger, redis, tracing)
+const filaController = new FilaController(database, logger, redis)
 
 setTimeout(() => {
   filaController.consumerCreateActivity()
